@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Dict, List, Optional
@@ -320,6 +321,9 @@ class FantasySharksScraper(WebScraper):
                 team_text = cells[3].get_text(strip=True)  # Position 3: Team
                 bye_text = cells[4].get_text(strip=True)  # Position 4: Bye
 
+                # Check for injury information in the name cell
+                injury_info = self._extract_injury_info(name_cell)
+
                 # Validate we have actual data
                 if not name_text or not team_text:
                     logger.debug(f"Row {rank}: Missing name or team data")
@@ -352,13 +356,30 @@ class FantasySharksScraper(WebScraper):
                     bye_week = 1
 
                 logger.debug(f"Row {rank}: Parsed {name} ({team}) Bye:{bye_week}")
+                if injury_info:
+                    logger.debug(f"Row {rank}: Injury info: {injury_info}")
 
             except (IndexError, AttributeError) as e:
                 logger.debug(f"Row {rank}: Error accessing cell data: {str(e)}")
                 return None
 
-            # Create player
-            player = Player(name=name, position=position, team=team, bye_week=bye_week)
+            # Create player with injury status
+            injury_status = (
+                injury_info.get("status", InjuryStatus.HEALTHY)
+                if injury_info
+                else InjuryStatus.HEALTHY
+            )
+            player = Player(
+                name=name,
+                position=position,
+                team=team,
+                bye_week=bye_week,
+                injury_status=injury_status,
+            )
+
+            # Add injury details to commentary if available
+            if injury_info and injury_info.get("details"):
+                player.commentary = f"Injury: {injury_info['details']}"
 
             # Add FantasySharks ranking
             # Calculate a score based on rank (higher rank = lower score)
@@ -392,6 +413,108 @@ class FantasySharksScraper(WebScraper):
 
         except Exception as e:
             logger.debug(f"Failed to extract commentary: {str(e)}")
+            return None
+
+    def _extract_injury_info(self, cell) -> Optional[Dict[str, any]]:
+        """Extract injury information from a table cell containing injury img tags"""
+        try:
+            # Look for injury images in the cell
+            injury_imgs = cell.find_all("img", src=re.compile(r"injured\d*\.gif"))
+
+            if not injury_imgs:
+                return None
+
+            for img in injury_imgs:
+                # Extract injury details from ONMOUSEOVER attribute
+                onmouseover = img.get("onmouseover", "")
+                if not onmouseover:
+                    continue
+
+                # Parse the popup content using regex
+                # Example: popup("&lt;b&gt; Out&lt;/b&gt; Expected back Preseason Week 2")
+                popup_match = re.search(
+                    r'popup\(["\']([^"\']+)["\']', onmouseover, re.IGNORECASE
+                )
+                if not popup_match:
+                    continue
+
+                popup_content = popup_match.group(1)
+                # Decode HTML entities
+                popup_content = (
+                    popup_content.replace("&lt;", "<")
+                    .replace("&gt;", ">")
+                    .replace("&quot;", '"')
+                )
+
+                # Extract injury details
+                injury_details = self._parse_injury_details(popup_content)
+                if injury_details:
+                    logger.debug(f"Extracted injury info: {injury_details}")
+                    return injury_details
+
+            return None
+
+        except Exception as e:
+            logger.debug(f"Failed to extract injury info: {str(e)}")
+            return None
+
+    def _parse_injury_details(self, popup_content: str) -> Optional[Dict[str, any]]:
+        """Parse injury details from popup content and classify severity"""
+        try:
+            # Remove HTML tags
+            clean_content = re.sub(r"<[^>]+>", "", popup_content).strip()
+
+            if not clean_content:
+                return None
+
+            # Determine injury status based on keywords
+            content_lower = clean_content.lower()
+
+            injury_status = InjuryStatus.QUESTIONABLE  # Default
+            is_long_term = False
+
+            if "out" in content_lower:
+                injury_status = InjuryStatus.OUT
+                # Check for long-term indicators (but exclude preseason)
+                if (
+                    any(
+                        indicator in content_lower
+                        for indicator in [
+                            "season",
+                            "year",
+                            "months",
+                            "week 8",
+                            "week 9",
+                            "week 10",
+                            "week 11",
+                            "week 12",
+                            "week 13",
+                            "week 14",
+                            "week 15",
+                            "week 16",
+                            "week 17",
+                            "week 18",
+                            "playoffs",
+                        ]
+                    )
+                    and "preseason" not in content_lower
+                ):
+                    is_long_term = True
+            elif "doubtful" in content_lower:
+                injury_status = InjuryStatus.DOUBTFUL
+            elif "questionable" in content_lower:
+                injury_status = InjuryStatus.QUESTIONABLE
+            elif "probable" in content_lower:
+                injury_status = InjuryStatus.PROBABLE
+
+            return {
+                "status": injury_status,
+                "details": clean_content,
+                "is_long_term": is_long_term,
+            }
+
+        except Exception as e:
+            logger.debug(f"Failed to parse injury details: {str(e)}")
             return None
 
 
