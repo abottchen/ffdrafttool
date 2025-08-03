@@ -60,6 +60,78 @@ Run the test suite:
 pytest
 ```
 
+## 🔧 Available MCP Tools
+
+The server provides the following MCP tools for fantasy football draft assistance:
+
+### 1. `get_player_rankings_tool`
+Fetch current player rankings from multiple fantasy football sources.
+
+**Parameters:**
+- `position` (optional): Filter by position (QB, RB, WR, TE, K, DST)
+- `limit` (default: 20): Number of players to return per page
+- `offset` (default: 0): Starting position for pagination
+- `force_refresh` (default: false): Bypass cache and fetch fresh data
+
+**Usage:**
+- Get top 20 players: `get_player_rankings_tool()`
+- Get top 10 QBs: `get_player_rankings_tool(position="QB", limit=10)`
+- Get RBs 21-40: `get_player_rankings_tool(position="RB", limit=20, offset=20)`
+
+### 2. `read_draft_progress_tool`
+Read live draft progress from Google Sheets.
+
+**Parameters:**
+- `sheet_id` (optional): Google Sheets ID (uses configured default if not provided)
+- `sheet_range` (default: "Draft!A1:V24"): Range to read from the sheet
+- `force_refresh` (default: false): Ignore cache and fetch fresh data
+
+**Usage:**
+- Read current draft state: `read_draft_progress_tool()`
+- Read from specific sheet: `read_draft_progress_tool(sheet_id="your_sheet_id")`
+
+### 3. `analyze_available_players_tool`
+Analyze available players with value metrics, positional scarcity, and bye week considerations.
+
+**Parameters:**
+- `draft_state` (required): Current draft state from `read_draft_progress_tool`
+- `position_filter` (optional): Focus on specific position (QB, RB, WR, TE, K, DST)
+- `limit` (default: 20): Number of players to analyze and return
+- `force_refresh` (default: false): Fetch fresh rankings data
+
+**Usage:**
+- Analyze top available players: `analyze_available_players_tool(draft_state)`
+- Focus on available RBs: `analyze_available_players_tool(draft_state, position_filter="RB")`
+
+### 4. `suggest_draft_pick_tool`
+Get personalized draft pick recommendations based on team needs and strategy.
+
+**Parameters:**
+- `draft_state` (required): Current draft state from `read_draft_progress_tool`
+- `strategy` (default: "balanced"): Draft strategy - "balanced", "best_available", "upside", "safe"
+- `consider_bye_weeks` (default: true): Factor in bye week conflicts
+- `force_refresh` (default: false): Use fresh rankings data
+
+**Usage:**
+- Get balanced recommendation: `suggest_draft_pick_tool(draft_state)`
+- Use upside strategy: `suggest_draft_pick_tool(draft_state, strategy="upside")`
+- Ignore bye weeks: `suggest_draft_pick_tool(draft_state, consider_bye_weeks=false)`
+
+### 5. `get_player_info_tool`
+Get detailed information about specific players by name.
+
+**Parameters:**
+- `last_name` (required): Player's last name (handles partial matches and suffixes)
+- `first_name` (optional): Player's first name to narrow results
+- `team` (optional): Team abbreviation filter (e.g., "KC", "SF")
+- `position` (optional): Position filter (QB, RB, WR, TE, K, DST)
+
+**Usage:**
+- Find player by last name: `get_player_info_tool(last_name="Mahomes")`
+- Handle suffixes: `get_player_info_tool(last_name="Penix")` (finds "Michael Penix Jr.")
+- Narrow by first name: `get_player_info_tool(first_name="Patrick", last_name="Mahomes")`
+- Filter by team: `get_player_info_tool(last_name="Williams", team="NYJ")`
+
 ## 💡 Usage Examples
 
 ### Basic Draft Assistance
@@ -67,6 +139,8 @@ pytest
 Who should I pick next?
 Show me the best available quarterbacks
 What positions do I still need to fill?
+What do you know about Patrick Mahomes?
+Tell me about Penix (finds Michael Penix Jr.)
 ```
 
 ### Advanced Analysis
