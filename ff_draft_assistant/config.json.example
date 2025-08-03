@@ -1,0 +1,13 @@
+{
+  "google_sheets": {
+    "default_sheet_id": "your_google_sheet_id_here",
+    "default_range": "Draft!A1:V24"
+  },
+  "draft": {
+    "owner_name": "YourName"
+  },
+  "cache": {
+    "rankings_cache_hours": 24,
+    "draft_cache_minutes": 5
+  }
+}

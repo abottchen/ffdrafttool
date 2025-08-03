@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(python -m pytest tests/models/test_player.py -v)",
+      "Bash(pip install:*)",
+      "Bash(python -m pytest tests/models/ -v)",
+      "Bash(python -m pytest tests/tools/test_mcp_tools.py::TestGetPlayerRankings::test_get_player_rankings_success -v)",
+      "Bash(python -m pytest tests/services/test_web_scraper.py -v)",
+      "Bash(python -m pytest tests/services/test_web_scraper.py::TestWebScrapers::test_fetch_page_retry_logic -v)",
+      "Bash(python -m pytest tests/models/test_roster_rules.py -v)",
+      "Bash(python -m pytest tests/models/test_team_analysis.py -v)",
+      "Bash(python -m pytest tests/models/test_team_analysis_strategy.py -v)",
+      "Bash(python:*)",
+      "mcp__fantasy-football-draft-assistant__read_draft_progress_tool",
+      "mcp__fantasy-football-draft-assistant__analyze_available_players_tool",
+      "mcp__fantasy-football-draft-assistant__get_player_rankings_tool",
+      "Bash(find:*)",
+      "Bash(mv:*)"
+    ],
+    "deny": []
+  }
+}
