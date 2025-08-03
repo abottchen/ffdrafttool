@@ -26,7 +26,7 @@ from tools.mcp_tools import (
 logging.basicConfig(
     level=logging.INFO,
     stream=sys.stderr,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger("fantasy-football-mcp")
 
@@ -36,10 +36,7 @@ mcp = FastMCP("Fantasy Football Draft Assistant")
 
 @mcp.tool()
 async def get_player_rankings_tool(
-    position: str = None,
-    limit: int = 20,
-    offset: int = 0,
-    force_refresh: bool = False
+    position: str = None, limit: int = 20, offset: int = 0, force_refresh: bool = False
 ) -> str:
     """
     Fetch current player rankings from all available fantasy football sources.
@@ -68,12 +65,16 @@ async def get_player_rankings_tool(
         limit = 50
         logger.warning("Limit capped at 50 to prevent token overflow")
 
-    logger.info(f"get_player_rankings called with position={position}, limit={limit}, offset={offset}, force_refresh={force_refresh}")
+    logger.info(
+        f"get_player_rankings called with position={position}, limit={limit}, offset={offset}, force_refresh={force_refresh}"
+    )
 
     try:
         # Get more data than needed for pagination (limit + offset + some buffer)
         fetch_limit = offset + limit + 50 if not position else None
-        result = await get_player_rankings(sources, position, fetch_limit, force_refresh)
+        result = await get_player_rankings(
+            sources, position, fetch_limit, force_refresh
+        )
 
         if result["success"]:
             players = result["aggregated"]["players"]
@@ -89,17 +90,17 @@ async def get_player_rankings_tool(
                 "success": True,
                 "aggregated": {
                     "players": paginated_players,
-                    "count": len(paginated_players)
+                    "count": len(paginated_players),
                 },
                 "pagination": {
                     "offset": offset,
                     "limit": limit,
                     "total_available": total_players,
                     "has_more": end_idx < total_players,
-                    "next_offset": end_idx if end_idx < total_players else None
+                    "next_offset": end_idx if end_idx < total_players else None,
                 },
                 "position": position,
-                "force_refresh": force_refresh
+                "force_refresh": force_refresh,
             }
 
             return json.dumps(paginated_result, indent=2)
@@ -115,7 +116,7 @@ async def get_player_rankings_tool(
 async def read_draft_progress_tool(
     sheet_id: str = DEFAULT_SHEET_ID,
     sheet_range: str = DEFAULT_SHEET_RANGE,
-    force_refresh: bool = False
+    force_refresh: bool = False,
 ) -> str:
     f"""
     **ALWAYS USE THIS TOOL FIRST** when the user asks about their draft, roster, or team needs.
@@ -143,7 +144,9 @@ async def read_draft_progress_tool(
     Returns:
         JSON string with current draft state, picks, and team information
     """
-    logger.info(f"read_draft_progress called with sheet_id={sheet_id}, range={sheet_range}, force_refresh={force_refresh}")
+    logger.info(
+        f"read_draft_progress called with sheet_id={sheet_id}, range={sheet_range}, force_refresh={force_refresh}"
+    )
 
     try:
         result = await read_draft_progress(sheet_id, sheet_range, force_refresh)
@@ -158,7 +161,7 @@ async def analyze_available_players_tool(
     draft_state: dict,
     position_filter: str = None,
     limit: int = 20,
-    force_refresh: bool = False
+    force_refresh: bool = False,
 ) -> str:
     f"""
     **USE THIS TOOL** to analyze available players and see detailed value metrics before making recommendations.
@@ -194,10 +197,14 @@ async def analyze_available_players_tool(
     Returns:
         JSON string with analyzed players, value metrics, and recommendations
     """
-    logger.info(f"analyze_available_players called with position_filter={position_filter}, limit={limit}, force_refresh={force_refresh}")
+    logger.info(
+        f"analyze_available_players called with position_filter={position_filter}, limit={limit}, force_refresh={force_refresh}"
+    )
 
     try:
-        result = await analyze_available_players(draft_state, position_filter, limit, force_refresh)
+        result = await analyze_available_players(
+            draft_state, position_filter, limit, force_refresh
+        )
         return json.dumps(result, indent=2)
     except Exception as e:
         logger.error(f"Error in analyze_available_players: {e}")
@@ -209,7 +216,7 @@ async def suggest_draft_pick_tool(
     draft_state: dict,
     strategy: str = "balanced",
     consider_bye_weeks: bool = True,
-    force_refresh: bool = False
+    force_refresh: bool = False,
 ) -> str:
     f"""
     **USE THIS TOOL** when the user asks for draft pick recommendations or "who should I pick".
@@ -242,10 +249,14 @@ async def suggest_draft_pick_tool(
     Returns:
         JSON string with primary recommendation, alternatives, and detailed reasoning
     """
-    logger.info(f"suggest_draft_pick called with strategy={strategy}, consider_bye_weeks={consider_bye_weeks}, force_refresh={force_refresh}")
+    logger.info(
+        f"suggest_draft_pick called with strategy={strategy}, consider_bye_weeks={consider_bye_weeks}, force_refresh={force_refresh}"
+    )
 
     try:
-        result = await suggest_draft_pick(draft_state, strategy, consider_bye_weeks, force_refresh)
+        result = await suggest_draft_pick(
+            draft_state, strategy, consider_bye_weeks, force_refresh
+        )
         return json.dumps(result, indent=2)
     except Exception as e:
         logger.error(f"Error in suggest_draft_pick: {e}")
@@ -264,6 +275,7 @@ def main():
     except Exception as e:
         logger.error(f"Server startup failed: {e}")
         import traceback
+
         traceback.print_exc()
         raise
 

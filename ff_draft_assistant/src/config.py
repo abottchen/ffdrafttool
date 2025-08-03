@@ -3,21 +3,22 @@ Configuration settings for the Fantasy Football Draft Assistant.
 """
 
 import json
-import os
 from pathlib import Path
+
 
 def load_config():
     """Load configuration from config.json file."""
     config_path = Path(__file__).parent.parent / "config.json"
-    
+
     if not config_path.exists():
         raise FileNotFoundError(
             f"Configuration file not found at {config_path}. "
             "Please copy config.json.example to config.json and update with your settings."
         )
-    
-    with open(config_path, 'r') as f:
+
+    with open(config_path, "r") as f:
         return json.load(f)
+
 
 # Load configuration
 _config = load_config()

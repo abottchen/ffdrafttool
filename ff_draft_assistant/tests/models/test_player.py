@@ -4,10 +4,7 @@ from src.models.player import InjuryStatus, Player, Position, RankingSource
 class TestPlayer:
     def test_player_creation(self):
         player = Player(
-            name="Christian McCaffrey",
-            position=Position.RB,
-            team="SF",
-            bye_week=9
+            name="Christian McCaffrey", position=Position.RB, team="SF", bye_week=9
         )
 
         assert player.name == "Christian McCaffrey"
@@ -23,17 +20,14 @@ class TestPlayer:
             position=Position.WR,
             team="MIN",
             bye_week=13,
-            injury_status=InjuryStatus.QUESTIONABLE
+            injury_status=InjuryStatus.QUESTIONABLE,
         )
 
         assert player.injury_status == InjuryStatus.QUESTIONABLE
 
     def test_add_ranking(self):
         player = Player(
-            name="Josh Allen",
-            position=Position.QB,
-            team="BUF",
-            bye_week=13
+            name="Josh Allen", position=Position.QB, team="BUF", bye_week=13
         )
 
         player.add_ranking(RankingSource.ESPN, 3, 98.5)
@@ -44,10 +38,7 @@ class TestPlayer:
 
     def test_average_rank(self):
         player = Player(
-            name="Tyreek Hill",
-            position=Position.WR,
-            team="MIA",
-            bye_week=10
+            name="Tyreek Hill", position=Position.WR, team="MIA", bye_week=10
         )
 
         player.add_ranking(RankingSource.ESPN, 5, 95.0)
@@ -58,20 +49,14 @@ class TestPlayer:
 
     def test_average_rank_no_rankings(self):
         player = Player(
-            name="Rookie Player",
-            position=Position.RB,
-            team="JAX",
-            bye_week=9
+            name="Rookie Player", position=Position.RB, team="JAX", bye_week=9
         )
 
         assert player.average_rank is None
 
     def test_average_score(self):
         player = Player(
-            name="Travis Kelce",
-            position=Position.TE,
-            team="KC",
-            bye_week=10
+            name="Travis Kelce", position=Position.TE, team="KC", bye_week=10
         )
 
         player.add_ranking(RankingSource.ESPN, 10, 88.0)
@@ -85,7 +70,7 @@ class TestPlayer:
             position=Position.WR,
             team="DAL",
             bye_week=7,
-            injury_status=InjuryStatus.HEALTHY
+            injury_status=InjuryStatus.HEALTHY,
         )
 
         injured_player = Player(
@@ -93,7 +78,7 @@ class TestPlayer:
             position=Position.RB,
             team="NYG",
             bye_week=13,
-            injury_status=InjuryStatus.OUT
+            injury_status=InjuryStatus.OUT,
         )
 
         assert not healthy_player.is_injured
@@ -101,10 +86,7 @@ class TestPlayer:
 
     def test_player_str_representation(self):
         player = Player(
-            name="Stefon Diggs",
-            position=Position.WR,
-            team="BUF",
-            bye_week=13
+            name="Stefon Diggs", position=Position.WR, team="BUF", bye_week=13
         )
         player.add_ranking(RankingSource.ESPN, 8, 92.0)
 
@@ -115,36 +97,22 @@ class TestPlayer:
 
     def test_player_equality(self):
         player1 = Player(
-            name="Patrick Mahomes",
-            position=Position.QB,
-            team="KC",
-            bye_week=10
+            name="Patrick Mahomes", position=Position.QB, team="KC", bye_week=10
         )
 
         player2 = Player(
-            name="Patrick Mahomes",
-            position=Position.QB,
-            team="KC",
-            bye_week=10
+            name="Patrick Mahomes", position=Position.QB, team="KC", bye_week=10
         )
 
         player3 = Player(
-            name="Lamar Jackson",
-            position=Position.QB,
-            team="BAL",
-            bye_week=13
+            name="Lamar Jackson", position=Position.QB, team="BAL", bye_week=13
         )
 
         assert player1 == player2
         assert player1 != player3
 
     def test_update_injury_status(self):
-        player = Player(
-            name="Joe Mixon",
-            position=Position.RB,
-            team="CIN",
-            bye_week=7
-        )
+        player = Player(name="Joe Mixon", position=Position.RB, team="CIN", bye_week=7)
 
         assert player.injury_status == InjuryStatus.HEALTHY
 
@@ -157,7 +125,7 @@ class TestPlayer:
             position=Position.WR,
             team="DAL",
             bye_week=7,
-            injury_status=InjuryStatus.PROBABLE
+            injury_status=InjuryStatus.PROBABLE,
         )
         player.add_ranking(RankingSource.ESPN, 4, 96.0)
 
@@ -177,9 +145,7 @@ class TestPlayer:
             "team": "TEN",
             "bye_week": 6,
             "injury_status": "HEALTHY",
-            "rankings": {
-                "ESPN": {"rank": 15, "score": 85.0}
-            }
+            "rankings": {"ESPN": {"rank": 15, "score": 85.0}},
         }
 
         player = Player.from_dict(player_data)

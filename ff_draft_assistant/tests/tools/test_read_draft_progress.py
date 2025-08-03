@@ -11,8 +11,10 @@ class TestReadDraftProgress:
         """Test read_draft_progress tool fails when Google API dependencies are missing"""
 
         # Mock the GoogleSheetsProvider to fail with ImportError
-        with patch('src.tools.mcp_tools.GoogleSheetsProvider') as mock_google_provider:
-            mock_google_provider.side_effect = ImportError("Google API dependencies not available. Install with: pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib")
+        with patch("src.tools.mcp_tools.GoogleSheetsProvider") as mock_google_provider:
+            mock_google_provider.side_effect = ImportError(
+                "Google API dependencies not available. Install with: pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib"
+            )
 
             result = await read_draft_progress("test_sheet_123", "Draft!A1:Z100")
 
@@ -34,8 +36,10 @@ class TestReadDraftProgress:
     async def test_read_draft_progress_missing_credentials(self):
         """Test read_draft_progress tool fails when credentials are missing"""
 
-        with patch('src.tools.mcp_tools.GoogleSheetsProvider') as mock_google_provider:
-            mock_google_provider.side_effect = FileNotFoundError("Google credentials file not found: credentials.json")
+        with patch("src.tools.mcp_tools.GoogleSheetsProvider") as mock_google_provider:
+            mock_google_provider.side_effect = FileNotFoundError(
+                "Google credentials file not found: credentials.json"
+            )
 
             result = await read_draft_progress("test_sheet_123", "Draft!A1:Z100")
 
@@ -56,10 +60,14 @@ class TestReadDraftProgress:
         # Mock successful provider creation but fail on data access
         mock_provider = AsyncMock()
         mock_service = AsyncMock()
-        mock_service.read_draft_data.side_effect = Exception("HTTP 403: Forbidden - Insufficient permissions")
+        mock_service.read_draft_data.side_effect = Exception(
+            "HTTP 403: Forbidden - Insufficient permissions"
+        )
 
-        with patch('src.tools.mcp_tools.GoogleSheetsProvider', return_value=mock_provider):
-            with patch('src.tools.mcp_tools.SheetsService', return_value=mock_service):
+        with patch(
+            "src.tools.mcp_tools.GoogleSheetsProvider", return_value=mock_provider
+        ):
+            with patch("src.tools.mcp_tools.SheetsService", return_value=mock_service):
 
                 result = await read_draft_progress("forbidden_sheet", "Draft!A1:Z100")
 
@@ -70,7 +78,10 @@ class TestReadDraftProgress:
                 # Should provide specific guidance for permission errors
                 troubleshooting = result["troubleshooting"]
                 assert "permission" in troubleshooting["solution"].lower()
-                assert any("shared with your Google account" in step for step in troubleshooting["next_steps"])
+                assert any(
+                    "shared with your Google account" in step
+                    for step in troubleshooting["next_steps"]
+                )
 
     @pytest.mark.asyncio
     async def test_read_draft_progress_with_google_sheets_provider(self):
@@ -90,7 +101,7 @@ class TestReadDraftProgress:
                     "team": "Cock N Bulls",
                     "owner": "Levi",
                     "player_name": "Isiah Pacheco   KC",
-                    "position": "RB"
+                    "position": "RB",
                 },
                 {
                     "pick_number": 2,
@@ -99,28 +110,48 @@ class TestReadDraftProgress:
                     "team": "Jodi's Broncos",
                     "owner": "Jodi",
                     "player_name": "Derrick Henry   BAL",
-                    "position": "RB"
-                }
+                    "position": "RB",
+                },
             ],
             "current_pick": 3,
             "teams": [
-                {"team_number": 1, "owner": "Levi", "team_name": "Cock N Bulls", "player_col": 1, "position_col": 2},
-                {"team_number": 2, "owner": "Jodi", "team_name": "Jodi's Broncos", "player_col": 3, "position_col": 4}
+                {
+                    "team_number": 1,
+                    "owner": "Levi",
+                    "team_name": "Cock N Bulls",
+                    "player_col": 1,
+                    "position_col": 2,
+                },
+                {
+                    "team_number": 2,
+                    "owner": "Jodi",
+                    "team_name": "Jodi's Broncos",
+                    "player_col": 3,
+                    "position_col": 4,
+                },
             ],
-            "current_team": {"team_number": 3, "owner": "Scott", "team_name": "Royal Chiefs", "player_col": 5, "position_col": 6},
+            "current_team": {
+                "team_number": 3,
+                "owner": "Scott",
+                "team_name": "Royal Chiefs",
+                "player_col": 5,
+                "position_col": 6,
+            },
             "draft_state": {
                 "total_picks": 2,
                 "total_teams": 10,
                 "completed_rounds": 1,
-                "current_round": 1
+                "current_round": 1,
             },
-            "available_players": []
+            "available_players": [],
         }
 
         mock_service.read_draft_data.return_value = mock_draft_data
 
-        with patch('src.tools.mcp_tools.GoogleSheetsProvider', return_value=mock_provider):
-            with patch('src.tools.mcp_tools.SheetsService', return_value=mock_service):
+        with patch(
+            "src.tools.mcp_tools.GoogleSheetsProvider", return_value=mock_provider
+        ):
+            with patch("src.tools.mcp_tools.SheetsService", return_value=mock_service):
 
                 result = await read_draft_progress("real_sheet_123", "Draft!A1:D100")
 
@@ -145,7 +176,9 @@ class TestReadDraftProgress:
                 assert "position" in first_pick
 
                 # Verify the service was called correctly with force_refresh parameter
-                mock_service.read_draft_data.assert_called_once_with("real_sheet_123", "Draft!A1:D100", False)
+                mock_service.read_draft_data.assert_called_once_with(
+                    "real_sheet_123", "Draft!A1:D100", False
+                )
 
     @pytest.mark.asyncio
     async def test_read_draft_progress_sheet_not_found(self):
@@ -153,10 +186,14 @@ class TestReadDraftProgress:
 
         mock_provider = AsyncMock()
         mock_service = AsyncMock()
-        mock_service.read_draft_data.side_effect = Exception("HTTP 404: Not Found - The requested sheet was not found")
+        mock_service.read_draft_data.side_effect = Exception(
+            "HTTP 404: Not Found - The requested sheet was not found"
+        )
 
-        with patch('src.tools.mcp_tools.GoogleSheetsProvider', return_value=mock_provider):
-            with patch('src.tools.mcp_tools.SheetsService', return_value=mock_service):
+        with patch(
+            "src.tools.mcp_tools.GoogleSheetsProvider", return_value=mock_provider
+        ):
+            with patch("src.tools.mcp_tools.SheetsService", return_value=mock_service):
 
                 result = await read_draft_progress("nonexistent_sheet", "Draft!A1:Z100")
 
@@ -167,7 +204,9 @@ class TestReadDraftProgress:
                 # Should provide specific guidance for not found errors
                 troubleshooting = result["troubleshooting"]
                 assert "not found" in troubleshooting["solution"].lower()
-                assert any("Google Sheet ID" in step for step in troubleshooting["next_steps"])
+                assert any(
+                    "Google Sheet ID" in step for step in troubleshooting["next_steps"]
+                )
 
     @pytest.mark.asyncio
     async def test_read_draft_progress_authentication_error(self):
@@ -175,10 +214,14 @@ class TestReadDraftProgress:
 
         mock_provider = AsyncMock()
         mock_service = AsyncMock()
-        mock_service.read_draft_data.side_effect = Exception("Authentication failed: Invalid credentials")
+        mock_service.read_draft_data.side_effect = Exception(
+            "Authentication failed: Invalid credentials"
+        )
 
-        with patch('src.tools.mcp_tools.GoogleSheetsProvider', return_value=mock_provider):
-            with patch('src.tools.mcp_tools.SheetsService', return_value=mock_service):
+        with patch(
+            "src.tools.mcp_tools.GoogleSheetsProvider", return_value=mock_provider
+        ):
+            with patch("src.tools.mcp_tools.SheetsService", return_value=mock_service):
 
                 result = await read_draft_progress("test_sheet", "Draft!A1:Z100")
 
@@ -189,4 +232,6 @@ class TestReadDraftProgress:
                 # Should provide specific guidance for auth errors
                 troubleshooting = result["troubleshooting"]
                 assert "authentication" in troubleshooting["solution"].lower()
-                assert any("token.json" in step for step in troubleshooting["next_steps"])
+                assert any(
+                    "token.json" in step for step in troubleshooting["next_steps"]
+                )

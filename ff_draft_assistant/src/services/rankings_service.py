@@ -28,7 +28,7 @@ class RankingsService:
         self,
         sources: List[str],
         position: Optional[str] = None,
-        limit: Optional[int] = None
+        limit: Optional[int] = None,
     ) -> List[Player]:
         """Get aggregated rankings from specified sources"""
         all_players: Dict[str, Player] = {}
@@ -72,7 +72,7 @@ class RankingsService:
         # Sort by average rank
         sorted_players = sorted(
             all_players.values(),
-            key=lambda p: p.average_rank if p.average_rank else float('inf')
+            key=lambda p: p.average_rank if p.average_rank else float("inf"),
         )
 
         # Apply limit if specified

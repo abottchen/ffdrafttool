@@ -28,36 +28,36 @@ class TestAnalyzeAvailablePlayers:
                     "round": 1,
                     "team": "Team Alpha",
                     "player": "Christian McCaffrey",
-                    "position": "RB"
+                    "position": "RB",
                 },
                 {
                     "pick_number": 2,
                     "round": 1,
                     "team": "Team Beta",
                     "player": "Tyreek Hill",
-                    "position": "WR"
+                    "position": "WR",
                 },
                 {
                     "pick_number": 3,
                     "round": 1,
                     "team": "Team Gamma",
                     "player": "Justin Jefferson",
-                    "position": "WR"
+                    "position": "WR",
                 },
                 {
                     "pick_number": 4,
                     "round": 1,
                     "team": "Team Delta",
                     "player": "Jahmyr Gibbs DET",
-                    "position": "RB"
+                    "position": "RB",
                 },
                 {
                     "pick_number": 5,
                     "round": 1,
                     "team": "Team Echo",
                     "player": "Mike Williams NYJ",
-                    "position": "WR"
-                }
+                    "position": "WR",
+                },
             ],
             "draft_state": {
                 "total_picks": 5,
@@ -67,9 +67,9 @@ class TestAnalyzeAvailablePlayers:
                 "draft_rules": {
                     "auction_rounds": [1, 2, 3],
                     "keeper_round": 4,
-                    "snake_start_round": 5
-                }
-            }
+                    "snake_start_round": 5,
+                },
+            },
         }
 
     @pytest.fixture
@@ -87,7 +87,7 @@ class TestAnalyzeAvailablePlayers:
                         "average_rank": 1.0,
                         "average_score": 95.5,
                         "rankings": {"fantasysharks": {"rank": 1, "score": 95.5}},
-                        "commentary": "Elite RB1 with high ceiling"
+                        "commentary": "Elite RB1 with high ceiling",
                     },
                     {
                         "name": "Derrick Henry",
@@ -97,7 +97,7 @@ class TestAnalyzeAvailablePlayers:
                         "average_rank": 8.0,
                         "average_score": 88.2,
                         "rankings": {"fantasysharks": {"rank": 8, "score": 88.2}},
-                        "commentary": "Consistent goal line back"
+                        "commentary": "Consistent goal line back",
                     },
                     {
                         "name": "Cooper Kupp",
@@ -107,7 +107,7 @@ class TestAnalyzeAvailablePlayers:
                         "average_rank": 15.0,
                         "average_score": 82.1,
                         "rankings": {"fantasysharks": {"rank": 15, "score": 82.1}},
-                        "commentary": "High target share WR"
+                        "commentary": "High target share WR",
                     },
                     {
                         "name": "Josh Allen",
@@ -117,7 +117,7 @@ class TestAnalyzeAvailablePlayers:
                         "average_rank": 25.0,
                         "average_score": 78.5,
                         "rankings": {"fantasysharks": {"rank": 25, "score": 78.5}},
-                        "commentary": "Dual threat QB1"
+                        "commentary": "Dual threat QB1",
                     },
                     {
                         "name": "Travis Kelce",
@@ -127,7 +127,7 @@ class TestAnalyzeAvailablePlayers:
                         "average_rank": 35.0,
                         "average_score": 75.2,
                         "rankings": {"fantasysharks": {"rank": 35, "score": 75.2}},
-                        "commentary": "Elite TE with consistent targets"
+                        "commentary": "Elite TE with consistent targets",
                     },
                     {
                         "name": "Jahmyr Gibbs",
@@ -137,7 +137,7 @@ class TestAnalyzeAvailablePlayers:
                         "average_rank": 12.0,
                         "average_score": 85.3,
                         "rankings": {"fantasysharks": {"rank": 12, "score": 85.3}},
-                        "commentary": "Explosive dual-threat RB"
+                        "commentary": "Explosive dual-threat RB",
                     },
                     {
                         "name": "Mike Williams",
@@ -147,7 +147,7 @@ class TestAnalyzeAvailablePlayers:
                         "average_rank": 45.0,
                         "average_score": 72.1,
                         "rankings": {"fantasysharks": {"rank": 45, "score": 72.1}},
-                        "commentary": "Big-play receiver when healthy"
+                        "commentary": "Big-play receiver when healthy",
                     },
                     {
                         "name": "Mike Williams",
@@ -157,17 +157,21 @@ class TestAnalyzeAvailablePlayers:
                         "average_rank": 95.0,
                         "average_score": 55.5,
                         "rankings": {"fantasysharks": {"rank": 95, "score": 55.5}},
-                        "commentary": "Deep threat option"
-                    }
+                        "commentary": "Deep threat option",
+                    },
                 ]
-            }
+            },
         }
 
     @pytest.mark.asyncio
-    async def test_analyze_basic_functionality(self, sample_draft_state, sample_rankings_response):
+    async def test_analyze_basic_functionality(
+        self, sample_draft_state, sample_rankings_response
+    ):
         """Test basic functionality of analyze_available_players"""
 
-        with patch("tools.mcp_tools.get_player_rankings", new_callable=AsyncMock) as mock_rankings:
+        with patch(
+            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+        ) as mock_rankings:
             mock_rankings.return_value = sample_rankings_response
 
             result = await analyze_available_players(sample_draft_state)
@@ -183,7 +187,10 @@ class TestAnalyzeAvailablePlayers:
             analysis = result["analysis"]
             assert analysis["current_round"] == 1
             assert analysis["round_type"] == "auction"
-            assert "elite talent" in analysis["strategy_note"].lower() or "scarcity" in analysis["strategy_note"].lower()
+            assert (
+                "elite talent" in analysis["strategy_note"].lower()
+                or "scarcity" in analysis["strategy_note"].lower()
+            )
 
             # Verify players are filtered (McCaffrey should be excluded as drafted)
             players = result["players"]
@@ -199,22 +206,32 @@ class TestAnalyzeAvailablePlayers:
                 assert "tier" in player["value_metrics"]
 
     @pytest.mark.asyncio
-    async def test_position_filtering(self, sample_draft_state, sample_rankings_response):
+    async def test_position_filtering(
+        self, sample_draft_state, sample_rankings_response
+    ):
         """Test position filtering functionality"""
 
         # Create RB-only response
         rb_only_response = {
             "success": True,
             "aggregated": {
-                "players": [p for p in sample_rankings_response["aggregated"]["players"] if p["position"] == "RB"]
-            }
+                "players": [
+                    p
+                    for p in sample_rankings_response["aggregated"]["players"]
+                    if p["position"] == "RB"
+                ]
+            },
         }
 
-        with patch("tools.mcp_tools.get_player_rankings", new_callable=AsyncMock) as mock_rankings:
+        with patch(
+            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+        ) as mock_rankings:
             mock_rankings.return_value = rb_only_response
 
             # Test RB filter
-            result = await analyze_available_players(sample_draft_state, position_filter="RB")
+            result = await analyze_available_players(
+                sample_draft_state, position_filter="RB"
+            )
 
             assert result["success"] is True
             players = result["players"]
@@ -228,26 +245,36 @@ class TestAnalyzeAvailablePlayers:
                 sources=["fantasysharks", "espn", "yahoo", "fantasypros"],
                 position="RB",
                 limit=None,
-                force_refresh=False
+                force_refresh=False,
             )
 
     @pytest.mark.asyncio
-    async def test_position_filtering_token_efficiency(self, sample_draft_state, sample_rankings_response):
+    async def test_position_filtering_token_efficiency(
+        self, sample_draft_state, sample_rankings_response
+    ):
         """Test that position filtering improves token efficiency by reducing response size"""
 
         # Create position-specific responses
         qb_only_response = {
             "success": True,
             "aggregated": {
-                "players": [p for p in sample_rankings_response["aggregated"]["players"] if p["position"] == "QB"]
-            }
+                "players": [
+                    p
+                    for p in sample_rankings_response["aggregated"]["players"]
+                    if p["position"] == "QB"
+                ]
+            },
         }
 
         rb_only_response = {
             "success": True,
             "aggregated": {
-                "players": [p for p in sample_rankings_response["aggregated"]["players"] if p["position"] == "RB"]
-            }
+                "players": [
+                    p
+                    for p in sample_rankings_response["aggregated"]["players"]
+                    if p["position"] == "RB"
+                ]
+            },
         }
 
         def mock_get_rankings(*args, **kwargs):
@@ -260,18 +287,28 @@ class TestAnalyzeAvailablePlayers:
             else:
                 return sample_rankings_response  # All positions
 
-        with patch("tools.mcp_tools.get_player_rankings", new_callable=AsyncMock, side_effect=mock_get_rankings) as mock_rankings:
+        with patch(
+            "tools.mcp_tools.get_player_rankings",
+            new_callable=AsyncMock,
+            side_effect=mock_get_rankings,
+        ) as mock_rankings:
 
             # Test without position filter (all positions)
-            result_all = await analyze_available_players(sample_draft_state, position_filter=None, limit=50)
+            result_all = await analyze_available_players(
+                sample_draft_state, position_filter=None, limit=50
+            )
             assert result_all["success"] is True
 
             # Test with QB filter only
-            result_qb = await analyze_available_players(sample_draft_state, position_filter="QB", limit=50)
+            result_qb = await analyze_available_players(
+                sample_draft_state, position_filter="QB", limit=50
+            )
             assert result_qb["success"] is True
 
             # Test with RB filter only
-            result_rb = await analyze_available_players(sample_draft_state, position_filter="RB", limit=50)
+            result_rb = await analyze_available_players(
+                sample_draft_state, position_filter="RB", limit=50
+            )
             assert result_rb["success"] is True
 
             # Verify position filtering works correctly
@@ -293,13 +330,18 @@ class TestAnalyzeAvailablePlayers:
 
             # Convert to JSON strings to estimate token usage
             import json
+
             json_all = json.dumps(result_all)
             json_qb = json.dumps(result_qb)
             json_rb = json.dumps(result_rb)
 
             # Position-filtered responses should be smaller (more token efficient)
-            assert len(json_qb) <= len(json_all), "QB filter should reduce response size"
-            assert len(json_rb) <= len(json_all), "RB filter should reduce response size"
+            assert len(json_qb) <= len(
+                json_all
+            ), "QB filter should reduce response size"
+            assert len(json_rb) <= len(
+                json_all
+            ), "RB filter should reduce response size"
 
             # Verify that get_player_rankings was called with correct position filters
             call_args_list = mock_rankings.call_args_list
@@ -308,24 +350,30 @@ class TestAnalyzeAvailablePlayers:
             # Verify the position parameter was passed correctly in each call
             all_call, qb_call, rb_call = call_args_list
             assert all_call.kwargs.get("position") is None  # All positions
-            assert qb_call.kwargs.get("position") == "QB"   # QB only
-            assert rb_call.kwargs.get("position") == "RB"   # RB only
+            assert qb_call.kwargs.get("position") == "QB"  # QB only
+            assert rb_call.kwargs.get("position") == "RB"  # RB only
 
     @pytest.mark.asyncio
     async def test_invalid_position_filter(self, sample_draft_state):
         """Test handling of invalid position filter"""
 
-        result = await analyze_available_players(sample_draft_state, position_filter="INVALID")
+        result = await analyze_available_players(
+            sample_draft_state, position_filter="INVALID"
+        )
 
         assert result["success"] is False
         assert "Invalid position filter" in result["error"]
         assert "Valid positions: QB, RB, WR, TE, K, DST" in result["error"]
 
     @pytest.mark.asyncio
-    async def test_limit_functionality(self, sample_draft_state, sample_rankings_response):
+    async def test_limit_functionality(
+        self, sample_draft_state, sample_rankings_response
+    ):
         """Test limit parameter functionality"""
 
-        with patch("tools.mcp_tools.get_player_rankings", new_callable=AsyncMock) as mock_rankings:
+        with patch(
+            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+        ) as mock_rankings:
             mock_rankings.return_value = sample_rankings_response
 
             result = await analyze_available_players(sample_draft_state, limit=2)
@@ -336,13 +384,20 @@ class TestAnalyzeAvailablePlayers:
             # Should be sorted by value (highest first)
             players = result["players"]
             if len(players) >= 2:
-                assert players[0]["value_metrics"]["overall_value"] >= players[1]["value_metrics"]["overall_value"]
+                assert (
+                    players[0]["value_metrics"]["overall_value"]
+                    >= players[1]["value_metrics"]["overall_value"]
+                )
 
     @pytest.mark.asyncio
-    async def test_value_metrics_calculation(self, sample_draft_state, sample_rankings_response):
+    async def test_value_metrics_calculation(
+        self, sample_draft_state, sample_rankings_response
+    ):
         """Test value metrics are calculated correctly"""
 
-        with patch("tools.mcp_tools.get_player_rankings", new_callable=AsyncMock) as mock_rankings:
+        with patch(
+            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+        ) as mock_rankings:
             mock_rankings.return_value = sample_rankings_response
 
             result = await analyze_available_players(sample_draft_state)
@@ -369,10 +424,14 @@ class TestAnalyzeAvailablePlayers:
                 assert value_metrics["positional_rank"] >= 1
 
     @pytest.mark.asyncio
-    async def test_scarcity_analysis(self, sample_draft_state, sample_rankings_response):
+    async def test_scarcity_analysis(
+        self, sample_draft_state, sample_rankings_response
+    ):
         """Test scarcity analysis calculations"""
 
-        with patch("tools.mcp_tools.get_player_rankings", new_callable=AsyncMock) as mock_rankings:
+        with patch(
+            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+        ) as mock_rankings:
             mock_rankings.return_value = sample_rankings_response
 
             result = await analyze_available_players(sample_draft_state)
@@ -396,10 +455,14 @@ class TestAnalyzeAvailablePlayers:
                 assert isinstance(scarcity["is_positional_run"], bool)
 
     @pytest.mark.asyncio
-    async def test_position_breakdown(self, sample_draft_state, sample_rankings_response):
+    async def test_position_breakdown(
+        self, sample_draft_state, sample_rankings_response
+    ):
         """Test position breakdown functionality"""
 
-        with patch("tools.mcp_tools.get_player_rankings", new_callable=AsyncMock) as mock_rankings:
+        with patch(
+            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+        ) as mock_rankings:
             mock_rankings.return_value = sample_rankings_response
 
             result = await analyze_available_players(sample_draft_state)
@@ -427,7 +490,9 @@ class TestAnalyzeAvailablePlayers:
     async def test_recommendations(self, sample_draft_state, sample_rankings_response):
         """Test recommendations generation"""
 
-        with patch("tools.mcp_tools.get_player_rankings", new_callable=AsyncMock) as mock_rankings:
+        with patch(
+            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+        ) as mock_rankings:
             mock_rankings.return_value = sample_rankings_response
 
             result = await analyze_available_players(sample_draft_state)
@@ -446,33 +511,47 @@ class TestAnalyzeAvailablePlayers:
             assert isinstance(recommendations["tier_breaks"], list)
 
     @pytest.mark.asyncio
-    async def test_round_type_detection(self, sample_draft_state, sample_rankings_response):
+    async def test_round_type_detection(
+        self, sample_draft_state, sample_rankings_response
+    ):
         """Test different round types are detected correctly"""
 
         # Test auction round
-        with patch("tools.mcp_tools.get_player_rankings", new_callable=AsyncMock) as mock_rankings:
+        with patch(
+            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+        ) as mock_rankings:
             mock_rankings.return_value = sample_rankings_response
 
             result = await analyze_available_players(sample_draft_state)
             assert result["analysis"]["round_type"] == "auction"
-            assert "elite talent" in result["analysis"]["strategy_note"].lower() or "scarcity" in result["analysis"]["strategy_note"].lower()
+            assert (
+                "elite talent" in result["analysis"]["strategy_note"].lower()
+                or "scarcity" in result["analysis"]["strategy_note"].lower()
+            )
 
         # Test keeper round
         draft_state_keeper = sample_draft_state.copy()
         draft_state_keeper["draft_state"]["current_round"] = 4
 
-        with patch("tools.mcp_tools.get_player_rankings", new_callable=AsyncMock) as mock_rankings:
+        with patch(
+            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+        ) as mock_rankings:
             mock_rankings.return_value = sample_rankings_response
 
             result = await analyze_available_players(draft_state_keeper)
             assert result["analysis"]["round_type"] == "keeper"
-            assert "value" in result["analysis"]["strategy_note"].lower() or "opportunity" in result["analysis"]["strategy_note"].lower()
+            assert (
+                "value" in result["analysis"]["strategy_note"].lower()
+                or "opportunity" in result["analysis"]["strategy_note"].lower()
+            )
 
         # Test snake round
         draft_state_snake = sample_draft_state.copy()
         draft_state_snake["draft_state"]["current_round"] = 5
 
-        with patch("tools.mcp_tools.get_player_rankings", new_callable=AsyncMock) as mock_rankings:
+        with patch(
+            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+        ) as mock_rankings:
             mock_rankings.return_value = sample_rankings_response
 
             result = await analyze_available_players(draft_state_snake)
@@ -480,10 +559,14 @@ class TestAnalyzeAvailablePlayers:
             assert "snake" in result["analysis"]["strategy_note"].lower()
 
     @pytest.mark.asyncio
-    async def test_drafted_player_filtering(self, sample_draft_state, sample_rankings_response):
+    async def test_drafted_player_filtering(
+        self, sample_draft_state, sample_rankings_response
+    ):
         """Test that drafted players are properly filtered out"""
 
-        with patch("tools.mcp_tools.get_player_rankings", new_callable=AsyncMock) as mock_rankings:
+        with patch(
+            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+        ) as mock_rankings:
             mock_rankings.return_value = sample_rankings_response
 
             result = await analyze_available_players(sample_draft_state)
@@ -493,15 +576,26 @@ class TestAnalyzeAvailablePlayers:
             player_names = [p["name"] for p in players]
 
             # Drafted players should not appear in available players (name-only checks)
-            simple_drafted_names = ["Christian McCaffrey", "Tyreek Hill", "Justin Jefferson", "Jahmyr Gibbs"]
+            simple_drafted_names = [
+                "Christian McCaffrey",
+                "Tyreek Hill",
+                "Justin Jefferson",
+                "Jahmyr Gibbs",
+            ]
             for drafted_name in simple_drafted_names:
-                assert drafted_name not in player_names, f"Drafted player {drafted_name} should not appear in available players"
+                assert (
+                    drafted_name not in player_names
+                ), f"Drafted player {drafted_name} should not appear in available players"
 
             # Special test for Mike Williams - NYJ version was drafted but PIT should be available
             mike_williams_players = [p for p in players if p["name"] == "Mike Williams"]
             # Should only have PIT Mike Williams since NYJ version was drafted
-            assert len(mike_williams_players) == 1, f"Expected 1 Mike Williams but found {len(mike_williams_players)}"
-            assert mike_williams_players[0]["team"] == "PIT", f"Expected PIT Mike Williams but found {mike_williams_players[0]['team']}"
+            assert (
+                len(mike_williams_players) == 1
+            ), f"Expected 1 Mike Williams but found {len(mike_williams_players)}"
+            assert (
+                mike_williams_players[0]["team"] == "PIT"
+            ), f"Expected PIT Mike Williams but found {mike_williams_players[0]['team']}"
 
     @pytest.mark.asyncio
     async def test_rankings_failure_handling(self, sample_draft_state):
@@ -509,10 +603,12 @@ class TestAnalyzeAvailablePlayers:
 
         failed_rankings_response = {
             "success": False,
-            "error": "Network error fetching rankings"
+            "error": "Network error fetching rankings",
         }
 
-        with patch("tools.mcp_tools.get_player_rankings", new_callable=AsyncMock) as mock_rankings:
+        with patch(
+            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+        ) as mock_rankings:
             mock_rankings.return_value = failed_rankings_response
 
             result = await analyze_available_players(sample_draft_state)
@@ -533,25 +629,31 @@ class TestAnalyzeAvailablePlayers:
                 "draft_rules": {
                     "auction_rounds": [1, 2, 3],
                     "keeper_round": 4,
-                    "snake_start_round": 5
-                }
-            }
+                    "snake_start_round": 5,
+                },
+            },
         }
 
-        with patch("tools.mcp_tools.get_player_rankings", new_callable=AsyncMock) as mock_rankings:
+        with patch(
+            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+        ) as mock_rankings:
             mock_rankings.return_value = sample_rankings_response
 
             result = await analyze_available_players(empty_draft_state)
 
             assert result["success"] is True
             # All players should be available since none are drafted
-            assert result["analysis"]["total_available"] == len(sample_rankings_response["aggregated"]["players"])
+            assert result["analysis"]["total_available"] == len(
+                sample_rankings_response["aggregated"]["players"]
+            )
 
     @pytest.mark.asyncio
     async def test_error_handling(self, sample_draft_state):
         """Test general error handling"""
 
-        with patch("tools.mcp_tools.get_player_rankings", new_callable=AsyncMock) as mock_rankings:
+        with patch(
+            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+        ) as mock_rankings:
             mock_rankings.side_effect = Exception("Unexpected error")
 
             result = await analyze_available_players(sample_draft_state)

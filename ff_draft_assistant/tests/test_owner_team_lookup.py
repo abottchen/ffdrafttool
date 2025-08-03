@@ -33,10 +33,10 @@ class TestOwnerTeamLookup:
                         "team": "TEST",
                         "rank": 1,
                         "score": 95,
-                        "bye_week": 8
+                        "bye_week": 8,
                     }
                 ]
-            }
+            },
         }
 
         # Draft state with multiple teams, including one owned by "Adam"
@@ -46,16 +46,17 @@ class TestOwnerTeamLookup:
                 {"team_name": "Niner Nation", "owner": "John Smith"},
                 {"team_name": "Lambs", "owner": "Adam"},  # This should be found
                 {"team_name": "Eagles", "owner": "Jane Doe"},
-            ]
+            ],
         }
 
-        with patch('tools.mcp_tools.get_player_rankings', new_callable=AsyncMock) as mock_rankings:
-            with patch('config.USER_OWNER_NAME', 'Adam'):
+        with patch(
+            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+        ) as mock_rankings:
+            with patch("config.USER_OWNER_NAME", "Adam"):
                 mock_rankings.return_value = mock_rankings_response
 
                 result = await analyze_available_players(
-                    draft_state=draft_state,
-                    limit=5
+                    draft_state=draft_state, limit=5
                 )
 
         # Should identify "Lambs" as the team being analyzed
@@ -76,10 +77,10 @@ class TestOwnerTeamLookup:
                         "team": "TEST",
                         "rank": 1,
                         "score": 95,
-                        "bye_week": 8
+                        "bye_week": 8,
                     }
                 ]
-            }
+            },
         }
 
         # Draft state where owner name has extra formatting
@@ -87,18 +88,22 @@ class TestOwnerTeamLookup:
             "picks": [],
             "teams": [
                 {"team_name": "Team One", "owner": "John Smith"},
-                {"team_name": "Team Two", "owner": "Adam Johnson"},  # Should match "Adam"
+                {
+                    "team_name": "Team Two",
+                    "owner": "Adam Johnson",
+                },  # Should match "Adam"
                 {"team_name": "Team Three", "owner": "Jane Doe"},
-            ]
+            ],
         }
 
-        with patch('tools.mcp_tools.get_player_rankings', new_callable=AsyncMock) as mock_rankings:
-            with patch('config.USER_OWNER_NAME', 'Adam'):
+        with patch(
+            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+        ) as mock_rankings:
+            with patch("config.USER_OWNER_NAME", "Adam"):
                 mock_rankings.return_value = mock_rankings_response
 
                 result = await analyze_available_players(
-                    draft_state=draft_state,
-                    limit=5
+                    draft_state=draft_state, limit=5
                 )
 
         # Should identify "Team Two" as the team being analyzed
@@ -119,29 +124,33 @@ class TestOwnerTeamLookup:
                         "team": "TEST",
                         "rank": 1,
                         "score": 95,
-                        "bye_week": 8
+                        "bye_week": 8,
                     }
                 ]
-            }
+            },
         }
 
         # Draft state where no team is owned by "Adam"
         draft_state = {
             "picks": [],
             "teams": [
-                {"team_name": "First Team", "owner": "John Smith"},  # Should fall back to this
+                {
+                    "team_name": "First Team",
+                    "owner": "John Smith",
+                },  # Should fall back to this
                 {"team_name": "Second Team", "owner": "Jane Doe"},
                 {"team_name": "Third Team", "owner": "Bob Wilson"},
-            ]
+            ],
         }
 
-        with patch('tools.mcp_tools.get_player_rankings', new_callable=AsyncMock) as mock_rankings:
-            with patch('config.USER_OWNER_NAME', 'Adam'):
+        with patch(
+            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+        ) as mock_rankings:
+            with patch("config.USER_OWNER_NAME", "Adam"):
                 mock_rankings.return_value = mock_rankings_response
 
                 result = await analyze_available_players(
-                    draft_state=draft_state,
-                    limit=5
+                    draft_state=draft_state, limit=5
                 )
 
         # Should provide general analysis instead of picking arbitrary team
@@ -162,10 +171,10 @@ class TestOwnerTeamLookup:
                         "team": "TEST",
                         "rank": 1,
                         "score": 95,
-                        "bye_week": 8
+                        "bye_week": 8,
                     }
                 ]
-            }
+            },
         }
 
         # Draft state with different case
@@ -173,18 +182,22 @@ class TestOwnerTeamLookup:
             "picks": [],
             "teams": [
                 {"team_name": "Team Alpha", "owner": "john smith"},
-                {"team_name": "Team Beta", "owner": "ADAM"},  # Should match despite different case
+                {
+                    "team_name": "Team Beta",
+                    "owner": "ADAM",
+                },  # Should match despite different case
                 {"team_name": "Team Gamma", "owner": "Jane Doe"},
-            ]
+            ],
         }
 
-        with patch('tools.mcp_tools.get_player_rankings', new_callable=AsyncMock) as mock_rankings:
-            with patch('config.USER_OWNER_NAME', 'adam'):
+        with patch(
+            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+        ) as mock_rankings:
+            with patch("config.USER_OWNER_NAME", "adam"):
                 mock_rankings.return_value = mock_rankings_response
 
                 result = await analyze_available_players(
-                    draft_state=draft_state,
-                    limit=5
+                    draft_state=draft_state, limit=5
                 )
 
         # Should match "ADAM" despite case difference

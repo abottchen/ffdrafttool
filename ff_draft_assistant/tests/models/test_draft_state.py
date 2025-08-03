@@ -53,7 +53,7 @@ class TestTeam:
             Position.WR: 4,
             Position.TE: 2,
             Position.DST: 1,
-            Position.K: 1
+            Position.K: 1,
         }
 
         needed = team.get_positions_needed(roster_requirements)
@@ -74,7 +74,7 @@ class TestDraftPick:
             round_number=1,
             team_name="Team Echo",
             player=player,
-            timestamp=datetime.now()
+            timestamp=datetime.now(),
         )
 
         assert pick.pick_number == 5
@@ -182,7 +182,7 @@ class TestDraftState:
         players = [
             Player("Player 1", Position.QB, "T1", 1),
             Player("Player 2", Position.RB, "T2", 2),
-            Player("Player 3", Position.WR, "T3", 3)
+            Player("Player 3", Position.WR, "T3", 3),
         ]
 
         draft.set_available_players(players)
@@ -202,12 +202,13 @@ class TestDraftState:
         # Simulate external picks
         external_picks = [
             {"team": "My Team", "player_name": "External Pick 1"},
-            {"team": "Other Team", "player_name": "External Pick 2"}
+            {"team": "Other Team", "player_name": "External Pick 2"},
         ]
 
         for pick_data in external_picks:
-            player = next(p for p in draft.available_players
-                         if p.name == pick_data["player_name"])
+            player = next(
+                p for p in draft.available_players if p.name == pick_data["player_name"]
+            )
             draft.make_pick(player)
 
         assert draft.current_pick == 3
@@ -219,10 +220,7 @@ class TestDraftState:
         teams = ["Team 1", "Team 2", "Team 3"]
         draft = DraftState(num_teams=3, team_names=teams)
 
-        players = [
-            Player(f"Player {i}", Position.RB, f"T{i}", i)
-            for i in range(1, 6)
-        ]
+        players = [Player(f"Player {i}", Position.RB, f"T{i}", i) for i in range(1, 6)]
         draft.available_players = players.copy()
 
         # Make 5 picks

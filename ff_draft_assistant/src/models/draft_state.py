@@ -17,7 +17,9 @@ class Team:
     def get_position_count(self, position: Position) -> int:
         return sum(1 for p in self.roster if p.position == position)
 
-    def get_positions_needed(self, roster_requirements: Dict[Position, int]) -> Dict[Position, int]:
+    def get_positions_needed(
+        self, roster_requirements: Dict[Position, int]
+    ) -> Dict[Position, int]:
         needed = {}
         for position, required_count in roster_requirements.items():
             current_count = self.get_position_count(position)
@@ -40,7 +42,7 @@ class DraftState:
         num_teams: int,
         team_names: List[str],
         rounds_per_draft: int = 15,
-        is_snake: bool = True
+        is_snake: bool = True,
     ):
         self.num_teams = num_teams
         self.rounds_per_draft = rounds_per_draft
@@ -74,7 +76,7 @@ class DraftState:
             pick_number=self.current_pick,
             round_number=self.current_round,
             team_name=current_team.name,
-            player=player
+            player=player,
         )
 
         # Update state
@@ -117,7 +119,7 @@ class DraftState:
                 {
                     "name": team.name,
                     "draft_position": team.draft_position,
-                    "roster": [p.to_dict() for p in team.roster]
+                    "roster": [p.to_dict() for p in team.roster],
                 }
                 for team in self.teams
             ],
@@ -127,11 +129,11 @@ class DraftState:
                     "round_number": pick.round_number,
                     "team_name": pick.team_name,
                     "player": pick.player.to_dict(),
-                    "timestamp": pick.timestamp.isoformat()
+                    "timestamp": pick.timestamp.isoformat(),
                 }
                 for pick in self.picks
             ],
-            "available_players": [p.to_dict() for p in self.available_players]
+            "available_players": [p.to_dict() for p in self.available_players],
         }
 
     @classmethod
@@ -141,7 +143,7 @@ class DraftState:
             num_teams=data["num_teams"],
             team_names=team_names,
             rounds_per_draft=data["rounds_per_draft"],
-            is_snake=data["is_snake"]
+            is_snake=data["is_snake"],
         )
 
         draft.current_pick = data["current_pick"]
@@ -160,7 +162,7 @@ class DraftState:
                 round_number=pick_data["round_number"],
                 team_name=pick_data["team_name"],
                 player=Player.from_dict(pick_data["player"]),
-                timestamp=datetime.fromisoformat(pick_data["timestamp"])
+                timestamp=datetime.fromisoformat(pick_data["timestamp"]),
             )
             draft.picks.append(pick)
 

@@ -25,20 +25,20 @@ class TestRealDataIntegration:
         real_data = load_real_draft_data()
 
         # Verify top-level structure
-        assert 'picks' in real_data
-        assert 'teams' in real_data
-        assert 'draft_state' in real_data
+        assert "picks" in real_data
+        assert "teams" in real_data
+        assert "draft_state" in real_data
 
         # Verify picks structure
-        picks = real_data['picks']
+        picks = real_data["picks"]
         assert len(picks) > 0
 
         first_pick = picks[0]
         # These are the REAL field names that should be used
-        assert 'player' in first_pick  # NOT 'player_name'
-        assert 'position' in first_pick
-        assert 'pick' in first_pick
-        assert 'round' in first_pick
+        assert "player" in first_pick  # NOT 'player_name'
+        assert "position" in first_pick
+        assert "pick" in first_pick
+        assert "round" in first_pick
 
     def test_drafted_players_field_names(self):
         """Ensure drafted players use correct field names from real data."""
@@ -46,11 +46,13 @@ class TestRealDataIntegration:
 
         for pick in drafted_players:
             # Verify the actual field structure
-            assert 'player' in pick, f"Pick missing 'player' field: {pick}"
-            assert 'position' in pick, f"Pick missing 'position' field: {pick}"
+            assert "player" in pick, f"Pick missing 'player' field: {pick}"
+            assert "position" in pick, f"Pick missing 'position' field: {pick}"
 
             # Ensure we're not using old mock field names
-            assert 'player_name' not in pick, f"Pick should not have 'player_name' field: {pick}"
+            assert (
+                "player_name" not in pick
+            ), f"Pick should not have 'player_name' field: {pick}"
 
     @pytest.mark.asyncio
     async def test_analyze_available_players_with_real_data(self):
@@ -69,7 +71,7 @@ class TestRealDataIntegration:
                         "team": "TEST",
                         "bye_week": 8,
                         "average_rank": 50.0,
-                        "average_score": 75.0
+                        "average_score": 75.0,
                     },
                     # Include a player that's in the real drafted list
                     {
@@ -78,20 +80,20 @@ class TestRealDataIntegration:
                         "team": "DET",
                         "bye_week": 8,
                         "average_rank": 1.0,
-                        "average_score": 99.0
-                    }
+                        "average_score": 99.0,
+                    },
                 ]
-            }
+            },
         }
 
-        with patch('src.tools.mcp_tools.get_player_rankings', new_callable=AsyncMock) as mock_rankings:
+        with patch(
+            "src.tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+        ) as mock_rankings:
             mock_rankings.return_value = mock_rankings_response
 
             # Test the function with real data structure
             result = await analyze_available_players(
-                draft_state=draft_state,
-                position_filter="RB",
-                limit=10
+                draft_state=draft_state, position_filter="RB", limit=10
             )
 
             # Verify it works
@@ -105,20 +107,25 @@ class TestRealDataIntegration:
             real_drafted_names = [pick["player"] for pick in draft_state["picks"]]
             for drafted_name in real_drafted_names[:3]:  # Check first few
                 # Extract just the player name without team abbreviation
-                clean_drafted_name = drafted_name.split()[0] + " " + drafted_name.split()[1]
-                assert clean_drafted_name not in available_names, \
-                    f"Drafted player '{clean_drafted_name}' should not appear in available players"
+                clean_drafted_name = (
+                    drafted_name.split()[0] + " " + drafted_name.split()[1]
+                )
+                assert (
+                    clean_drafted_name not in available_names
+                ), f"Drafted player '{clean_drafted_name}' should not appear in available players"
 
     def test_real_data_snapshot_freshness(self):
         """Verify that our real data snapshot contains expected amount of data."""
         real_data = load_real_draft_data()
 
         # Verify we have a reasonable amount of picks (adjust based on draft progress)
-        picks_count = len(real_data.get('picks', []))
-        assert picks_count > 100, f"Expected substantial draft data, got {picks_count} picks"
+        picks_count = len(real_data.get("picks", []))
+        assert (
+            picks_count > 100
+        ), f"Expected substantial draft data, got {picks_count} picks"
 
         # Verify we have teams
-        teams_count = len(real_data.get('teams', []))
+        teams_count = len(real_data.get("teams", []))
         assert teams_count >= 8, f"Expected at least 8 teams, got {teams_count}"
 
     def test_player_name_formats_in_real_data(self):
@@ -128,20 +135,22 @@ class TestRealDataIntegration:
         name_formats_found = set()
 
         for pick in drafted_players:
-            player_name = pick['player']
+            player_name = pick["player"]
 
             # Categorize the format
-            if '   ' in player_name:  # Three spaces (name + team)
-                name_formats_found.add('name_with_team_spaces')
-            elif ' - ' in player_name:  # Dash separator
-                name_formats_found.add('name_with_team_dash')
-            elif '(' in player_name:  # Parentheses
-                name_formats_found.add('name_with_team_parens')
+            if "   " in player_name:  # Three spaces (name + team)
+                name_formats_found.add("name_with_team_spaces")
+            elif " - " in player_name:  # Dash separator
+                name_formats_found.add("name_with_team_dash")
+            elif "(" in player_name:  # Parentheses
+                name_formats_found.add("name_with_team_parens")
             else:
-                name_formats_found.add('name_only')
+                name_formats_found.add("name_only")
 
         # Log the formats we found for debugging
         print(f"Real data contains these name formats: {name_formats_found}")
 
         # Ensure we found at least some variation
-        assert len(name_formats_found) > 0, "Should find various name formats in real data"
+        assert (
+            len(name_formats_found) > 0
+        ), "Should find various name formats in real data"

@@ -11,8 +11,8 @@ class Position(Enum):
     K = "K"
     DST = "DST"
     FLEX = "FLEX"  # Flex position (RB/WR/TE eligible)
-    BE = "BE"      # Bench
-    IR = "IR"      # Injured Reserve
+    BE = "BE"  # Bench
+    IR = "IR"  # Injured Reserve
 
 
 class InjuryStatus(Enum):
@@ -63,7 +63,7 @@ class Player:
         return self.injury_status in [
             InjuryStatus.QUESTIONABLE,
             InjuryStatus.DOUBTFUL,
-            InjuryStatus.OUT
+            InjuryStatus.OUT,
         ]
 
     def update_injury_status(self, status: InjuryStatus) -> None:
@@ -75,9 +75,11 @@ class Player:
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Player):
             return NotImplemented
-        return (self.name == other.name and
-                self.position == other.position and
-                self.team == other.team)
+        return (
+            self.name == other.name
+            and self.position == other.position
+            and self.team == other.team
+        )
 
     def __hash__(self) -> int:
         return hash((self.name, self.position, self.team))
@@ -90,10 +92,7 @@ class Player:
             "bye_week": self.bye_week,
             "injury_status": self.injury_status.value,
             "commentary": self.commentary,
-            "rankings": {
-                source.value: data
-                for source, data in self.rankings.items()
-            }
+            "rankings": {source.value: data for source, data in self.rankings.items()},
         }
 
     @classmethod
@@ -104,7 +103,7 @@ class Player:
             team=data["team"],
             bye_week=data["bye_week"],
             injury_status=InjuryStatus(data.get("injury_status", "HEALTHY")),
-            commentary=data.get("commentary")
+            commentary=data.get("commentary"),
         )
 
         if "rankings" in data:

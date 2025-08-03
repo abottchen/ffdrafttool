@@ -3,8 +3,8 @@
 Startup script for the Fantasy Football Draft Assistant MCP Server
 """
 
-import sys
 import os
+import sys
 from pathlib import Path
 
 # Add src directory to Python path
@@ -21,7 +21,7 @@ if __name__ == "__main__":
     print(f"Python path: {sys.path[0]}", file=sys.stderr)
     print("Ready for MCP connection...", file=sys.stderr)
     print(file=sys.stderr)
-    
+
     try:
         # Import here to ensure path is set up
         from server import main

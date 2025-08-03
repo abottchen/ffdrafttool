@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ScraperConfig:
     """Configuration for web scraping"""
+
     user_agent: str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
     timeout: int = 30
     retry_attempts: int = 3
@@ -37,7 +38,7 @@ class WebScraper(ABC):
                     async with session.get(
                         url,
                         headers=headers,
-                        timeout=aiohttp.ClientTimeout(total=self.config.timeout)
+                        timeout=aiohttp.ClientTimeout(total=self.config.timeout),
                     ) as response:
                         response.raise_for_status()
                         return await response.text()
@@ -49,7 +50,9 @@ class WebScraper(ABC):
                     raise
 
     @abstractmethod
-    async def scrape_rankings(self, position: Optional[Position] = None) -> List[Player]:
+    async def scrape_rankings(
+        self, position: Optional[Position] = None
+    ) -> List[Player]:
         """Scrape rankings from the website"""
         pass
 
@@ -59,7 +62,9 @@ class ESPNScraper(WebScraper):
 
     BASE_URL = "https://www.espn.com/fantasy/football/ffl/rankings"
 
-    async def scrape_rankings(self, position: Optional[Position] = None) -> List[Player]:
+    async def scrape_rankings(
+        self, position: Optional[Position] = None
+    ) -> List[Player]:
         """Scrape ESPN rankings"""
         # TODO: Implement actual ESPN scraping logic
         # This would parse the ESPN rankings page
@@ -95,7 +100,9 @@ class YahooScraper(WebScraper):
 
     BASE_URL = "https://football.fantasysports.yahoo.com/f1/draftanalysis"
 
-    async def scrape_rankings(self, position: Optional[Position] = None) -> List[Player]:
+    async def scrape_rankings(
+        self, position: Optional[Position] = None
+    ) -> List[Player]:
         """Scrape Yahoo rankings"""
         # TODO: Implement actual Yahoo scraping logic
         logger.info("Scraping Yahoo rankings...")
@@ -130,7 +137,9 @@ class FantasyProsScraper(WebScraper):
 
     BASE_URL = "https://www.fantasypros.com/nfl/rankings/consensus-cheatsheets.php"
 
-    async def scrape_rankings(self, position: Optional[Position] = None) -> List[Player]:
+    async def scrape_rankings(
+        self, position: Optional[Position] = None
+    ) -> List[Player]:
         """Scrape FantasyPros consensus rankings"""
         # TODO: Implement actual FantasyPros scraping logic
         logger.info("Scraping FantasyPros rankings...")
@@ -170,26 +179,36 @@ class FantasySharksScraper(WebScraper):
         Position.RB: "RB",
         Position.WR: "WR",
         Position.TE: "TE",
-        Position.K: "PK",    # FantasySharks uses "PK" for kickers
-        Position.DST: "D"    # FantasySharks uses "D" for defenses
+        Position.K: "PK",  # FantasySharks uses "PK" for kickers
+        Position.DST: "D",  # FantasySharks uses "D" for defenses
     }
 
-    async def scrape_rankings(self, position: Optional[Position] = None) -> List[Player]:
+    async def scrape_rankings(
+        self, position: Optional[Position] = None
+    ) -> List[Player]:
         """Scrape FantasySharks rankings for specified position"""
         if position and position not in self.POSITION_PARAMS:
-            raise ValueError(f"Position {position} not supported by FantasySharks scraper")
+            raise ValueError(
+                f"Position {position} not supported by FantasySharks scraper"
+            )
 
-        logger.info(f"Scraping FantasySharks rankings for {position.value if position else 'all positions'}...")
+        logger.info(
+            f"Scraping FantasySharks rankings for {position.value if position else 'all positions'}..."
+        )
 
         players = []
-        positions_to_scrape = [position] if position else list(self.POSITION_PARAMS.keys())
+        positions_to_scrape = (
+            [position] if position else list(self.POSITION_PARAMS.keys())
+        )
 
         for pos in positions_to_scrape:
             try:
                 pos_players = await self._scrape_position(pos)
                 players.extend(pos_players)
             except Exception as e:
-                logger.error(f"Failed to scrape {pos.value} from FantasySharks: {str(e)}")
+                logger.error(
+                    f"Failed to scrape {pos.value} from FantasySharks: {str(e)}"
+                )
 
         return players
 
@@ -199,35 +218,43 @@ class FantasySharksScraper(WebScraper):
 
         try:
             html = await self.fetch_page(url)
-            soup = BeautifulSoup(html, 'html.parser')
+            soup = BeautifulSoup(html, "html.parser")
 
             # Find the main rankings table - FantasySharks uses id="toolData"
-            table = soup.find('table', {'id': 'toolData'})
+            table = soup.find("table", {"id": "toolData"})
             if not table:
                 # Try alternative selectors
-                table = soup.find('table', {'class': 'datatable'}) or soup.find('table', {'id': 'projections'})
+                table = soup.find("table", {"class": "datatable"}) or soup.find(
+                    "table", {"id": "projections"}
+                )
                 if not table:
-                    table = soup.find('table')
+                    table = soup.find("table")
 
             if not table:
                 logger.warning(f"Could not find rankings table for {position.value}")
                 # Debug: Show what we found
-                all_tables = soup.find_all('table')
+                all_tables = soup.find_all("table")
                 logger.debug(f"Found {len(all_tables)} tables total")
                 return []
 
             logger.debug(f"Found table for {position.value} scraping")
 
             players = []
-            rows = table.find_all('tr')[2:]  # Skip first 2 header rows for FantasySharks
+            rows = table.find_all("tr")[
+                2:
+            ]  # Skip first 2 header rows for FantasySharks
 
             logger.debug(f"Found {len(rows)} data rows in table")
 
             i = 0
-            while i < len(rows):  # Process all rows looking for player + commentary pairs
+            while i < len(
+                rows
+            ):  # Process all rows looking for player + commentary pairs
                 try:
                     current_row = rows[i]
-                    player = self._parse_player_row(current_row, position, len(players) + 1)
+                    player = self._parse_player_row(
+                        current_row, position, len(players) + 1
+                    )
 
                     if player:
                         # Look for commentary in the next row
@@ -236,7 +263,9 @@ class FantasySharksScraper(WebScraper):
                             commentary = self._extract_player_commentary(next_row)
                             if commentary:
                                 player.commentary = commentary
-                                logger.debug(f"Added commentary for {player.name}: {commentary[:50]}...")
+                                logger.debug(
+                                    f"Added commentary for {player.name}: {commentary[:50]}..."
+                                )
 
                         players.append(player)
                         logger.debug(f"Row {i+1}: Parsed {player.name}")
@@ -244,11 +273,15 @@ class FantasySharksScraper(WebScraper):
                         logger.debug(f"Row {i+1}: No player parsed")
 
                 except Exception as e:
-                    logger.warning(f"Failed to parse row {i+1} for {position.value}: {str(e)}")
+                    logger.warning(
+                        f"Failed to parse row {i+1} for {position.value}: {str(e)}"
+                    )
 
                 i += 1
 
-            logger.info(f"Successfully scraped {len(players)} {position.value} players from FantasySharks")
+            logger.info(
+                f"Successfully scraped {len(players)} {position.value} players from FantasySharks"
+            )
             return players
 
         except Exception as e:
@@ -257,7 +290,7 @@ class FantasySharksScraper(WebScraper):
 
     def _parse_player_row(self, row, position: Position, rank: int) -> Optional[Player]:
         """Parse a single player row from the table"""
-        cells = row.find_all(['td', 'th'])
+        cells = row.find_all(["td", "th"])
         logger.debug(f"Row {rank}: Found {len(cells)} cells")
 
         if len(cells) < 4:
@@ -280,12 +313,12 @@ class FantasySharksScraper(WebScraper):
                 # Extract name text while excluding <sup> tags (rookie indicators)
                 name_cell = cells[2]
                 # Remove any <sup> tags before extracting text
-                for sup_tag in name_cell.find_all('sup'):
+                for sup_tag in name_cell.find_all("sup"):
                     sup_tag.decompose()  # Remove the tag completely
-                name_text = name_cell.get_text(strip=True)   # Position 2: Name (cleaned)
+                name_text = name_cell.get_text(strip=True)  # Position 2: Name (cleaned)
 
-                team_text = cells[3].get_text(strip=True)   # Position 3: Team
-                bye_text = cells[4].get_text(strip=True)    # Position 4: Bye
+                team_text = cells[3].get_text(strip=True)  # Position 3: Team
+                bye_text = cells[4].get_text(strip=True)  # Position 4: Bye
 
                 # Validate we have actual data
                 if not name_text or not team_text:
@@ -293,9 +326,9 @@ class FantasySharksScraper(WebScraper):
                     return None
 
                 # Clean up name (handle "Last, First" format)
-                if ',' in name_text:
+                if "," in name_text:
                     # Convert "Allen, Josh" to "Josh Allen"
-                    parts = name_text.split(',')
+                    parts = name_text.split(",")
                     if len(parts) == 2:
                         name = f"{parts[1].strip()} {parts[0].strip()}"
                     else:
@@ -341,14 +374,18 @@ class FantasySharksScraper(WebScraper):
     def _extract_player_commentary(self, row) -> Optional[str]:
         """Extract player commentary from a commentary row"""
         try:
-            cells = row.find_all(['td', 'th'])
+            cells = row.find_all(["td", "th"])
 
             # Commentary rows typically have 2 cells: empty + commentary text
             if len(cells) == 2:
                 commentary_text = cells[1].get_text(strip=True)
 
                 # Make sure it's actually commentary (long text, not just a tier marker)
-                if commentary_text and len(commentary_text) > 50 and not commentary_text.startswith("Tier"):
+                if (
+                    commentary_text
+                    and len(commentary_text) > 50
+                    and not commentary_text.startswith("Tier")
+                ):
                     return commentary_text
 
             return None
