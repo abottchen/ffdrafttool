@@ -27,7 +27,7 @@ No API keys are required - all data is gathered from public web pages.
 
 1. **Clone and install dependencies**:
    ```bash
-   cd C:\Users\adam\Documents\Projects\ffdrafttool2\ff_draft_assistant
+   cd C:\Users\adam\Documents\Projects\ffdrafttool2
    pip install -e ".[dev]"
    ```
 
@@ -44,6 +44,10 @@ No API keys are required - all data is gathered from public web pages.
    - Create credentials at [Google Cloud Console](https://console.developers.google.com/)
    - Download `credentials.json` to the project directory
    - Run the authentication flow when first using Google Sheets features
+
+   **Optional environment variables:**
+   - `GOOGLE_CREDENTIALS_FILE`: Custom path to credentials.json (defaults to project root)
+   - `GOOGLE_TOKEN_FILE`: Custom path to token.json (defaults to project root)
 
 ## 👤 Owner Configuration
 
@@ -96,7 +100,7 @@ Show me 10 wide receivers starting from rank 31
 ## 📁 Project Structure
 
 ```
-ff_draft_assistant/
+ffdrafttool/
 ├── src/
 │   ├── config.py              # Configuration settings
 │   ├── server.py              # Main MCP server
