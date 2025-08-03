@@ -18,6 +18,7 @@ from mcp.server.fastmcp import FastMCP
 from config import DEFAULT_SHEET_ID, DEFAULT_SHEET_RANGE, USER_OWNER_NAME
 from tools.mcp_tools import (
     analyze_available_players,
+    get_player_info,
     get_player_rankings,
     read_draft_progress,
     suggest_draft_pick,
@@ -260,6 +261,51 @@ async def suggest_draft_pick_tool(
         return json.dumps(result, indent=2)
     except Exception as e:
         logger.error(f"Error in suggest_draft_pick: {e}")
+        return json.dumps({"success": False, "error": str(e)}, indent=2)
+
+
+@mcp.tool()
+async def get_player_info_tool(
+    last_name: str,
+    first_name: str = None,
+    team: str = None,
+    position: str = None,
+) -> str:
+    """
+    Get detailed ranking and stats information for a specific player.
+
+    **USE THIS TOOL** when the user asks about a specific player by name.
+
+    This tool fetches comprehensive information about one or more players matching
+    the provided criteria, including rankings, projected stats, injury status, and
+    expert commentary.
+
+    **REQUIRED USAGE**: Use this tool when the user asks:
+    - "what do you know about [player name]?"
+    - "tell me about [player name]"
+    - "show me [player name]'s stats/rankings"
+    - "is [player name] injured?"
+    - Any question about a specific named player
+
+    Args:
+        last_name: Player's last name (REQUIRED)
+        first_name: Player's first name (optional, helps narrow results)
+        team: Team abbreviation (optional, e.g., "KC", "SF")
+        position: Position filter (optional: QB, RB, WR, TE, K, DST)
+
+    Returns:
+        JSON string with array of matching players and their detailed information
+    """
+    logger.info(
+        f"get_player_info called with last_name={last_name}, first_name={first_name}, "
+        f"team={team}, position={position}"
+    )
+
+    try:
+        result = await get_player_info(last_name, first_name, team, position)
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error in get_player_info: {e}")
         return json.dumps({"success": False, "error": str(e)}, indent=2)
 
 
