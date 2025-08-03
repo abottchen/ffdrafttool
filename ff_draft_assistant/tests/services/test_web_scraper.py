@@ -1,4 +1,3 @@
-
 import pytest
 
 from src.models.player import Position, RankingSource
@@ -42,10 +41,7 @@ class TestWebScrapers:
     async def test_scraper_config(self):
         """Test scraper configuration"""
         config = ScraperConfig(
-            user_agent="Test Agent",
-            timeout=60,
-            retry_attempts=5,
-            retry_delay=2.0
+            user_agent="Test Agent", timeout=60, retry_attempts=5, retry_delay=2.0
         )
         scraper = ESPNScraper(config)
 
@@ -82,7 +78,14 @@ class TestWebScrapers:
         scraper = FantasySharksScraper()
 
         # Test valid positions
-        for position in [Position.QB, Position.RB, Position.WR, Position.TE, Position.K, Position.DST]:
+        for position in [
+            Position.QB,
+            Position.RB,
+            Position.WR,
+            Position.TE,
+            Position.K,
+            Position.DST,
+        ]:
             # Should not raise an exception
             try:
                 # We're not actually making network calls, just testing validation
@@ -93,7 +96,9 @@ class TestWebScrapers:
 
         # Test invalid position
         with pytest.raises(ValueError):
-            await scraper.scrape_rankings(Position.FLEX)  # FLEX not supported by FantasySharks
+            await scraper.scrape_rankings(
+                Position.FLEX
+            )  # FLEX not supported by FantasySharks
 
     @pytest.mark.asyncio
     async def test_fantasy_sharks_name_parsing(self):
@@ -117,13 +122,15 @@ class TestWebScrapers:
             <td>0</td><td>0</td><td>0</td><td>450</td>
         </tr>
         """
-        soup = BeautifulSoup(html, 'html.parser')
-        row = soup.find('tr')
+        soup = BeautifulSoup(html, "html.parser")
+        row = soup.find("tr")
 
         player = scraper._parse_player_row(row, Position.QB, 1)
 
         assert player is not None
-        assert player.name == "Josh Allen"  # Should convert "Allen, Josh" to "Josh Allen"
+        assert (
+            player.name == "Josh Allen"
+        )  # Should convert "Allen, Josh" to "Josh Allen"
         assert player.team == "BUF"
         assert player.bye_week == 7
         assert player.position == Position.QB
@@ -142,8 +149,8 @@ class TestWebScrapers:
             <td>The second overall selection in the 2024 draft, Daniels took the league by storm last season, rocketing into the upper echelon of fantasy quarterbacks with an impressive QB5 showing and capturing well-deserved Offensive Rookie of the Year honors.</td>
         </tr>
         """
-        soup = BeautifulSoup(html, 'html.parser')
-        row = soup.find('tr')
+        soup = BeautifulSoup(html, "html.parser")
+        row = soup.find("tr")
 
         commentary = scraper._extract_player_commentary(row)
 
@@ -158,8 +165,8 @@ class TestWebScrapers:
             <td>Tier 2</td>
         </tr>
         """
-        soup = BeautifulSoup(tier_html, 'html.parser')
-        tier_row = soup.find('tr')
+        soup = BeautifulSoup(tier_html, "html.parser")
+        tier_row = soup.find("tr")
 
         tier_commentary = scraper._extract_player_commentary(tier_row)
         assert tier_commentary is None  # Should ignore tier markers

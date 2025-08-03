@@ -71,10 +71,38 @@ class TestPlayerExtraction:
     def test_all_nfl_teams_recognized(self):
         """Test that all current NFL team abbreviations are recognized."""
         nfl_teams = [
-            "ARI", "ATL", "BAL", "BUF", "CAR", "CHI", "CIN", "CLE",
-            "DAL", "DEN", "DET", "GB", "HOU", "IND", "JAX", "KC",
-            "LAC", "LAR", "LV", "MIA", "MIN", "NE", "NO", "NYG",
-            "NYJ", "PHI", "PIT", "SEA", "SF", "TB", "TEN", "WAS"
+            "ARI",
+            "ATL",
+            "BAL",
+            "BUF",
+            "CAR",
+            "CHI",
+            "CIN",
+            "CLE",
+            "DAL",
+            "DEN",
+            "DET",
+            "GB",
+            "HOU",
+            "IND",
+            "JAX",
+            "KC",
+            "LAC",
+            "LAR",
+            "LV",
+            "MIA",
+            "MIN",
+            "NE",
+            "NO",
+            "NYG",
+            "NYJ",
+            "PHI",
+            "PIT",
+            "SEA",
+            "SF",
+            "TB",
+            "TEN",
+            "WAS",
         ]
 
         for team in nfl_teams:

@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 _rankings_cache = {
     "data": None,
     "timestamp": None,
-    "cache_duration": timedelta(hours=24)  # Rankings valid for entire draft session
+    "cache_duration": timedelta(hours=24),  # Rankings valid for entire draft session
 }
 
 
@@ -28,7 +28,7 @@ async def get_player_rankings(
     sources: List[str],
     position: Optional[str] = None,
     limit: Optional[int] = None,
-    force_refresh: bool = False
+    force_refresh: bool = False,
 ) -> Dict[str, Any]:
     """
     Fetch current player rankings from multiple sources with caching.
@@ -48,7 +48,9 @@ async def get_player_rankings(
     if not force_refresh and _rankings_cache["data"] is not None:
         cache_age = datetime.now() - _rankings_cache["timestamp"]
         if cache_age < _rankings_cache["cache_duration"]:
-            logger.info(f"Using cached rankings (age: {cache_age.total_seconds():.0f}s)")
+            logger.info(
+                f"Using cached rankings (age: {cache_age.total_seconds():.0f}s)"
+            )
 
             # Extract from cache and apply filters
             cached_data = _rankings_cache["data"]
@@ -58,7 +60,8 @@ async def get_player_rankings(
                 try:
                     position_filter = Position(position.upper())
                     filtered_players = [
-                        p for p in cached_data["aggregated"]["players"]
+                        p
+                        for p in cached_data["aggregated"]["players"]
                         if p["position"] == position_filter.value
                     ]
 
@@ -66,18 +69,20 @@ async def get_player_rankings(
                     result = {
                         "success": True,
                         "aggregated": {
-                            "players": filtered_players[:limit] if limit else filtered_players,
-                            "count": len(filtered_players)
+                            "players": (
+                                filtered_players[:limit] if limit else filtered_players
+                            ),
+                            "count": len(filtered_players),
                         },
                         "position": position,
                         "limit": limit,
-                        "from_cache": True
+                        "from_cache": True,
                     }
                     return result
                 except ValueError:
                     return {
                         "success": False,
-                        "error": f"Invalid position: {position}. Valid positions: QB, RB, WR, TE, K, DST"
+                        "error": f"Invalid position: {position}. Valid positions: QB, RB, WR, TE, K, DST",
                     }
 
             # Apply limit if requested (no position filter)
@@ -87,10 +92,10 @@ async def get_player_rankings(
                     "success": True,
                     "aggregated": {
                         "players": limited_players,
-                        "count": len(limited_players)
+                        "count": len(limited_players),
                     },
                     "limit": limit,
-                    "from_cache": True
+                    "from_cache": True,
                 }
                 return result
 
@@ -107,7 +112,7 @@ async def get_player_rankings(
         except ValueError:
             return {
                 "success": False,
-                "error": f"Invalid position: {position}. Valid positions: QB, RB, WR, TE, K, DST"
+                "error": f"Invalid position: {position}. Valid positions: QB, RB, WR, TE, K, DST",
             }
 
     # Map source names to scrapers
@@ -115,7 +120,7 @@ async def get_player_rankings(
         "espn": ESPNScraper(),
         "yahoo": YahooScraper(),
         "fantasypros": FantasyProsScraper(),
-        "fantasysharks": FantasySharksScraper()
+        "fantasysharks": FantasySharksScraper(),
     }
 
     results = {}
@@ -124,11 +129,10 @@ async def get_player_rankings(
     for source in sources:
         source_lower = source.lower()
         if source_lower not in scrapers:
-            logger.warning(f"Unknown source: {source}. Available: {list(scrapers.keys())}")
-            results[source] = {
-                "success": False,
-                "error": f"Unknown source: {source}"
-            }
+            logger.warning(
+                f"Unknown source: {source}. Available: {list(scrapers.keys())}"
+            )
+            results[source] = {"success": False, "error": f"Unknown source: {source}"}
             continue
 
         try:
@@ -146,14 +150,14 @@ async def get_player_rankings(
                     "rankings": {},
                     "average_rank": player.average_rank,
                     "average_score": player.average_score,
-                    "commentary": player.commentary  # Include expert analysis if available
+                    "commentary": player.commentary,  # Include expert analysis if available
                 }
 
                 # Add rankings from all sources for this player
                 for ranking_source, ranking in player.rankings.items():
                     player_dict["rankings"][ranking_source.value] = {
                         "rank": ranking["rank"],
-                        "score": ranking["score"]
+                        "score": ranking["score"],
                     }
 
                 player_data.append(player_dict)
@@ -171,17 +175,16 @@ async def get_player_rankings(
             results[source] = {
                 "success": True,
                 "players": player_data,
-                "count": len(player_data)
+                "count": len(player_data),
             }
 
-            logger.info(f"Successfully fetched {len(player_data)} players from {source}")
+            logger.info(
+                f"Successfully fetched {len(player_data)} players from {source}"
+            )
 
         except Exception as e:
             logger.error(f"Error fetching from {source}: {str(e)}")
-            results[source] = {
-                "success": False,
-                "error": str(e)
-            }
+            results[source] = {"success": False, "error": str(e)}
 
     # Create aggregated rankings
     aggregated_players = []
@@ -195,7 +198,7 @@ async def get_player_rankings(
             "team": player.team,
             "bye_week": player.bye_week,
             "average_rank": player.average_rank,
-            "average_score": player.average_score
+            "average_score": player.average_score,
         }
 
         # Only include primary ranking source to save tokens
@@ -220,12 +223,9 @@ async def get_player_rankings(
     # Build the result
     result = {
         "success": True,
-        "aggregated": {
-            "players": aggregated_players,
-            "count": len(aggregated_players)
-        },
+        "aggregated": {"players": aggregated_players, "count": len(aggregated_players)},
         "position": position,
-        "limit": limit
+        "limit": limit,
     }
 
     # Cache the full unfiltered data if this was a fresh fetch without filters
@@ -246,9 +246,7 @@ def clear_rankings_cache():
 
 
 async def read_draft_progress(
-    sheet_id: str,
-    sheet_range: str = "Draft!A1:V24",
-    force_refresh: bool = False
+    sheet_id: str, sheet_range: str = "Draft!A1:V24", force_refresh: bool = False
 ) -> Dict[str, Any]:
     """
     Read draft progress from Google Sheets with caching support.
@@ -279,11 +277,11 @@ async def read_draft_progress(
                     "next_steps": [
                         "1. Run: pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib",
                         "2. Set up Google Sheets API credentials using setup_google_sheets.py",
-                        "3. Retry reading draft progress"
-                    ]
+                        "3. Retry reading draft progress",
+                    ],
                 },
                 "sheet_id": sheet_id,
-                "sheet_range": sheet_range
+                "sheet_range": sheet_range,
             }
         except FileNotFoundError as e:
             logger.error(f"Google Sheets credentials not found: {e}")
@@ -300,43 +298,59 @@ async def read_draft_progress(
                         "3. Create OAuth 2.0 credentials for desktop application",
                         "4. Download credentials.json to the project directory",
                         "5. Run setup_google_sheets.py to test authentication",
-                        "6. Retry reading draft progress"
-                    ]
+                        "6. Retry reading draft progress",
+                    ],
                 },
                 "sheet_id": sheet_id,
-                "sheet_range": sheet_range
+                "sheet_range": sheet_range,
             }
 
         sheets_service = SheetsService(provider)
 
         # Read and parse draft data with caching support
-        draft_data = await sheets_service.read_draft_data(sheet_id, sheet_range, force_refresh)
+        draft_data = await sheets_service.read_draft_data(
+            sheet_id, sheet_range, force_refresh
+        )
 
         # Create a more compact summary to avoid token limits
         # Remove draft_type (not useful) and team name (player name is sufficient)
         picks_summary = []
         for pick in draft_data.get("picks", []):
-            picks_summary.append({
-                "pick": pick.get("pick_number"),
-                "round": pick.get("round"),
-                "player": pick.get("player_name"),
-                "position": pick.get("position"),
-                "column_team": pick.get("column_team")  # Include actual column team for proper roster tracking
-            })
+            picks_summary.append(
+                {
+                    "pick": pick.get("pick_number"),
+                    "round": pick.get("round"),
+                    "player": pick.get("player_name"),
+                    "position": pick.get("position"),
+                    "column_team": pick.get(
+                        "column_team"
+                    ),  # Include actual column team for proper roster tracking
+                }
+            )
 
         teams_summary = []
         for team in draft_data.get("teams", []):
-            teams_summary.append({
-                "team_name": team.get("team_name"),
-                "owner": team.get("owner"),
-                "team_number": team.get("team_number")
-            })
+            teams_summary.append(
+                {
+                    "team_name": team.get("team_name"),
+                    "owner": team.get("owner"),
+                    "team_number": team.get("team_number"),
+                }
+            )
 
         return {
             "success": True,
             "sheet_id": sheet_id,
             "current_pick": draft_data.get("current_pick"),
-            "current_round": ((draft_data.get("current_pick", 1) - 1) // len(draft_data.get("teams", []))) + 1 if draft_data.get("teams") else 1,
+            "current_round": (
+                (
+                    (draft_data.get("current_pick", 1) - 1)
+                    // len(draft_data.get("teams", []))
+                )
+                + 1
+                if draft_data.get("teams")
+                else 1
+            ),
             "total_picks": len(picks_summary),
             "teams": teams_summary,
             "picks": picks_summary,
@@ -344,8 +358,8 @@ async def read_draft_progress(
                 "picks": picks_summary,
                 "teams": teams_summary,
                 "current_pick": draft_data.get("current_pick"),
-                "current_team": draft_data.get("current_team")
-            }
+                "current_team": draft_data.get("current_team"),
+            },
         }
 
     except Exception as e:
@@ -359,8 +373,8 @@ async def read_draft_progress(
                 "1. Verify the Google Sheet ID is correct",
                 "2. Ensure the sheet is accessible (shared with your Google account or public)",
                 "3. Check that the sheet range exists and contains data",
-                "4. Verify your Google Sheets API authentication is working"
-            ]
+                "4. Verify your Google Sheets API authentication is working",
+            ],
         }
 
         # Add specific guidance for common errors
@@ -370,7 +384,7 @@ async def read_draft_progress(
                 "1. Ensure the Google Sheet is shared with your Google account",
                 "2. Or make the sheet publicly viewable with link sharing",
                 "3. Verify the sheet ID in the URL is correct",
-                "4. Check that your Google account has access to the sheet"
+                "4. Check that your Google account has access to the sheet",
             ]
         elif "404" in error_message or "not found" in error_message.lower():
             troubleshooting["solution"] = "Sheet not found - check sheet ID and range"
@@ -378,18 +392,23 @@ async def read_draft_progress(
                 "1. Verify the Google Sheet ID from the URL",
                 "2. Check that the sheet tab name is correct (e.g., 'Draft')",
                 "3. Ensure the range exists in the sheet",
-                "4. Confirm the sheet hasn't been deleted or moved"
+                "4. Confirm the sheet hasn't been deleted or moved",
             ]
-        elif "authentication" in error_message.lower() or "credentials" in error_message.lower():
+        elif (
+            "authentication" in error_message.lower()
+            or "credentials" in error_message.lower()
+        ):
             troubleshooting["solution"] = "Authentication failed - refresh credentials"
             troubleshooting["next_steps"] = [
                 "1. Delete token.json to force re-authentication",
                 "2. Run setup_google_sheets.py to re-authenticate",
                 "3. Ensure credentials.json is valid and for the correct project",
-                "4. Check that Google Sheets API is enabled in your project"
+                "4. Check that Google Sheets API is enabled in your project",
             ]
         else:
-            troubleshooting["solution"] = "Check network connection and sheet accessibility"
+            troubleshooting["solution"] = (
+                "Check network connection and sheet accessibility"
+            )
 
         return {
             "success": False,
@@ -397,7 +416,7 @@ async def read_draft_progress(
             "error_type": "sheet_access_failed",
             "troubleshooting": troubleshooting,
             "sheet_id": sheet_id,
-            "sheet_range": sheet_range
+            "sheet_range": sheet_range,
         }
 
 
@@ -421,10 +440,39 @@ def _extract_player_name_and_team(player_field: str) -> tuple[str, str]:
 
     # Known NFL team abbreviations
     NFL_TEAMS = {
-        "ARI", "ATL", "BAL", "BUF", "CAR", "CHI", "CIN", "CLE",
-        "DAL", "DEN", "DET", "GB", "HOU", "IND", "JAC", "JAX", "KC",
-        "LAC", "LAR", "LV", "MIA", "MIN", "NE", "NO", "NYG",
-        "NYJ", "PHI", "PIT", "SEA", "SF", "TB", "TEN", "WAS"
+        "ARI",
+        "ATL",
+        "BAL",
+        "BUF",
+        "CAR",
+        "CHI",
+        "CIN",
+        "CLE",
+        "DAL",
+        "DEN",
+        "DET",
+        "GB",
+        "HOU",
+        "IND",
+        "JAC",
+        "JAX",
+        "KC",
+        "LAC",
+        "LAR",
+        "LV",
+        "MIA",
+        "MIN",
+        "NE",
+        "NO",
+        "NYG",
+        "NYJ",
+        "PHI",
+        "PIT",
+        "SEA",
+        "SF",
+        "TB",
+        "TEN",
+        "WAS",
     }
 
     # Split by spaces and check if last part is a known team abbreviation
@@ -446,7 +494,7 @@ async def analyze_available_players(
     draft_state: Dict[str, Any],
     position_filter: Optional[str] = None,
     limit: int = 20,
-    force_refresh: bool = False
+    force_refresh: bool = False,
 ) -> Dict[str, Any]:
     """
     Analyze available players with value metrics and scarcity.
@@ -460,7 +508,9 @@ async def analyze_available_players(
     Returns:
         Dict containing analyzed players with value metrics, scarcity info, and recommendations
     """
-    logger.info(f"Analyzing available players with position filter: {position_filter}, limit: {limit}, force_refresh: {force_refresh}")
+    logger.info(
+        f"Analyzing available players with position filter: {position_filter}, limit: {limit}, force_refresh: {force_refresh}"
+    )
 
     try:
         # Parse position filter
@@ -470,20 +520,19 @@ async def analyze_available_players(
             except ValueError:
                 return {
                     "success": False,
-                    "error": f"Invalid position filter: {position_filter}. Valid positions: QB, RB, WR, TE, K, DST"
+                    "error": f"Invalid position filter: {position_filter}. Valid positions: QB, RB, WR, TE, K, DST",
                 }
 
         # Extract drafted players and analyze current roster composition
         picks = draft_state.get("picks", [])
         drafted_players = set()
-        current_roster = {
-            "QB": [], "RB": [], "WR": [], "TE": [], "K": [], "DST": []
-        }
+        current_roster = {"QB": [], "RB": [], "WR": [], "TE": [], "K": [], "DST": []}
         bye_week_conflicts = {}  # bye_week -> {position: [players]}
 
         # Determine which team we're analyzing for - ALWAYS look for FF_OWNER's team by owner name
         # Note: draft_state.current_team represents who's "on the clock", not who we're analyzing for
         from config import USER_OWNER_NAME
+
         teams = draft_state.get("teams", [])
         analysis_team = None  # The team we're providing analysis for (FF_OWNER's team)
 
@@ -494,26 +543,39 @@ async def analyze_available_players(
                 owner_name = team.get("owner", "").strip()
                 if owner_name.lower() == USER_OWNER_NAME.lower():
                     analysis_team = team
-                    logger.info(f"Found FF_OWNER's team by exact owner match: {team.get('team_name')} (owner: {owner_name})")
+                    logger.info(
+                        f"Found FF_OWNER's team by exact owner match: {team.get('team_name')} (owner: {owner_name})"
+                    )
                     break
 
             # If exact match fails, try partial match (in case of formatting differences)
             if not analysis_team:
                 for team in teams:
                     owner_name = team.get("owner", "").strip()
-                    if USER_OWNER_NAME.lower() in owner_name.lower() or owner_name.lower() in USER_OWNER_NAME.lower():
+                    if (
+                        USER_OWNER_NAME.lower() in owner_name.lower()
+                        or owner_name.lower() in USER_OWNER_NAME.lower()
+                    ):
                         analysis_team = team
-                        logger.info(f"Found FF_OWNER's team by partial owner match: {team.get('team_name')} (owner: {owner_name})")
+                        logger.info(
+                            f"Found FF_OWNER's team by partial owner match: {team.get('team_name')} (owner: {owner_name})"
+                        )
                         break
 
             # If no owner match found, provide general analysis instead of fallback
             if not analysis_team:
-                logger.info(f"Could not find team for owner '{USER_OWNER_NAME}', will provide general best available player analysis")
+                logger.info(
+                    f"Could not find team for owner '{USER_OWNER_NAME}', will provide general best available player analysis"
+                )
 
         if analysis_team:
-            logger.info(f"Analyzing for FF_OWNER's team: {analysis_team.get('team_name')} (owner: {analysis_team.get('owner')})")
+            logger.info(
+                f"Analyzing for FF_OWNER's team: {analysis_team.get('team_name')} (owner: {analysis_team.get('owner')})"
+            )
         else:
-            logger.info(f"Providing general analysis (no specific team identified for {USER_OWNER_NAME})")
+            logger.info(
+                f"Providing general analysis (no specific team identified for {USER_OWNER_NAME})"
+            )
 
         for pick in picks:
             player_field = pick.get("player", "").strip()
@@ -526,15 +588,28 @@ async def analyze_available_players(
                 # Remove team abbreviations in parentheses like "(BUF)" FIRST
                 if "(" in normalized_name:
                     normalized_name = normalized_name.split("(")[0]
-                normalized_name = normalized_name.replace(".", "").replace("'", "").replace("-", "")
-                normalized_name = normalized_name.replace("jr", "").replace("sr", "").replace("iii", "").replace("ii", "")
+                normalized_name = (
+                    normalized_name.replace(".", "").replace("'", "").replace("-", "")
+                )
+                normalized_name = (
+                    normalized_name.replace("jr", "")
+                    .replace("sr", "")
+                    .replace("iii", "")
+                    .replace("ii", "")
+                )
                 normalized_name = " ".join(normalized_name.split()).strip()
 
                 # Create composite key to handle players with same name on different teams
-                composite_key = f"{normalized_name}|{player_team.upper()}" if player_team else normalized_name
+                composite_key = (
+                    f"{normalized_name}|{player_team.upper()}"
+                    if player_team
+                    else normalized_name
+                )
                 drafted_players.add(composite_key)
 
-                logger.info(f"DRAFT_DEBUG: Raw='{player_field}' -> Name='{player_name}' Team='{player_team}' -> Key='{composite_key}'")
+                logger.info(
+                    f"DRAFT_DEBUG: Raw='{player_field}' -> Name='{player_name}' Team='{player_team}' -> Key='{composite_key}'"
+                )
 
                 # Track FF_OWNER's team roster for bye week analysis
                 # Use column_team (actual column position) instead of team (snake draft logic)
@@ -544,11 +619,13 @@ async def analyze_available_players(
                     bye_week = pick.get("bye_week", 0)
 
                     if position in current_roster:
-                        current_roster[position].append({
-                            "name": player_name,
-                            "position": position,
-                            "bye_week": bye_week
-                        })
+                        current_roster[position].append(
+                            {
+                                "name": player_name,
+                                "position": position,
+                                "bye_week": bye_week,
+                            }
+                        )
 
                         # Track bye week conflicts
                         if bye_week not in bye_week_conflicts:
@@ -558,9 +635,13 @@ async def analyze_available_players(
                         bye_week_conflicts[bye_week][position].append(player_name)
 
         logger.info(f"Found {len(drafted_players)} drafted players")
-        logger.info(f"First 10 drafted players (normalized): {list(list(drafted_players)[:10])}")
+        logger.info(
+            f"First 10 drafted players (normalized): {list(list(drafted_players)[:10])}"
+        )
         if analysis_team:
-            logger.info(f"Analyzing bye weeks for team: {analysis_team.get('team_name')}")
+            logger.info(
+                f"Analyzing bye weeks for team: {analysis_team.get('team_name')}"
+            )
 
         # Get current player rankings from all available sources
         ranking_sources = ["fantasysharks", "espn", "yahoo", "fantasypros"]
@@ -568,14 +649,14 @@ async def analyze_available_players(
             sources=ranking_sources,
             position=position_filter,
             limit=None,  # Get all players for analysis
-            force_refresh=force_refresh
+            force_refresh=force_refresh,
         )
 
         if not rankings_result.get("success"):
             return {
                 "success": False,
                 "error": "Failed to fetch player rankings for analysis",
-                "ranking_error": rankings_result.get("error")
+                "ranking_error": rankings_result.get("error"),
             }
 
         all_players = rankings_result["aggregated"]["players"]
@@ -592,13 +673,22 @@ async def analyze_available_players(
 
             # Apply normalization for filtering comparison
             rankings_name = clean_name.lower()
-            rankings_name = rankings_name.replace(".", "").replace("'", "").replace("-", "")
-            rankings_name = rankings_name.replace("jr", "").replace("sr", "").replace("iii", "").replace("ii", "")
+            rankings_name = (
+                rankings_name.replace(".", "").replace("'", "").replace("-", "")
+            )
+            rankings_name = (
+                rankings_name.replace("jr", "")
+                .replace("sr", "")
+                .replace("iii", "")
+                .replace("ii", "")
+            )
             rankings_name = " ".join(rankings_name.split()).strip()
 
             # Create composite key for available player: "name|team"
             player_team = player.get("team", "").upper()
-            available_composite_key = f"{rankings_name}|{player_team}" if player_team else rankings_name
+            available_composite_key = (
+                f"{rankings_name}|{player_team}" if player_team else rankings_name
+            )
 
             # Check if player is drafted using flexible team matching
             is_drafted = False
@@ -617,17 +707,29 @@ async def analyze_available_players(
                         if drafted_name == rankings_name:
                             # Check if teams are compatible using substring matching
                             # This handles cases like SF/SFO, GB/GBP, NO/NOS, NE/NEP, TB/TBB
-                            if (drafted_team in player_team or player_team in drafted_team or
-                                (len(drafted_team) >= 2 and len(player_team) >= 2 and
-                                 drafted_team[:2] == player_team[:2])):
+                            if (
+                                drafted_team in player_team
+                                or player_team in drafted_team
+                                or (
+                                    len(drafted_team) >= 2
+                                    and len(player_team) >= 2
+                                    and drafted_team[:2] == player_team[:2]
+                                )
+                            ):
                                 is_drafted = True
                                 break
 
             # Special debug logging for Jahmyr Gibbs
             if "jahmyr" in rankings_name.lower() and "gibbs" in rankings_name.lower():
-                logger.info(f"GIBBS_DEBUG: Original='{player['name']}' Clean='{clean_name}' Normalized='{rankings_name}' Team='{player_team}' CompositeKey='{available_composite_key}'")
-                logger.info(f"GIBBS_DEBUG: Checking against drafted_players: {sorted(drafted_players)}")
-                logger.info(f"GIBBS_DEBUG: is_drafted={is_drafted} (composite_check={available_composite_key in drafted_players}, name_check={rankings_name in drafted_players})")
+                logger.info(
+                    f"GIBBS_DEBUG: Original='{player['name']}' Clean='{clean_name}' Normalized='{rankings_name}' Team='{player_team}' CompositeKey='{available_composite_key}'"
+                )
+                logger.info(
+                    f"GIBBS_DEBUG: Checking against drafted_players: {sorted(drafted_players)}"
+                )
+                logger.info(
+                    f"GIBBS_DEBUG: is_drafted={is_drafted} (composite_check={available_composite_key in drafted_players}, name_check={rankings_name in drafted_players})"
+                )
 
             if not is_drafted:
                 # Update the player object with the cleaned name
@@ -635,9 +737,13 @@ async def analyze_available_players(
                 player_copy["name"] = clean_name
                 available_players.append(player_copy)
             else:
-                logger.info(f"Filtered out drafted player: {player['name']} -> '{clean_name}' (key: '{available_composite_key}')")
+                logger.info(
+                    f"Filtered out drafted player: {player['name']} -> '{clean_name}' (key: '{available_composite_key}')"
+                )
 
-        logger.info(f"Found {len(available_players)} available players after filtering drafted")
+        logger.info(
+            f"Found {len(available_players)} available players after filtering drafted"
+        )
 
         # Calculate positional scarcity and value metrics
         analyzed_players = []
@@ -660,7 +766,14 @@ async def analyze_available_players(
             # Calculate positional rank among available players for this position
             same_pos_players = [p for p in available_players if p["position"] == pos]
             same_pos_players.sort(key=lambda p: p.get("average_rank", 999))
-            pos_rank = next((i+1 for i, p in enumerate(same_pos_players) if p["name"] == player["name"]), 999)
+            pos_rank = next(
+                (
+                    i + 1
+                    for i, p in enumerate(same_pos_players)
+                    if p["name"] == player["name"]
+                ),
+                999,
+            )
 
             # Position-specific scarcity based on real fantasy value curves
             if pos == "QB":
@@ -730,12 +843,12 @@ async def analyze_available_players(
 
                 # Define minimum roster requirements per position for bye weeks
                 min_requirements = {
-                    "QB": 1,   # Need 1 starting QB
-                    "RB": 2,   # Need 2 starting RBs
-                    "WR": 2,   # Need 2 starting WRs (could flex a 3rd)
-                    "TE": 1,   # Need 1 starting TE
-                    "K": 1,    # Need 1 starting K
-                    "DST": 1   # Need 1 starting DST
+                    "QB": 1,  # Need 1 starting QB
+                    "RB": 2,  # Need 2 starting RBs
+                    "WR": 2,  # Need 2 starting WRs (could flex a 3rd)
+                    "TE": 1,  # Need 1 starting TE
+                    "K": 1,  # Need 1 starting K
+                    "DST": 1,  # Need 1 starting DST
                 }
 
                 # Check if adding this player would create problematic conflicts
@@ -763,28 +876,49 @@ async def analyze_available_players(
                             else:  # WR
                                 total_skill_conflicts += 1  # Adding this WR
 
-                            total_skill_players = len(current_roster.get("RB", [])) + len(current_roster.get("WR", [])) + 1
+                            total_skill_players = (
+                                len(current_roster.get("RB", []))
+                                + len(current_roster.get("WR", []))
+                                + 1
+                            )
 
                             # Need at least 3 skill players not on bye (2 RB + 2 WR + 1 FLEX)
                             if total_skill_conflicts >= total_skill_players - 2:
                                 bye_week_penalty = 0.7  # Moderate penalty
-                                bye_week_conflicts_found.append(f"FLEX conflict on bye week {player_bye_week}")
+                                bye_week_conflicts_found.append(
+                                    f"FLEX conflict on bye week {player_bye_week}"
+                                )
                             elif total_skill_conflicts >= total_skill_players - 3:
                                 bye_week_penalty = 0.85  # Light penalty
-                                bye_week_conflicts_found.append(f"Potential FLEX issue on bye week {player_bye_week}")
+                                bye_week_conflicts_found.append(
+                                    f"Potential FLEX issue on bye week {player_bye_week}"
+                                )
                         else:
                             # For non-skill positions, direct conflict check
                             if players_on_bye_after >= total_after_draft:
-                                bye_week_penalty = 0.5  # Heavy penalty - complete positional shutdown
-                                bye_week_conflicts_found.append(f"Complete {pos} bye week conflict on week {player_bye_week}")
+                                bye_week_penalty = (
+                                    0.5  # Heavy penalty - complete positional shutdown
+                                )
+                                bye_week_conflicts_found.append(
+                                    f"Complete {pos} bye week conflict on week {player_bye_week}"
+                                )
                             elif players_on_bye_after >= min_needed:
-                                bye_week_penalty = 0.75  # Moderate penalty - starter conflict
-                                bye_week_conflicts_found.append(f"{pos} starter conflict on bye week {player_bye_week}")
+                                bye_week_penalty = (
+                                    0.75  # Moderate penalty - starter conflict
+                                )
+                                bye_week_conflicts_found.append(
+                                    f"{pos} starter conflict on bye week {player_bye_week}"
+                                )
 
                 # Bonus for filling bye week gaps
-                if player_bye_week not in bye_week_conflicts or pos not in bye_week_conflicts.get(player_bye_week, {}):
+                if (
+                    player_bye_week not in bye_week_conflicts
+                    or pos not in bye_week_conflicts.get(player_bye_week, {})
+                ):
                     # This player helps with bye week diversity
-                    if current_at_position < min_requirements.get(pos, 1) * 2:  # Still building depth
+                    if (
+                        current_at_position < min_requirements.get(pos, 1) * 2
+                    ):  # Still building depth
                         bye_week_penalty = 1.05  # Small bonus for bye week diversity
 
             # Value over replacement calculation
@@ -792,7 +926,9 @@ async def analyze_available_players(
             rank_value = max(0, 200 - avg_rank) if avg_rank < 200 else 0
 
             # Combine ranking value with scarcity and bye week considerations
-            overall_value = (rank_value * scarcity_multiplier * bye_week_penalty) + (avg_score * 0.1)
+            overall_value = (rank_value * scarcity_multiplier * bye_week_penalty) + (
+                avg_score * 0.1
+            )
 
             # Tier analysis based on average rank
             if avg_rank <= 12:
@@ -824,7 +960,6 @@ async def analyze_available_players(
                 "average_rank": avg_rank,
                 "average_score": avg_score,
                 "commentary": player.get("commentary"),
-
                 # Value analysis
                 "value_metrics": {
                     "overall_value": round(overall_value, 2),
@@ -833,31 +968,44 @@ async def analyze_available_players(
                     "tier": tier,
                     "tier_rank": tier_rank,
                     "positional_rank": pos_rank,
-                    "position_depth": position_depth
+                    "position_depth": position_depth,
                 },
-
                 # Scarcity analysis
                 "scarcity_analysis": {
-                    "position_scarcity": "High" if scarcity_multiplier > 1.3 else "Medium" if scarcity_multiplier > 1.1 else "Low",
+                    "position_scarcity": (
+                        "High"
+                        if scarcity_multiplier > 1.3
+                        else "Medium" if scarcity_multiplier > 1.1 else "Low"
+                    ),
                     "available_at_position": position_depth,
                     "position_rank": pos_rank,
-                    "is_positional_run": pos_rank <= 5 and position_depth < 20  # Top 5 at shallow position
+                    "is_positional_run": pos_rank <= 5
+                    and position_depth < 20,  # Top 5 at shallow position
                 },
-
                 # Bye week analysis
                 "bye_week_analysis": {
                     "bye_week": player_bye_week,
                     "bye_week_penalty": round(bye_week_penalty, 3),
-                    "conflict_severity": "High" if bye_week_penalty <= 0.6 else "Medium" if bye_week_penalty <= 0.8 else "Low" if bye_week_penalty < 1.0 else "None",
+                    "conflict_severity": (
+                        "High"
+                        if bye_week_penalty <= 0.6
+                        else (
+                            "Medium"
+                            if bye_week_penalty <= 0.8
+                            else "Low" if bye_week_penalty < 1.0 else "None"
+                        )
+                    ),
                     "conflicts_found": bye_week_conflicts_found,
-                    "helps_bye_diversity": bye_week_penalty > 1.0
-                }
+                    "helps_bye_diversity": bye_week_penalty > 1.0,
+                },
             }
 
             analyzed_players.append(analyzed_player)
 
         # Sort by overall value (descending)
-        analyzed_players.sort(key=lambda p: p["value_metrics"]["overall_value"], reverse=True)
+        analyzed_players.sort(
+            key=lambda p: p["value_metrics"]["overall_value"], reverse=True
+        )
 
         # Apply limit
         if limit > 0:
@@ -868,14 +1016,18 @@ async def analyze_available_players(
         existing_round = draft_state.get("draft_state", {}).get("current_round")
         if existing_round:
             current_round = existing_round
-            logger.info(f"Using existing current_round from draft_state: {current_round}")
+            logger.info(
+                f"Using existing current_round from draft_state: {current_round}"
+            )
         else:
             total_picks = len(draft_state.get("picks", []))
             teams = draft_state.get("teams", [])
             total_teams = len(teams) if teams else 10
             current_pick = total_picks + 1
             current_round = ((current_pick - 1) // total_teams) + 1
-            logger.info(f"Calculated current round: pick {current_pick}, round {current_round}, {total_teams} teams")
+            logger.info(
+                f"Calculated current round: pick {current_pick}, round {current_round}, {total_teams} teams"
+            )
 
         # Determine round strategy
         draft_rules = draft_state.get("draft_state", {}).get("draft_rules", {})
@@ -887,10 +1039,14 @@ async def analyze_available_players(
             strategy_note = "Focus on elite talent and positional scarcity. Target players you specifically want."
         elif current_round == keeper_round:
             round_type = "keeper"
-            strategy_note = "Limited participation. Good opportunity for value if you're drafting."
+            strategy_note = (
+                "Limited participation. Good opportunity for value if you're drafting."
+            )
         else:
             round_type = "snake"
-            strategy_note = "Traditional snake draft. Consider positional needs and upcoming picks."
+            strategy_note = (
+                "Traditional snake draft. Consider positional needs and upcoming picks."
+            )
 
         # Position breakdown
         position_breakdown = {}
@@ -900,7 +1056,7 @@ async def analyze_available_players(
                 position_breakdown[pos] = {
                     "count": 0,
                     "best_available": None,
-                    "scarcity_level": "Low"
+                    "scarcity_level": "Low",
                 }
 
             position_breakdown[pos]["count"] += 1
@@ -908,7 +1064,7 @@ async def analyze_available_players(
                 position_breakdown[pos]["best_available"] = {
                     "name": player["name"],
                     "rank": player["average_rank"],
-                    "value": player["value_metrics"]["overall_value"]
+                    "value": player["value_metrics"]["overall_value"],
                 }
 
             # Update scarcity level based on best player at position
@@ -929,7 +1085,7 @@ async def analyze_available_players(
                     bye_week_summary[bye_week] = {
                         "total_players": total_conflicts,
                         "positions_affected": list(conflicts.keys()),
-                        "severity": "High" if total_conflicts >= 3 else "Medium"
+                        "severity": "High" if total_conflicts >= 3 else "Medium",
                     }
 
         return {
@@ -940,26 +1096,49 @@ async def analyze_available_players(
                 "current_round": current_round,
                 "round_type": round_type,
                 "strategy_note": strategy_note,
-                "team_analyzed": analysis_team.get("team_name") if analysis_team else "General (no specific team)"
+                "team_analyzed": (
+                    analysis_team.get("team_name")
+                    if analysis_team
+                    else "General (no specific team)"
+                ),
             },
             "players": analyzed_players,
             "position_breakdown": position_breakdown,
             "bye_week_analysis": {
                 "current_conflicts": bye_week_summary,
                 "problematic_weeks": problematic_bye_weeks,
-                "roster_summary": {pos: len(players) for pos, players in current_roster.items() if players}
+                "roster_summary": {
+                    pos: len(players)
+                    for pos, players in current_roster.items()
+                    if players
+                },
             },
-            "filters": {
-                "position_filter": position_filter,
-                "limit": limit
-            },
+            "filters": {"position_filter": position_filter, "limit": limit},
             "recommendations": {
-                "high_value_targets": [p for p in analyzed_players[:5] if p["value_metrics"]["overall_value"] > 50],
-                "scarcity_picks": [p for p in analyzed_players if p["scarcity_analysis"]["position_scarcity"] == "High"][:3],
-                "tier_breaks": [p for p in analyzed_players if p["value_metrics"]["tier_rank"] <= 2][:5],
-                "bye_week_safe": [p for p in analyzed_players if p["bye_week_analysis"]["conflict_severity"] == "None"][:5],
-                "bye_week_helpers": [p for p in analyzed_players if p["bye_week_analysis"]["helps_bye_diversity"]][:3]
-            }
+                "high_value_targets": [
+                    p
+                    for p in analyzed_players[:5]
+                    if p["value_metrics"]["overall_value"] > 50
+                ],
+                "scarcity_picks": [
+                    p
+                    for p in analyzed_players
+                    if p["scarcity_analysis"]["position_scarcity"] == "High"
+                ][:3],
+                "tier_breaks": [
+                    p for p in analyzed_players if p["value_metrics"]["tier_rank"] <= 2
+                ][:5],
+                "bye_week_safe": [
+                    p
+                    for p in analyzed_players
+                    if p["bye_week_analysis"]["conflict_severity"] == "None"
+                ][:5],
+                "bye_week_helpers": [
+                    p
+                    for p in analyzed_players
+                    if p["bye_week_analysis"]["helps_bye_diversity"]
+                ][:3],
+            },
         }
 
     except Exception as e:
@@ -974,9 +1153,9 @@ async def analyze_available_players(
                     "1. Verify draft_state contains valid picks data",
                     "2. Check that player rankings are available",
                     "3. Ensure network connection for fetching rankings",
-                    "4. Verify position filter is valid if specified"
-                ]
-            }
+                    "4. Verify position filter is valid if specified",
+                ],
+            },
         }
 
 
@@ -984,7 +1163,7 @@ async def suggest_draft_pick(
     draft_state: Dict[str, Any],
     strategy: str = "balanced",
     consider_bye_weeks: bool = True,
-    force_refresh: bool = False
+    force_refresh: bool = False,
 ) -> Dict[str, Any]:
     """
     Suggest the best draft pick based on team needs, strategy, and roster construction.
@@ -997,7 +1176,9 @@ async def suggest_draft_pick(
     Returns:
         Dict containing recommended pick, alternatives, reasoning, and strategic analysis
     """
-    logger.info(f"Generating draft pick suggestion with strategy: {strategy}, consider_bye_weeks: {consider_bye_weeks}")
+    logger.info(
+        f"Generating draft pick suggestion with strategy: {strategy}, consider_bye_weeks: {consider_bye_weeks}"
+    )
 
     try:
         # Validate strategy
@@ -1005,31 +1186,36 @@ async def suggest_draft_pick(
         if strategy not in valid_strategies:
             return {
                 "success": False,
-                "error": f"Invalid strategy: {strategy}. Valid strategies: {', '.join(valid_strategies)}"
+                "error": f"Invalid strategy: {strategy}. Valid strategies: {', '.join(valid_strategies)}",
             }
 
         # Get comprehensive player analysis
-        available_analysis = await analyze_available_players(draft_state, limit=50, force_refresh=force_refresh)
+        available_analysis = await analyze_available_players(
+            draft_state, limit=50, force_refresh=force_refresh
+        )
 
         if not available_analysis.get("success"):
             return {
                 "success": False,
                 "error": "Failed to analyze available players for draft suggestion",
-                "analysis_error": available_analysis.get("error")
+                "analysis_error": available_analysis.get("error"),
             }
 
         available_players = available_analysis["players"]
         if not available_players:
             return {
                 "success": False,
-                "error": "No available players found for draft suggestion"
+                "error": "No available players found for draft suggestion",
             }
 
         # Analyze current roster needs - ALWAYS find FF_OWNER's team by owner name
         # Note: draft_state.current_team represents who's "on the clock", not who we're analyzing for
         from config import USER_OWNER_NAME
+
         teams = draft_state.get("teams", [])
-        analysis_team = None  # The team we're providing suggestions for (FF_OWNER's team)
+        analysis_team = (
+            None  # The team we're providing suggestions for (FF_OWNER's team)
+        )
 
         # Always try to find user's team by owner name (ignore current_team as it's who's on the clock)
         if teams:
@@ -1038,21 +1224,30 @@ async def suggest_draft_pick(
                 owner_name = team.get("owner", "").strip()
                 if owner_name.lower() == USER_OWNER_NAME.lower():
                     analysis_team = team
-                    logger.info(f"Found FF_OWNER's team for draft suggestion: {team.get('team_name')} (owner: {owner_name})")
+                    logger.info(
+                        f"Found FF_OWNER's team for draft suggestion: {team.get('team_name')} (owner: {owner_name})"
+                    )
                     break
 
             # If exact match fails, try partial match
             if not analysis_team:
                 for team in teams:
                     owner_name = team.get("owner", "").strip()
-                    if USER_OWNER_NAME.lower() in owner_name.lower() or owner_name.lower() in USER_OWNER_NAME.lower():
+                    if (
+                        USER_OWNER_NAME.lower() in owner_name.lower()
+                        or owner_name.lower() in USER_OWNER_NAME.lower()
+                    ):
                         analysis_team = team
-                        logger.info(f"Found FF_OWNER's team by partial match for draft suggestion: {team.get('team_name')} (owner: {owner_name})")
+                        logger.info(
+                            f"Found FF_OWNER's team by partial match for draft suggestion: {team.get('team_name')} (owner: {owner_name})"
+                        )
                         break
 
             # If no owner match found, provide general suggestions instead of fallback
             if not analysis_team:
-                logger.info(f"Could not find team for owner '{USER_OWNER_NAME}' for draft suggestion, will provide general best available recommendations")
+                logger.info(
+                    f"Could not find team for owner '{USER_OWNER_NAME}' for draft suggestion, will provide general best available recommendations"
+                )
 
         roster_analysis = _analyze_roster_needs(draft_state, analysis_team)
 
@@ -1086,25 +1281,38 @@ async def suggest_draft_pick(
                 bye_week_factor = player["bye_week_analysis"]["bye_week_penalty"]
 
             # Roster need factor
-            position_need_factor = roster_analysis["position_needs"].get(position, {}).get("urgency_multiplier", 1.0)
+            position_need_factor = (
+                roster_analysis["position_needs"]
+                .get(position, {})
+                .get("urgency_multiplier", 1.0)
+            )
 
             # Final weighted score
-            final_score = base_value * strategy_multiplier * bye_week_factor * position_need_factor
+            final_score = (
+                base_value
+                * strategy_multiplier
+                * bye_week_factor
+                * position_need_factor
+            )
 
-            strategy_weighted_players.append({
-                **player,
-                "strategy_score": round(final_score, 2),
-                "strategy_multiplier": round(strategy_multiplier, 2),
-                "position_need_factor": round(position_need_factor, 2),
-                "final_reasoning": []
-            })
+            strategy_weighted_players.append(
+                {
+                    **player,
+                    "strategy_score": round(final_score, 2),
+                    "strategy_multiplier": round(strategy_multiplier, 2),
+                    "position_need_factor": round(position_need_factor, 2),
+                    "final_reasoning": [],
+                }
+            )
 
         # Sort by strategy-weighted score
         strategy_weighted_players.sort(key=lambda p: p["strategy_score"], reverse=True)
 
         # Generate recommendations
         top_pick = strategy_weighted_players[0] if strategy_weighted_players else None
-        alternatives = strategy_weighted_players[1:4] if len(strategy_weighted_players) > 1 else []
+        alternatives = (
+            strategy_weighted_players[1:4] if len(strategy_weighted_players) > 1 else []
+        )
 
         # Generate detailed reasoning for top pick
         if top_pick:
@@ -1116,13 +1324,20 @@ async def suggest_draft_pick(
         # Generate alternative reasoning
         for alt in alternatives:
             alt_reasoning = _generate_pick_reasoning(
-                alt, roster_analysis, strategy, current_round, consider_bye_weeks, is_alternative=True
+                alt,
+                roster_analysis,
+                strategy,
+                current_round,
+                consider_bye_weeks,
+                is_alternative=True,
             )
             alt["detailed_reasoning"] = alt_reasoning
 
         # Round-specific strategic guidance
         draft_rules = draft_state.get("draft_state", {}).get("draft_rules", {})
-        round_guidance = _get_round_specific_guidance(current_round, draft_rules, strategy)
+        round_guidance = _get_round_specific_guidance(
+            current_round, draft_rules, strategy
+        )
 
         # Position-specific recommendations
         position_recs = _get_position_specific_recommendations(
@@ -1135,26 +1350,43 @@ async def suggest_draft_pick(
                 "primary_pick": top_pick,
                 "alternatives": alternatives,
                 "strategy_used": strategy,
-                "consider_bye_weeks": consider_bye_weeks
+                "consider_bye_weeks": consider_bye_weeks,
             },
             "analysis": {
                 "current_round": current_round,
                 "round_type": available_analysis["analysis"]["round_type"],
                 "total_options_analyzed": len(available_players),
-                "team_analyzed": analysis_team.get("team_name") if analysis_team else "General (no specific team)"
+                "team_analyzed": (
+                    analysis_team.get("team_name")
+                    if analysis_team
+                    else "General (no specific team)"
+                ),
             },
             "roster_analysis": roster_analysis,
             "strategic_guidance": {
                 "round_guidance": round_guidance,
                 "position_recommendations": position_recs,
-                "bye_week_considerations": available_analysis["bye_week_analysis"]
+                "bye_week_considerations": available_analysis["bye_week_analysis"],
             },
             "confidence_factors": {
-                "high_confidence": top_pick["strategy_score"] > 50 if top_pick else False,
-                "clear_best_pick": (top_pick["strategy_score"] - alternatives[0]["strategy_score"]) > 10 if top_pick and alternatives else False,
-                "positional_need_urgent": any(need["urgency"] == "Critical" for need in roster_analysis["position_needs"].values()),
-                "bye_week_conflicts": len(available_analysis["bye_week_analysis"]["problematic_weeks"]) > 0
-            }
+                "high_confidence": (
+                    top_pick["strategy_score"] > 50 if top_pick else False
+                ),
+                "clear_best_pick": (
+                    (top_pick["strategy_score"] - alternatives[0]["strategy_score"])
+                    > 10
+                    if top_pick and alternatives
+                    else False
+                ),
+                "positional_need_urgent": any(
+                    need["urgency"] == "Critical"
+                    for need in roster_analysis["position_needs"].values()
+                ),
+                "bye_week_conflicts": len(
+                    available_analysis["bye_week_analysis"]["problematic_weeks"]
+                )
+                > 0,
+            },
         }
 
     except Exception as e:
@@ -1169,23 +1401,33 @@ async def suggest_draft_pick(
                     "1. Verify draft_state contains valid data",
                     "2. Check that available players analysis is working",
                     "3. Ensure strategy parameter is valid",
-                    "4. Verify current team information is available"
-                ]
-            }
+                    "4. Verify current team information is available",
+                ],
+            },
         }
 
 
-def _analyze_roster_needs(draft_state: Dict[str, Any], current_team: Dict[str, Any]) -> Dict[str, Any]:
+def _analyze_roster_needs(
+    draft_state: Dict[str, Any], current_team: Dict[str, Any]
+) -> Dict[str, Any]:
     """Analyze current roster composition and identify needs"""
 
     # Standard roster requirements
     roster_requirements = {
         "QB": {"starters": 1, "recommended_depth": 2, "max_useful": 3},
-        "RB": {"starters": 2, "recommended_depth": 4, "max_useful": 6},  # 2 starters + FLEX
-        "WR": {"starters": 2, "recommended_depth": 4, "max_useful": 6},  # 2 starters + FLEX
+        "RB": {
+            "starters": 2,
+            "recommended_depth": 4,
+            "max_useful": 6,
+        },  # 2 starters + FLEX
+        "WR": {
+            "starters": 2,
+            "recommended_depth": 4,
+            "max_useful": 6,
+        },  # 2 starters + FLEX
         "TE": {"starters": 1, "recommended_depth": 2, "max_useful": 3},
         "K": {"starters": 1, "recommended_depth": 1, "max_useful": 2},
-        "DST": {"starters": 1, "recommended_depth": 1, "max_useful": 2}
+        "DST": {"starters": 1, "recommended_depth": 1, "max_useful": 2},
     }
 
     current_roster = {"QB": [], "RB": [], "WR": [], "TE": [], "K": [], "DST": []}
@@ -1231,13 +1473,15 @@ def _analyze_roster_needs(draft_state: Dict[str, Any], current_team: Dict[str, A
             "depth_needed": depth_needed,
             "urgency": urgency,
             "urgency_multiplier": urgency_multiplier,
-            "current_players": [p["player_name"] for p in current_roster[position]]
+            "current_players": [p["player_name"] for p in current_roster[position]],
         }
 
     return {
         "position_needs": position_needs,
         "current_roster": current_roster,
-        "roster_balance_score": _calculate_roster_balance_score(current_roster, roster_requirements)
+        "roster_balance_score": _calculate_roster_balance_score(
+            current_roster, roster_requirements
+        ),
     }
 
 
@@ -1265,7 +1509,9 @@ def _calculate_roster_balance_score(current_roster: Dict, requirements: Dict) ->
     return round(total_score / total_positions, 1) if total_positions > 0 else 0
 
 
-def _calculate_strategy_multiplier(player: Dict, roster_analysis: Dict, strategy: str, current_round: int) -> float:
+def _calculate_strategy_multiplier(
+    player: Dict, roster_analysis: Dict, strategy: str, current_round: int
+) -> float:
     """Calculate strategy-specific multiplier for a player"""
 
     position = player["position"]
@@ -1284,7 +1530,9 @@ def _calculate_strategy_multiplier(player: Dict, roster_analysis: Dict, strategy
 
     elif strategy == "balanced":
         # Balance value with roster needs
-        position_urgency = roster_analysis["position_needs"].get(position, {}).get("urgency", "None")
+        position_urgency = (
+            roster_analysis["position_needs"].get(position, {}).get("urgency", "None")
+        )
 
         if position_urgency == "Critical":
             return 1.6  # Must fill starter spots
@@ -1307,7 +1555,9 @@ def _calculate_strategy_multiplier(player: Dict, roster_analysis: Dict, strategy
             else:
                 return 1.0
         else:  # Later rounds - swing for upside
-            if avg_rank > 100 and player.get("commentary"):  # Sleeper pick with analysis
+            if avg_rank > 100 and player.get(
+                "commentary"
+            ):  # Sleeper pick with analysis
                 return 1.4
             elif scarcity == "High":  # Positional upside
                 return 1.2
@@ -1328,8 +1578,14 @@ def _calculate_strategy_multiplier(player: Dict, roster_analysis: Dict, strategy
     return 1.0
 
 
-def _generate_pick_reasoning(player: Dict, roster_analysis: Dict, strategy: str, current_round: int,
-                           consider_bye_weeks: bool, is_alternative: bool = False) -> List[str]:
+def _generate_pick_reasoning(
+    player: Dict,
+    roster_analysis: Dict,
+    strategy: str,
+    current_round: int,
+    consider_bye_weeks: bool,
+    is_alternative: bool = False,
+) -> List[str]:
     """Generate detailed reasoning for a pick recommendation"""
 
     reasoning = []
@@ -1341,13 +1597,19 @@ def _generate_pick_reasoning(player: Dict, roster_analysis: Dict, strategy: str,
 
     # Lead with recommendation type
     if is_alternative:
-        reasoning.append(f"Alternative option: {name} ({position}) offers different strategic value")
+        reasoning.append(
+            f"Alternative option: {name} ({position}) offers different strategic value"
+        )
     else:
-        reasoning.append(f"Primary recommendation: {name} ({position}) - Rank {avg_rank:.0f}")
+        reasoning.append(
+            f"Primary recommendation: {name} ({position}) - Rank {avg_rank:.0f}"
+        )
 
     # Value reasoning
     if tier in ["Elite", "Tier 1"]:
-        reasoning.append(f"Excellent value - {tier} player still available at this pick")
+        reasoning.append(
+            f"Excellent value - {tier} player still available at this pick"
+        )
     elif tier == "Tier 2":
         reasoning.append(f"Good value - Solid {tier} option with reliable production")
 
@@ -1357,9 +1619,13 @@ def _generate_pick_reasoning(player: Dict, roster_analysis: Dict, strategy: str,
     current_count = position_need.get("current_count", 0)
 
     if urgency == "Critical":
-        reasoning.append(f"Critical need - You have {current_count} {position}s and need starters")
+        reasoning.append(
+            f"Critical need - You have {current_count} {position}s and need starters"
+        )
     elif urgency == "High":
-        reasoning.append(f"Important need - Helps fill starting lineup depth at {position}")
+        reasoning.append(
+            f"Important need - Helps fill starting lineup depth at {position}"
+        )
     elif urgency == "Medium":
         reasoning.append(f"Depth play - Adds valuable {position} depth to your roster")
 
@@ -1384,9 +1650,13 @@ def _generate_pick_reasoning(player: Dict, roster_analysis: Dict, strategy: str,
     pos_rank = player["value_metrics"]["positional_rank"]
 
     if scarcity == "High":
-        reasoning.append(f"Positional scarcity - Only {pos_rank} quality {position}s left available")
+        reasoning.append(
+            f"Positional scarcity - Only {pos_rank} quality {position}s left available"
+        )
     elif position in ["TE", "QB"] and pos_rank <= 8:
-        reasoning.append(f"Position timing - Good value for {position}{pos_rank} at this draft stage")
+        reasoning.append(
+            f"Position timing - Good value for {position}{pos_rank} at this draft stage"
+        )
 
     # Bye week reasoning
     if consider_bye_weeks:
@@ -1394,9 +1664,16 @@ def _generate_pick_reasoning(player: Dict, roster_analysis: Dict, strategy: str,
         bye_week = player["bye_week_analysis"]["bye_week"]
 
         if bye_week_severity == "High":
-            reasoning.append(f"⚠️ Bye week concern - Week {bye_week} creates roster conflicts")
-        elif bye_week_severity == "None" and player["bye_week_analysis"]["helps_bye_diversity"]:
-            reasoning.append(f"✓ Bye week help - Week {bye_week} improves roster flexibility")
+            reasoning.append(
+                f"⚠️ Bye week concern - Week {bye_week} creates roster conflicts"
+            )
+        elif (
+            bye_week_severity == "None"
+            and player["bye_week_analysis"]["helps_bye_diversity"]
+        ):
+            reasoning.append(
+                f"✓ Bye week help - Week {bye_week} improves roster flexibility"
+            )
 
     # Final strategic note
     if strategy_score > 60:
@@ -1409,7 +1686,9 @@ def _generate_pick_reasoning(player: Dict, roster_analysis: Dict, strategy: str,
     return reasoning
 
 
-def _get_round_specific_guidance(current_round: int, draft_rules: Dict, strategy: str) -> Dict[str, Any]:
+def _get_round_specific_guidance(
+    current_round: int, draft_rules: Dict, strategy: str
+) -> Dict[str, Any]:
     """Provide round-specific strategic guidance"""
 
     auction_rounds = draft_rules.get("auction_rounds", [1, 2, 3])
@@ -1423,8 +1702,8 @@ def _get_round_specific_guidance(current_round: int, draft_rules: Dict, strategy
                 "Focus on elite talent and positional scarcity",
                 "Don't worry about traditional draft value",
                 "Target players that fit your long-term roster construction",
-                "Consider which positions will be thin in snake rounds"
-            ]
+                "Consider which positions will be thin in snake rounds",
+            ],
         }
     elif current_round == keeper_round:
         return {
@@ -1434,8 +1713,8 @@ def _get_round_specific_guidance(current_round: int, draft_rules: Dict, strategy
                 "Limited participation creates value opportunities",
                 "Good chance for above-ADP picks",
                 "Fill gaps not covered by your keeper",
-                "Consider positions that will be scarce later"
-            ]
+                "Consider positions that will be scarce later",
+            ],
         }
     elif current_round <= 6:
         return {
@@ -1445,8 +1724,8 @@ def _get_round_specific_guidance(current_round: int, draft_rules: Dict, strategy
                 "Priority on RB/WR scarcity positions",
                 "Avoid QB/TE/K/DST unless elite tier",
                 "Build foundation with consistent producers",
-                "Consider positional runs and timing"
-            ]
+                "Consider positional runs and timing",
+            ],
         }
     elif current_round <= 12:
         return {
@@ -1456,8 +1735,8 @@ def _get_round_specific_guidance(current_round: int, draft_rules: Dict, strategy
                 "Fill remaining starter needs",
                 "Begin building bench depth",
                 "Consider QB/TE if not addressed",
-                "Target high-upside players in deeper positions"
-            ]
+                "Target high-upside players in deeper positions",
+            ],
         }
     else:
         return {
@@ -1467,12 +1746,14 @@ def _get_round_specific_guidance(current_round: int, draft_rules: Dict, strategy
                 "Target handcuffs and lottery tickets",
                 "Fill K/DST if not done yet",
                 "Look for breakout candidates",
-                "Consider stashing injured players"
-            ]
+                "Consider stashing injured players",
+            ],
         }
 
 
-def _get_position_specific_recommendations(available_players: List[Dict], roster_analysis: Dict, strategy: str) -> Dict[str, Any]:
+def _get_position_specific_recommendations(
+    available_players: List[Dict], roster_analysis: Dict, strategy: str
+) -> Dict[str, Any]:
     """Get position-specific recommendations"""
 
     recommendations = {}
@@ -1490,17 +1771,21 @@ def _get_position_specific_recommendations(available_players: List[Dict], roster
                         "name": p["name"],
                         "rank": p["average_rank"],
                         "tier": p["value_metrics"]["tier"],
-                        "value": p["value_metrics"]["overall_value"]
+                        "value": p["value_metrics"]["overall_value"],
                     }
                     for p in pos_players
                 ],
-                "recommendation": _get_position_timing_rec(position, position_need, pos_players, strategy)
+                "recommendation": _get_position_timing_rec(
+                    position, position_need, pos_players, strategy
+                ),
             }
 
     return recommendations
 
 
-def _get_position_timing_rec(position: str, position_need: Dict, available_players: List[Dict], strategy: str) -> str:
+def _get_position_timing_rec(
+    position: str, position_need: Dict, available_players: List[Dict], strategy: str
+) -> str:
     """Get timing recommendation for a specific position"""
 
     urgency = position_need.get("urgency", "None")
@@ -1536,6 +1821,8 @@ def _get_position_timing_rec(position: str, position_need: Dict, available_playe
             return "Can wait - TE streaming options available"
     else:
         if urgency in ["Medium", "High"]:
-            return f"Good depth option - {best_available['name']} adds roster flexibility"
+            return (
+                f"Good depth option - {best_available['name']} adds roster flexibility"
+            )
         else:
             return f"Optional - {best_available['name']} available if value aligns"

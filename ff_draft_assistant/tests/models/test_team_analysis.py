@@ -9,10 +9,7 @@ from src.models.team_analysis import PositionScarcity, RosterNeed, TeamAnalysis
 class TestRosterNeed:
     def test_roster_need_creation(self):
         need = RosterNeed(
-            position=Position.RB,
-            needed_count=2,
-            current_count=1,
-            priority_score=0.8
+            position=Position.RB, needed_count=2, current_count=1, priority_score=0.8
         )
 
         assert need.position == Position.RB
@@ -28,7 +25,7 @@ class TestPositionScarcity:
             position=Position.TE,
             total_starters_needed=12,
             quality_players_available=8,
-            scarcity_score=0.7
+            scarcity_score=0.7,
         )
 
         assert scarcity.position == Position.TE
@@ -59,28 +56,36 @@ class TestTeamAnalysis:
         # Add QBs with rankings
         for i in range(1, 11):
             player = Player(f"QB{i}", Position.QB, "TEAM", 1)
-            player.add_ranking(RankingSource.ESPN, rank_counter, 100 - rank_counter * 0.5)
+            player.add_ranking(
+                RankingSource.ESPN, rank_counter, 100 - rank_counter * 0.5
+            )
             players.append(player)
             rank_counter += 1
 
         # Add RBs with rankings
         for i in range(1, 21):
             player = Player(f"RB{i}", Position.RB, "TEAM", 1)
-            player.add_ranking(RankingSource.ESPN, rank_counter, 100 - rank_counter * 0.5)
+            player.add_ranking(
+                RankingSource.ESPN, rank_counter, 100 - rank_counter * 0.5
+            )
             players.append(player)
             rank_counter += 1
 
         # Add WRs with rankings
         for i in range(1, 31):
             player = Player(f"WR{i}", Position.WR, "TEAM", 1)
-            player.add_ranking(RankingSource.ESPN, rank_counter, 100 - rank_counter * 0.5)
+            player.add_ranking(
+                RankingSource.ESPN, rank_counter, 100 - rank_counter * 0.5
+            )
             players.append(player)
             rank_counter += 1
 
         # Add TEs with rankings
         for i in range(1, 16):
             player = Player(f"TE{i}", Position.TE, "TEAM", 1)
-            player.add_ranking(RankingSource.ESPN, rank_counter, 100 - rank_counter * 0.5)
+            player.add_ranking(
+                RankingSource.ESPN, rank_counter, 100 - rank_counter * 0.5
+            )
             players.append(player)
             rank_counter += 1
 
@@ -112,12 +117,12 @@ class TestTeamAnalysis:
         # Should be sorted by priority
         assert needs[0].priority_score >= needs[-1].priority_score
 
-    def test_calculate_position_scarcity(self, sample_available_players, sample_roster_rules):
+    def test_calculate_position_scarcity(
+        self, sample_available_players, sample_roster_rules
+    ):
         analysis = TeamAnalysis(roster_rules=sample_roster_rules, num_teams=12)
         scarcity = analysis.calculate_position_scarcity(
-            sample_available_players,
-            current_round=3,
-            total_rounds=15
+            sample_available_players, current_round=3, total_rounds=15
         )
 
         assert len(scarcity) > 0
@@ -139,7 +144,7 @@ class TestTeamAnalysis:
             if player.position == Position.RB:
                 # Create clear tiers: 1-5 (tier 1), 6-10 (tier 2), etc.
                 score = 100 - (i // 5) * 10
-                player.add_ranking("TEST", i+1, score)
+                player.add_ranking("TEST", i + 1, score)
 
         rb_players = [p for p in sample_available_players if p.position == Position.RB]
         tiers = analysis.get_positional_tiers(rb_players, max_tiers=4)
@@ -150,8 +155,12 @@ class TestTeamAnalysis:
         # Check that tiers are properly ordered
         for tier_idx in range(len(tiers) - 1):
             # Players in earlier tiers should have better average scores
-            tier1_avg = sum(p.average_score for p in tiers[tier_idx]) / len(tiers[tier_idx])
-            tier2_avg = sum(p.average_score for p in tiers[tier_idx + 1]) / len(tiers[tier_idx + 1])
+            tier1_avg = sum(p.average_score for p in tiers[tier_idx]) / len(
+                tiers[tier_idx]
+            )
+            tier2_avg = sum(p.average_score for p in tiers[tier_idx + 1]) / len(
+                tiers[tier_idx + 1]
+            )
             assert tier1_avg > tier2_avg
 
     def test_calculate_value_over_replacement(self, sample_available_players):
@@ -161,26 +170,24 @@ class TestTeamAnalysis:
         # Add rankings
         for i, player in enumerate(sample_available_players):
             if player.position == Position.RB:
-                player.add_ranking(RankingSource.ESPN, i+1, 100 - i * 2)
+                player.add_ranking(RankingSource.ESPN, i + 1, 100 - i * 2)
 
         rb_players = [p for p in sample_available_players if p.position == Position.RB]
         target_player = rb_players[2]  # 3rd best RB
 
         vor = analysis.calculate_value_over_replacement(
-            target_player,
-            sample_available_players
+            target_player, sample_available_players
         )
 
         assert vor > 0  # Should have positive value over replacement
 
-    def test_get_recommended_positions(self, sample_team, sample_available_players, sample_roster_rules):
+    def test_get_recommended_positions(
+        self, sample_team, sample_available_players, sample_roster_rules
+    ):
         analysis = TeamAnalysis(roster_rules=sample_roster_rules, num_teams=12)
 
         recommendations = analysis.get_recommended_positions(
-            sample_team,
-            sample_available_players,
-            current_round=3,
-            total_rounds=15
+            sample_team, sample_available_players, current_round=3, total_rounds=15
         )
 
         assert len(recommendations) > 0
@@ -192,15 +199,21 @@ class TestTeamAnalysis:
         # Given the team has 1 QB, 2 RBs, 1 WR, WR or FLEX should be recommended
         assert Position.WR in recommendations or Position.FLEX in recommendations
 
-    def test_evaluate_pick_value(self, sample_team, sample_available_players, sample_roster_rules):
+    def test_evaluate_pick_value(
+        self, sample_team, sample_available_players, sample_roster_rules
+    ):
         analysis = TeamAnalysis(roster_rules=sample_roster_rules, num_teams=12)
 
         # Get a high-value WR (team needs WRs)
-        wr_player = next(p for p in sample_available_players if p.position == Position.WR)
+        wr_player = next(
+            p for p in sample_available_players if p.position == Position.WR
+        )
         wr_player.add_ranking(RankingSource.ESPN, 10, 90.0)
 
         # Get a lower-value QB (team needs fewer QBs)
-        qb_player = next(p for p in sample_available_players if p.position == Position.QB)
+        qb_player = next(
+            p for p in sample_available_players if p.position == Position.QB
+        )
         qb_player.add_ranking(RankingSource.ESPN, 15, 85.0)
 
         wr_score = analysis.evaluate_pick_value(
@@ -208,7 +221,7 @@ class TestTeamAnalysis:
             sample_team,
             sample_available_players,
             current_round=3,
-            total_rounds=15
+            total_rounds=15,
         )
 
         qb_score = analysis.evaluate_pick_value(
@@ -216,7 +229,7 @@ class TestTeamAnalysis:
             sample_team,
             sample_available_players,
             current_round=3,
-            total_rounds=15
+            total_rounds=15,
         )
 
         # WR should score higher due to greater need despite similar player quality
@@ -236,17 +249,19 @@ class TestTeamAnalysis:
         # Check that we need at least the core starter positions
         assert sum(need.deficit for need in needs) >= 7
 
-    def test_position_scarcity_late_rounds(self, sample_available_players, sample_roster_rules):
+    def test_position_scarcity_late_rounds(
+        self, sample_available_players, sample_roster_rules
+    ):
         analysis = TeamAnalysis(roster_rules=sample_roster_rules, num_teams=12)
 
         # Test scarcity in late rounds
         late_round_scarcity = analysis.calculate_position_scarcity(
-            sample_available_players,
-            current_round=12,
-            total_rounds=15
+            sample_available_players, current_round=12, total_rounds=15
         )
 
         # In late rounds, kicker and defense become more relevant
-        k_scarcity = next((s for s in late_round_scarcity if s.position == Position.K), None)
+        k_scarcity = next(
+            (s for s in late_round_scarcity if s.position == Position.K), None
+        )
         if k_scarcity:
             assert k_scarcity.scarcity_score > 0

@@ -35,15 +35,15 @@ class TestRankingsCache:
                 "position": "QB",
                 "team": "KC",
                 "bye_week": 10,
-                "rankings": {"fantasysharks": {"rank": 1, "score": 95.0}}
+                "rankings": {"fantasysharks": {"rank": 1, "score": 95.0}},
             },
             {
                 "name": "Player Two",
                 "position": "RB",
                 "team": "SF",
                 "bye_week": 9,
-                "rankings": {"fantasysharks": {"rank": 2, "score": 92.0}}
-            }
+                "rankings": {"fantasysharks": {"rank": 2, "score": 92.0}},
+            },
         ]
 
     @pytest.mark.asyncio
@@ -51,15 +51,19 @@ class TestRankingsCache:
         """Test that initial fetch populates the cache"""
 
         # Mock all scrapers
-        with patch("tools.mcp_tools.FantasySharksScraper") as MockSharks, \
-             patch("tools.mcp_tools.ESPNScraper") as MockESPN, \
-             patch("tools.mcp_tools.YahooScraper") as MockYahoo, \
-             patch("tools.mcp_tools.FantasyProsScraper") as MockPros:
+        with (
+            patch("tools.mcp_tools.FantasySharksScraper") as MockSharks,
+            patch("tools.mcp_tools.ESPNScraper") as MockESPN,
+            patch("tools.mcp_tools.YahooScraper") as MockYahoo,
+            patch("tools.mcp_tools.FantasyProsScraper") as MockPros,
+        ):
 
             # Setup mock scrapers to return data
             for MockScraper in [MockSharks, MockESPN, MockYahoo, MockPros]:
                 mock_instance = MockScraper.return_value
-                mock_instance.scrape_rankings = AsyncMock(return_value=mock_scraper_results)
+                mock_instance.scrape_rankings = AsyncMock(
+                    return_value=mock_scraper_results
+                )
 
             # First call should fetch fresh data
             result = await get_player_rankings(["fantasysharks"])
@@ -75,15 +79,19 @@ class TestRankingsCache:
     async def test_subsequent_calls_use_cache(self, mock_scraper_results):
         """Test that subsequent calls use cached data"""
 
-        with patch("tools.mcp_tools.FantasySharksScraper") as MockSharks, \
-             patch("tools.mcp_tools.ESPNScraper") as MockESPN, \
-             patch("tools.mcp_tools.YahooScraper") as MockYahoo, \
-             patch("tools.mcp_tools.FantasyProsScraper") as MockPros:
+        with (
+            patch("tools.mcp_tools.FantasySharksScraper") as MockSharks,
+            patch("tools.mcp_tools.ESPNScraper") as MockESPN,
+            patch("tools.mcp_tools.YahooScraper") as MockYahoo,
+            patch("tools.mcp_tools.FantasyProsScraper") as MockPros,
+        ):
 
             # Setup mock scrapers
             for MockScraper in [MockSharks, MockESPN, MockYahoo, MockPros]:
                 mock_instance = MockScraper.return_value
-                mock_instance.scrape_rankings = AsyncMock(return_value=mock_scraper_results)
+                mock_instance.scrape_rankings = AsyncMock(
+                    return_value=mock_scraper_results
+                )
 
             # First call
             result1 = await get_player_rankings(["fantasysharks"])
@@ -103,15 +111,19 @@ class TestRankingsCache:
     async def test_position_filter_uses_cache(self, mock_scraper_results):
         """Test that position filtering works with cached data"""
 
-        with patch("tools.mcp_tools.FantasySharksScraper") as MockSharks, \
-             patch("tools.mcp_tools.ESPNScraper") as MockESPN, \
-             patch("tools.mcp_tools.YahooScraper") as MockYahoo, \
-             patch("tools.mcp_tools.FantasyProsScraper") as MockPros:
+        with (
+            patch("tools.mcp_tools.FantasySharksScraper") as MockSharks,
+            patch("tools.mcp_tools.ESPNScraper") as MockESPN,
+            patch("tools.mcp_tools.YahooScraper") as MockYahoo,
+            patch("tools.mcp_tools.FantasyProsScraper") as MockPros,
+        ):
 
             # Setup mock scrapers
             for MockScraper in [MockSharks, MockESPN, MockYahoo, MockPros]:
                 mock_instance = MockScraper.return_value
-                mock_instance.scrape_rankings = AsyncMock(return_value=mock_scraper_results)
+                mock_instance.scrape_rankings = AsyncMock(
+                    return_value=mock_scraper_results
+                )
 
             # First call without filter to populate cache
             await get_player_rankings(["fantasysharks"])
@@ -121,7 +133,9 @@ class TestRankingsCache:
 
             assert result_qb["from_cache"] is True
             assert result_qb["position"] == "QB"
-            assert all(p["position"] == "QB" for p in result_qb["aggregated"]["players"])
+            assert all(
+                p["position"] == "QB" for p in result_qb["aggregated"]["players"]
+            )
 
             # Scrapers should only be called once
             MockSharks.return_value.scrape_rankings.assert_called_once()
@@ -130,15 +144,19 @@ class TestRankingsCache:
     async def test_force_refresh_bypasses_cache(self, mock_scraper_results):
         """Test that force_refresh bypasses the cache"""
 
-        with patch("tools.mcp_tools.FantasySharksScraper") as MockSharks, \
-             patch("tools.mcp_tools.ESPNScraper") as MockESPN, \
-             patch("tools.mcp_tools.YahooScraper") as MockYahoo, \
-             patch("tools.mcp_tools.FantasyProsScraper") as MockPros:
+        with (
+            patch("tools.mcp_tools.FantasySharksScraper") as MockSharks,
+            patch("tools.mcp_tools.ESPNScraper") as MockESPN,
+            patch("tools.mcp_tools.YahooScraper") as MockYahoo,
+            patch("tools.mcp_tools.FantasyProsScraper") as MockPros,
+        ):
 
             # Setup mock scrapers
             for MockScraper in [MockSharks, MockESPN, MockYahoo, MockPros]:
                 mock_instance = MockScraper.return_value
-                mock_instance.scrape_rankings = AsyncMock(return_value=mock_scraper_results)
+                mock_instance.scrape_rankings = AsyncMock(
+                    return_value=mock_scraper_results
+                )
 
             # First call
             await get_player_rankings(["fantasysharks"])
@@ -155,15 +173,19 @@ class TestRankingsCache:
     async def test_cache_expiration(self, mock_scraper_results):
         """Test that cache expires after duration"""
 
-        with patch("tools.mcp_tools.FantasySharksScraper") as MockSharks, \
-             patch("tools.mcp_tools.ESPNScraper") as MockESPN, \
-             patch("tools.mcp_tools.YahooScraper") as MockYahoo, \
-             patch("tools.mcp_tools.FantasyProsScraper") as MockPros:
+        with (
+            patch("tools.mcp_tools.FantasySharksScraper") as MockSharks,
+            patch("tools.mcp_tools.ESPNScraper") as MockESPN,
+            patch("tools.mcp_tools.YahooScraper") as MockYahoo,
+            patch("tools.mcp_tools.FantasyProsScraper") as MockPros,
+        ):
 
             # Setup mock scrapers
             for MockScraper in [MockSharks, MockESPN, MockYahoo, MockPros]:
                 mock_instance = MockScraper.return_value
-                mock_instance.scrape_rankings = AsyncMock(return_value=mock_scraper_results)
+                mock_instance.scrape_rankings = AsyncMock(
+                    return_value=mock_scraper_results
+                )
 
             # First call
             await get_player_rankings(["fantasysharks"])
@@ -181,15 +203,19 @@ class TestRankingsCache:
     async def test_clear_cache_function(self, mock_scraper_results):
         """Test that clear_rankings_cache works correctly"""
 
-        with patch("tools.mcp_tools.FantasySharksScraper") as MockSharks, \
-             patch("tools.mcp_tools.ESPNScraper") as MockESPN, \
-             patch("tools.mcp_tools.YahooScraper") as MockYahoo, \
-             patch("tools.mcp_tools.FantasyProsScraper") as MockPros:
+        with (
+            patch("tools.mcp_tools.FantasySharksScraper") as MockSharks,
+            patch("tools.mcp_tools.ESPNScraper") as MockESPN,
+            patch("tools.mcp_tools.YahooScraper") as MockYahoo,
+            patch("tools.mcp_tools.FantasyProsScraper") as MockPros,
+        ):
 
             # Setup mock scrapers
             for MockScraper in [MockSharks, MockESPN, MockYahoo, MockPros]:
                 mock_instance = MockScraper.return_value
-                mock_instance.scrape_rankings = AsyncMock(return_value=mock_scraper_results)
+                mock_instance.scrape_rankings = AsyncMock(
+                    return_value=mock_scraper_results
+                )
 
             # Populate cache
             await get_player_rankings(["fantasysharks"])

@@ -1,4 +1,3 @@
-
 import pytest
 
 from src.tools.mcp_tools import (
@@ -12,7 +11,9 @@ class TestGetPlayerRankings:
     @pytest.mark.asyncio
     async def test_get_player_rankings_success(self):
         # Now uses all sources by default
-        result = await get_player_rankings(["fantasysharks", "espn", "yahoo", "fantasypros"])
+        result = await get_player_rankings(
+            ["fantasysharks", "espn", "yahoo", "fantasypros"]
+        )
 
         assert result["success"]
         assert "aggregated" in result
@@ -35,8 +36,7 @@ class TestGetPlayerRankings:
     @pytest.mark.asyncio
     async def test_get_player_rankings_with_position_filter(self):
         result = await get_player_rankings(
-            ["fantasysharks", "espn", "yahoo", "fantasypros"],
-            position="RB"
+            ["fantasysharks", "espn", "yahoo", "fantasypros"], position="RB"
         )
 
         assert result["success"]
@@ -47,8 +47,7 @@ class TestGetPlayerRankings:
     async def test_get_player_rankings_invalid_position(self):
         """Test error handling for invalid position"""
         result = await get_player_rankings(
-            ["fantasysharks", "espn", "yahoo", "fantasypros"],
-            position="INVALID"
+            ["fantasysharks", "espn", "yahoo", "fantasypros"], position="INVALID"
         )
 
         assert not result["success"]
@@ -57,9 +56,7 @@ class TestGetPlayerRankings:
     @pytest.mark.asyncio
     async def test_get_player_rankings_unknown_source(self):
         """Test handling of unknown sources"""
-        result = await get_player_rankings(
-            ["unknown_source", "espn"]
-        )
+        result = await get_player_rankings(["unknown_source", "espn"])
 
         assert result["success"]  # Should succeed for valid sources
         # Response structure doesn't expose individual source details,
@@ -70,11 +67,7 @@ class TestGetPlayerRankings:
     @pytest.mark.asyncio
     async def test_get_player_rankings_fantasysharks_structure(self):
         """Test FantasySharks source structure"""
-        result = await get_player_rankings(
-            ["fantasysharks"],
-            position="QB",
-            limit=5
-        )
+        result = await get_player_rankings(["fantasysharks"], position="QB", limit=5)
 
         # Note: This test may fail if no internet connection
         # In a real test environment, we'd mock the network calls
@@ -92,8 +85,7 @@ class TestGetPlayerRankings:
     @pytest.mark.asyncio
     async def test_get_player_rankings_with_limit(self):
         result = await get_player_rankings(
-            ["fantasysharks", "espn", "yahoo", "fantasypros"],
-            limit=3
+            ["fantasysharks", "espn", "yahoo", "fantasypros"], limit=3
         )
 
         assert result["success"]
@@ -112,15 +104,11 @@ class TestAnalyzeAvailablePlayers:
             "current_pick": 25,
             "current_round": 3,
             "my_team_name": "My Team",
-            "roster_requirements": {
-                "QB": 2, "RB": 4, "WR": 4, "TE": 2
-            }
+            "roster_requirements": {"QB": 2, "RB": 4, "WR": 4, "TE": 2},
         }
 
         result = await analyze_available_players(
-            draft_state=draft_state,
-            position_filter=None,
-            limit=20
+            draft_state=draft_state, position_filter=None, limit=20
         )
 
         assert "players" in result
@@ -130,16 +118,10 @@ class TestAnalyzeAvailablePlayers:
 
     @pytest.mark.asyncio
     async def test_analyze_available_players_with_position_filter(self):
-        draft_state = {
-            "num_teams": 12,
-            "current_pick": 13,
-            "my_team_name": "My Team"
-        }
+        draft_state = {"num_teams": 12, "current_pick": 13, "my_team_name": "My Team"}
 
         result = await analyze_available_players(
-            draft_state=draft_state,
-            position_filter="WR",
-            limit=10
+            draft_state=draft_state, position_filter="WR", limit=10
         )
 
         players = result["players"]
@@ -147,15 +129,9 @@ class TestAnalyzeAvailablePlayers:
 
     @pytest.mark.asyncio
     async def test_analyze_available_players_includes_value_metrics(self):
-        draft_state = {
-            "num_teams": 12,
-            "current_pick": 5,
-            "my_team_name": "My Team"
-        }
+        draft_state = {"num_teams": 12, "current_pick": 5, "my_team_name": "My Team"}
 
-        result = await analyze_available_players(
-            draft_state=draft_state
-        )
+        result = await analyze_available_players(draft_state=draft_state)
 
         players = result["players"]
         if players:
@@ -172,12 +148,10 @@ class TestAnalyzeAvailablePlayers:
             "num_teams": 12,
             "current_pick": 37,
             "current_round": 4,
-            "my_team_name": "My Team"
+            "my_team_name": "My Team",
         }
 
-        result = await analyze_available_players(
-            draft_state=draft_state
-        )
+        result = await analyze_available_players(draft_state=draft_state)
 
         # Check position breakdown contains scarcity information
         position_breakdown = result["position_breakdown"]
@@ -201,15 +175,10 @@ class TestSuggestDraftPick:
             "current_round": 1,
             "my_team_name": "My Team",
             "my_roster": [],
-            "roster_requirements": {
-                "QB": 2, "RB": 4, "WR": 4, "TE": 2
-            }
+            "roster_requirements": {"QB": 2, "RB": 4, "WR": 4, "TE": 2},
         }
 
-        result = await suggest_draft_pick(
-            draft_state=draft_state,
-            strategy="balanced"
-        )
+        result = await suggest_draft_pick(draft_state=draft_state, strategy="balanced")
 
         assert "recommendation" in result
         assert "primary_pick" in result["recommendation"]
@@ -231,20 +200,19 @@ class TestSuggestDraftPick:
                 {"name": "Josh Allen", "position": "QB"},
                 {"name": "Christian McCaffrey", "position": "RB"},
                 {"name": "Tyreek Hill", "position": "WR"},
-                {"name": "CeeDee Lamb", "position": "WR"}
+                {"name": "CeeDee Lamb", "position": "WR"},
             ],
-            "roster_requirements": {
-                "QB": 2, "RB": 4, "WR": 4, "TE": 2
-            }
+            "roster_requirements": {"QB": 2, "RB": 4, "WR": 4, "TE": 2},
         }
 
         result = await suggest_draft_pick(
-            draft_state=draft_state,
-            strategy="best_available"
+            draft_state=draft_state, strategy="best_available"
         )
 
         # Should consider roster needs
-        reasoning = ' '.join(result["recommendation"]["primary_pick"]["detailed_reasoning"])
+        reasoning = " ".join(
+            result["recommendation"]["primary_pick"]["detailed_reasoning"]
+        )
         assert "roster" in reasoning.lower() or "need" in reasoning.lower()
 
     @pytest.mark.asyncio
@@ -256,8 +224,8 @@ class TestSuggestDraftPick:
             "my_team_name": "My Team",
             "my_roster": [
                 {"name": "Lamar Jackson", "position": "QB"},
-                {"name": "Derrick Henry", "position": "RB"}
-            ]
+                {"name": "Derrick Henry", "position": "RB"},
+            ],
         }
 
         # Test different strategies
@@ -266,8 +234,7 @@ class TestSuggestDraftPick:
 
         for strategy in strategies:
             result = await suggest_draft_pick(
-                draft_state=draft_state,
-                strategy=strategy
+                draft_state=draft_state, strategy=strategy
             )
             results[strategy] = result
 
@@ -294,22 +261,31 @@ class TestSuggestDraftPick:
                 {"name": "WR3", "position": "WR"},
                 {"name": "WR4", "position": "WR"},
                 {"name": "TE1", "position": "TE"},
-                {"name": "TE2", "position": "TE"}
+                {"name": "TE2", "position": "TE"},
             ],
             "roster_requirements": {
-                "QB": 2, "RB": 4, "WR": 4, "TE": 2, "K": 1, "DST": 1
-            }
+                "QB": 2,
+                "RB": 4,
+                "WR": 4,
+                "TE": 2,
+                "K": 1,
+                "DST": 1,
+            },
         }
 
-        result = await suggest_draft_pick(
-            draft_state=draft_state,
-            strategy="balanced"
-        )
+        result = await suggest_draft_pick(draft_state=draft_state, strategy="balanced")
 
         # Should provide a recommendation for the roster gaps
         pick = result["recommendation"]["primary_pick"]
         # With current roster, should prioritize remaining needs (K, DST, or depth)
-        assert pick["position"] in ["K", "DST", "QB", "RB", "WR", "TE"]  # Any valid position
+        assert pick["position"] in [
+            "K",
+            "DST",
+            "QB",
+            "RB",
+            "WR",
+            "TE",
+        ]  # Any valid position
         assert "detailed_reasoning" in pick
 
     @pytest.mark.asyncio
@@ -322,14 +298,12 @@ class TestSuggestDraftPick:
             "my_roster": [
                 {"name": "Player1", "position": "RB", "bye_week": 7},
                 {"name": "Player2", "position": "RB", "bye_week": 7},
-                {"name": "Player3", "position": "WR", "bye_week": 7}
-            ]
+                {"name": "Player3", "position": "WR", "bye_week": 7},
+            ],
         }
 
         result = await suggest_draft_pick(
-            draft_state=draft_state,
-            strategy="balanced",
-            consider_bye_weeks=True
+            draft_state=draft_state, strategy="balanced", consider_bye_weeks=True
         )
 
         # Should mention bye week consideration in strategic guidance
@@ -343,13 +317,10 @@ class TestSuggestDraftPick:
             "num_teams": 12,
             "current_pick": 200,
             "current_round": 17,
-            "my_team_name": "My Team"
+            "my_team_name": "My Team",
         }
 
-        result = await suggest_draft_pick(
-            draft_state=draft_state,
-            strategy="balanced"
-        )
+        result = await suggest_draft_pick(draft_state=draft_state, strategy="balanced")
 
         # Should still provide a recommendation even in very late rounds
         assert result["success"] is True

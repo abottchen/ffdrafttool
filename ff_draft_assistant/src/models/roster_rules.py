@@ -7,12 +7,14 @@ from .player import Player, Position
 
 class RosterValidationError(Exception):
     """Exception raised for roster validation errors"""
+
     pass
 
 
 @dataclass
 class ValidationResult:
     """Result of roster/lineup validation"""
+
     is_valid: bool
     violations: List[str] = field(default_factory=list)
     total_starters: int = 0
@@ -20,11 +22,10 @@ class ValidationResult:
     warnings: List[str] = field(default_factory=list)
 
 
-
-
 @dataclass
 class FlexEligibility:
     """Information about FLEX eligibility for a team"""
+
     eligible_players: List[Player] = field(default_factory=list)
     rb_options: int = 0
     wr_options: int = 0
@@ -41,7 +42,7 @@ class RosterRules:
         roster_limits: Optional[Dict[Position, int]] = None,
         bench_slots: int = 10,
         ir_slots: int = 2,
-        flex_eligible_positions: Optional[Set[Position]] = None
+        flex_eligible_positions: Optional[Set[Position]] = None,
     ):
         # Default starter requirements
         self.starter_requirements = starter_requirements or {
@@ -69,7 +70,9 @@ class RosterRules:
 
         # FLEX eligible positions
         self.flex_eligible_positions = flex_eligible_positions or {
-            Position.RB, Position.WR, Position.TE
+            Position.RB,
+            Position.WR,
+            Position.TE,
         }
 
         # Calculate total starter slots and max roster size
@@ -80,12 +83,8 @@ class RosterRules:
         """Get positions eligible for FLEX slot"""
         return self.flex_eligible_positions.copy()
 
-
     def is_roster_legal(
-        self,
-        team: Team,
-        ir_slots_used: int = 0,
-        bench_slots_used: Optional[int] = None
+        self, team: Team, ir_slots_used: int = 0, bench_slots_used: Optional[int] = None
     ) -> ValidationResult:
         """
         Validate entire roster construction is legal.
@@ -146,9 +145,7 @@ class RosterRules:
         return result
 
     def get_position_needs(
-        self,
-        team: Team,
-        consider_flex_depth: bool = False
+        self, team: Team, consider_flex_depth: bool = False
     ) -> Dict[Position, int]:
         """
         Calculate position needs for a team.
@@ -175,15 +172,14 @@ class RosterRules:
             if position == Position.FLEX:
                 # FLEX can be filled by flex-eligible positions
                 flex_eligible_count = sum(
-                    position_counts.get(pos, 0)
-                    for pos in self.flex_eligible_positions
+                    position_counts.get(pos, 0) for pos in self.flex_eligible_positions
                 )
                 # Need enough flex-eligible players for RB/WR/TE starters + FLEX
                 required_flex_eligible = (
-                    self.starter_requirements.get(Position.RB, 0) +
-                    self.starter_requirements.get(Position.WR, 0) +
-                    self.starter_requirements.get(Position.TE, 0) +
-                    1  # The FLEX slot itself
+                    self.starter_requirements.get(Position.RB, 0)
+                    + self.starter_requirements.get(Position.WR, 0)
+                    + self.starter_requirements.get(Position.TE, 0)
+                    + 1  # The FLEX slot itself
                 )
 
                 if flex_eligible_count < required_flex_eligible:
@@ -196,28 +192,27 @@ class RosterRules:
         # Consider FLEX depth if requested
         if consider_flex_depth:
             flex_eligible_count = sum(
-                position_counts.get(pos, 0)
-                for pos in self.flex_eligible_positions
+                position_counts.get(pos, 0) for pos in self.flex_eligible_positions
             )
 
             # Recommend additional depth for bye weeks and injuries
             starter_needs = (
-                self.starter_requirements.get(Position.RB, 0) +
-                self.starter_requirements.get(Position.WR, 0) +
-                self.starter_requirements.get(Position.TE, 0) +
-                1  # FLEX
+                self.starter_requirements.get(Position.RB, 0)
+                + self.starter_requirements.get(Position.WR, 0)
+                + self.starter_requirements.get(Position.TE, 0)
+                + 1  # FLEX
             )
 
             recommended_depth = starter_needs + 2  # 2 extra for depth
             if flex_eligible_count < recommended_depth:
-                needs['flex_depth'] = recommended_depth - flex_eligible_count
+                needs["flex_depth"] = recommended_depth - flex_eligible_count
 
         return needs
 
     def calculate_flex_eligibility(
         self,
         team: Team,
-        exclude_starters: Optional[Dict[Position, List[Player]]] = None
+        exclude_starters: Optional[Dict[Position, List[Player]]] = None,
     ) -> FlexEligibility:
         """
         Calculate FLEX eligibility for team's players.
@@ -239,8 +234,10 @@ class RosterRules:
 
         # Find eligible players
         for player in team.roster:
-            if (player.position in self.flex_eligible_positions and
-                player not in excluded_players):
+            if (
+                player.position in self.flex_eligible_positions
+                and player not in excluded_players
+            ):
                 eligibility.eligible_players.append(player)
 
                 if player.position == Position.RB:
@@ -253,7 +250,9 @@ class RosterRules:
         # Sort by rankings to find best option
         ranked_players = [p for p in eligibility.eligible_players if p.average_rank]
         if ranked_players:
-            eligibility.best_flex_option = min(ranked_players, key=lambda p: p.average_rank)
+            eligibility.best_flex_option = min(
+                ranked_players, key=lambda p: p.average_rank
+            )
         elif eligibility.eligible_players:
             eligibility.best_flex_option = eligibility.eligible_players[0]
 
@@ -299,7 +298,7 @@ class RosterRules:
     def get_optimal_flex_choice(
         self,
         available_players: List[Player],
-        current_starters: Optional[Dict[Position, List[Player]]] = None
+        current_starters: Optional[Dict[Position, List[Player]]] = None,
     ) -> Optional[Player]:
         """
         Get optimal FLEX player choice from available options.
@@ -318,9 +317,11 @@ class RosterRules:
 
         # Filter to eligible players not already starting
         eligible = [
-            p for p in available_players
-            if (p.position in self.flex_eligible_positions and
-                p not in excluded_players)
+            p
+            for p in available_players
+            if (
+                p.position in self.flex_eligible_positions and p not in excluded_players
+            )
         ]
 
         if not eligible:
@@ -335,10 +336,7 @@ class RosterRules:
         return eligible[0]
 
     def validate_draft_pick(
-        self,
-        team: Team,
-        player: Player,
-        current_round: int = 1
+        self, team: Team, player: Player, current_round: int = 1
     ) -> ValidationResult:
         """
         Validate if drafting a player makes sense for roster construction.
@@ -372,8 +370,10 @@ class RosterRules:
         # Check for better positional value in early rounds
         if current_round <= 3:
             high_need_positions = [pos for pos, need in needs.items() if need > 0]
-            if (player.position not in high_need_positions and
-                len(high_need_positions) > 0):
+            if (
+                player.position not in high_need_positions
+                and len(high_need_positions) > 0
+            ):
                 result.warnings.append(
                     f"Consider addressing {', '.join(p.value for p in high_need_positions[:2])} "
                     f"before {player.position.value}"

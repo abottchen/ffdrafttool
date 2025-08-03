@@ -37,7 +37,7 @@ class TestDraftedPlayerCompositeKeys:
                         "score": 85,
                         "bye_week": 5,
                         "average_rank": 15,
-                        "average_score": 85
+                        "average_score": 85,
                     },
                     {
                         "name": "Christian McCaffrey",
@@ -47,10 +47,10 @@ class TestDraftedPlayerCompositeKeys:
                         "score": 98,
                         "bye_week": 9,
                         "average_rank": 1,
-                        "average_score": 98
-                    }
+                        "average_score": 98,
+                    },
                 ]
-            }
+            },
         }
 
         # Draft state where Jahmyr Gibbs has been drafted in "Player Team" format
@@ -62,22 +62,23 @@ class TestDraftedPlayerCompositeKeys:
                     "team": "Lambs",
                     "player": "Jahmyr Gibbs DET",  # This format should be filtered
                     "position": "RB",
-                    "bye_week": 5
+                    "bye_week": 5,
                 }
             ],
             "teams": [
                 {"team_name": "Lambs", "owner": "Adam"},
                 {"team_name": "Eagles", "owner": "Jane"},
-            ]
+            ],
         }
 
-        with patch('tools.mcp_tools.get_player_rankings', new_callable=AsyncMock) as mock_rankings:
-            with patch('config.USER_OWNER_NAME', 'Adam'):
+        with patch(
+            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+        ) as mock_rankings:
+            with patch("config.USER_OWNER_NAME", "Adam"):
                 mock_rankings.return_value = mock_rankings_response
 
                 result = await analyze_available_players(
-                    draft_state=draft_state,
-                    limit=10
+                    draft_state=draft_state, limit=10
                 )
 
         # Should successfully filter out Jahmyr Gibbs
@@ -107,7 +108,7 @@ class TestDraftedPlayerCompositeKeys:
                         "score": 75,
                         "bye_week": 12,
                         "average_rank": 45,
-                        "average_score": 75
+                        "average_score": 75,
                     },
                     {
                         "name": "Mike Williams",
@@ -117,10 +118,10 @@ class TestDraftedPlayerCompositeKeys:
                         "score": 55,
                         "bye_week": 9,
                         "average_rank": 95,
-                        "average_score": 55
-                    }
+                        "average_score": 55,
+                    },
                 ]
-            }
+            },
         }
 
         # Draft state where only the NYJ Mike Williams has been drafted
@@ -132,22 +133,23 @@ class TestDraftedPlayerCompositeKeys:
                     "team": "Eagles",
                     "player": "Mike Williams NYJ",  # Only NYJ version drafted
                     "position": "WR",
-                    "bye_week": 12
+                    "bye_week": 12,
                 }
             ],
             "teams": [
                 {"team_name": "Lambs", "owner": "Adam"},
                 {"team_name": "Eagles", "owner": "Jane"},
-            ]
+            ],
         }
 
-        with patch('tools.mcp_tools.get_player_rankings', new_callable=AsyncMock) as mock_rankings:
-            with patch('config.USER_OWNER_NAME', 'Adam'):
+        with patch(
+            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+        ) as mock_rankings:
+            with patch("config.USER_OWNER_NAME", "Adam"):
                 mock_rankings.return_value = mock_rankings_response
 
                 result = await analyze_available_players(
-                    draft_state=draft_state,
-                    limit=10
+                    draft_state=draft_state, limit=10
                 )
 
         # Should successfully filter correctly
@@ -155,7 +157,9 @@ class TestDraftedPlayerCompositeKeys:
 
         # Check available players
         available_players = result["players"]
-        mike_williams_players = [p for p in available_players if p["name"] == "Mike Williams"]
+        mike_williams_players = [
+            p for p in available_players if p["name"] == "Mike Williams"
+        ]
 
         # Should have exactly 1 Mike Williams remaining (the PIT one)
         assert len(mike_williams_players) == 1

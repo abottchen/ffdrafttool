@@ -9,6 +9,7 @@ from typing import Dict, List
 
 class DraftType(Enum):
     """Types of draft rounds"""
+
     AUCTION = "auction"
     KEEPER = "keeper"
     SNAKE = "snake"
@@ -19,6 +20,7 @@ class DraftRules:
     """
     Defines the draft format and rules for the league
     """
+
     # Round type definitions
     auction_rounds: List[int] = None  # Rounds 1-3
     keeper_round: int = 4
@@ -72,8 +74,9 @@ class DraftRules:
         else:  # Even snake rounds: total_teams→1
             return list(range(total_teams - 1, -1, -1))
 
-    def calculate_overall_pick_number(self, round_num: int, pick_in_round: int,
-                                    completed_picks_before_round: int) -> int:
+    def calculate_overall_pick_number(
+        self, round_num: int, pick_in_round: int, completed_picks_before_round: int
+    ) -> int:
         """
         Calculate the overall pick number across all draft types.
 
@@ -91,7 +94,9 @@ class DraftAnalyzer:
     def __init__(self, rules: DraftRules = None):
         self.rules = rules or DraftRules()
 
-    def analyze_round_participation(self, round_num: int, picks_in_round: List[Dict]) -> Dict:
+    def analyze_round_participation(
+        self, round_num: int, picks_in_round: List[Dict]
+    ) -> Dict:
         """
         Analyze which teams participated in a round.
         Important for keeper round where not all teams participate.
@@ -101,7 +106,7 @@ class DraftAnalyzer:
 
         # Get all team names from picks
         for pick in picks_in_round:
-            participating_teams.add(pick.get('team'))
+            participating_teams.add(pick.get("team"))
 
         # For keeper round, determine non-participating teams
         if self.is_keeper_round(round_num):
@@ -110,10 +115,10 @@ class DraftAnalyzer:
             non_participating_teams = all_teams - participating_teams
 
         return {
-            'participating_teams': list(participating_teams),
-            'non_participating_teams': list(non_participating_teams),
-            'participation_count': len(participating_teams),
-            'round_type': self.rules.get_round_type(round_num).value
+            "participating_teams": list(participating_teams),
+            "non_participating_teams": list(non_participating_teams),
+            "participation_count": len(participating_teams),
+            "round_type": self.rules.get_round_type(round_num).value,
         }
 
     def get_draft_strategy_for_round(self, round_num: int) -> Dict:
@@ -124,36 +129,36 @@ class DraftAnalyzer:
 
         if round_type == DraftType.AUCTION:
             return {
-                'type': 'auction',
-                'strategy': 'Identify optimal players to target for your team',
-                'considerations': [
-                    'Analyze player rankings and projections',
-                    'Consider positional needs for your roster',
-                    'Evaluate player upside and consistency',
-                    'Target players that fit your team strategy',
-                    'Consider injury risk and reliability'
-                ]
+                "type": "auction",
+                "strategy": "Identify optimal players to target for your team",
+                "considerations": [
+                    "Analyze player rankings and projections",
+                    "Consider positional needs for your roster",
+                    "Evaluate player upside and consistency",
+                    "Target players that fit your team strategy",
+                    "Consider injury risk and reliability",
+                ],
             }
         elif round_type == DraftType.KEEPER:
             return {
-                'type': 'keeper',
-                'strategy': 'Only draft if you did not keep a player',
-                'considerations': [
-                    'Limited participation - only non-keeper teams',
-                    'Good opportunity for value picks',
-                    'Fill positional needs not met by keeper'
-                ]
+                "type": "keeper",
+                "strategy": "Only draft if you did not keep a player",
+                "considerations": [
+                    "Limited participation - only non-keeper teams",
+                    "Good opportunity for value picks",
+                    "Fill positional needs not met by keeper",
+                ],
             }
         else:  # SNAKE
             return {
-                'type': 'snake',
-                'strategy': 'Traditional best available player strategy',
-                'considerations': [
-                    'Follow snake draft order',
-                    'Consider bye weeks',
-                    'Balance roster construction',
-                    'Plan for upcoming picks'
-                ]
+                "type": "snake",
+                "strategy": "Traditional best available player strategy",
+                "considerations": [
+                    "Follow snake draft order",
+                    "Consider bye weeks",
+                    "Balance roster construction",
+                    "Plan for upcoming picks",
+                ],
             }
 
     def is_keeper_round(self, round_num: int) -> bool:

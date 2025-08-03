@@ -32,7 +32,7 @@ class TeamAnalysis:
         self,
         roster_rules: Optional[RosterRules] = None,
         num_teams: int = 12,
-        starter_threshold_percentile: float = 0.8
+        starter_threshold_percentile: float = 0.8,
     ):
         self.roster_rules = roster_rules or RosterRules()
         self.num_teams = num_teams
@@ -41,7 +41,9 @@ class TeamAnalysis:
         # For backward compatibility - keep roster_requirements reference
         self.roster_requirements = self.roster_rules.starter_requirements
 
-    def analyze_roster_needs(self, team: Team, consider_flex_depth: bool = True) -> List[RosterNeed]:
+    def analyze_roster_needs(
+        self, team: Team, consider_flex_depth: bool = True
+    ) -> List[RosterNeed]:
         """Analyze roster needs using RosterRules for accurate assessment"""
         needs = []
 
@@ -68,38 +70,46 @@ class TeamAnalysis:
 
                 # Extra boost for FLEX depth since it provides positional flexibility
                 if position in self.roster_rules.get_flex_eligible_positions():
-                    flex_eligibility = self.roster_rules.calculate_flex_eligibility(team)
-                    if flex_eligibility.rb_options + flex_eligibility.wr_options + flex_eligibility.te_options < 3:
+                    flex_eligibility = self.roster_rules.calculate_flex_eligibility(
+                        team
+                    )
+                    if (
+                        flex_eligibility.rb_options
+                        + flex_eligibility.wr_options
+                        + flex_eligibility.te_options
+                        < 3
+                    ):
                         priority_score *= 1.1  # Boost for FLEX depth
             else:
                 priority_score = 0
 
-            needs.append(RosterNeed(
-                position=position,
-                needed_count=required_count,
-                current_count=current_count,
-                priority_score=priority_score
-            ))
+            needs.append(
+                RosterNeed(
+                    position=position,
+                    needed_count=required_count,
+                    current_count=current_count,
+                    priority_score=priority_score,
+                )
+            )
 
         # Add FLEX depth need if identified by RosterRules
-        flex_depth_need = position_needs.get('flex_depth', 0)
+        flex_depth_need = position_needs.get("flex_depth", 0)
         if flex_depth_need > 0:
-            needs.append(RosterNeed(
-                position=Position.FLEX,  # Use FLEX to represent depth need
-                needed_count=flex_depth_need,
-                current_count=0,
-                priority_score=0.8  # High priority for depth
-            ))
+            needs.append(
+                RosterNeed(
+                    position=Position.FLEX,  # Use FLEX to represent depth need
+                    needed_count=flex_depth_need,
+                    current_count=0,
+                    priority_score=0.8,  # High priority for depth
+                )
+            )
 
         # Sort by priority score descending
         needs.sort(key=lambda n: n.priority_score, reverse=True)
         return needs
 
     def calculate_position_scarcity(
-        self,
-        available_players: List[Player],
-        current_round: int,
-        total_rounds: int
+        self, available_players: List[Player], current_round: int, total_rounds: int
     ) -> List[PositionScarcity]:
         scarcity_list = []
 
@@ -121,7 +131,7 @@ class TeamAnalysis:
 
             # Count quality players (above threshold)
             if players:
-                sorted(players, key=lambda p: p.average_rank or float('inf'))
+                sorted(players, key=lambda p: p.average_rank or float("inf"))
                 threshold_index = int(len(players) * self.starter_threshold_percentile)
                 quality_players = len(players[:threshold_index])
             else:
@@ -134,21 +144,21 @@ class TeamAnalysis:
             else:
                 scarcity_score = 0
 
-            scarcity_list.append(PositionScarcity(
-                position=position,
-                total_starters_needed=total_starters_needed,
-                quality_players_available=quality_players,
-                scarcity_score=scarcity_score
-            ))
+            scarcity_list.append(
+                PositionScarcity(
+                    position=position,
+                    total_starters_needed=total_starters_needed,
+                    quality_players_available=quality_players,
+                    scarcity_score=scarcity_score,
+                )
+            )
 
         # Sort by scarcity score descending
         scarcity_list.sort(key=lambda s: s.scarcity_score, reverse=True)
         return scarcity_list
 
     def get_positional_tiers(
-        self,
-        players: List[Player],
-        max_tiers: int = 5
+        self, players: List[Player], max_tiers: int = 5
     ) -> List[List[Player]]:
         if not players:
             return []
@@ -157,7 +167,7 @@ class TeamAnalysis:
         sorted_players = sorted(
             [p for p in players if p.average_score is not None],
             key=lambda p: p.average_score,
-            reverse=True
+            reverse=True,
         )
 
         if not sorted_players:
@@ -168,7 +178,7 @@ class TeamAnalysis:
         current_tier = [sorted_players[0]]
 
         for i in range(1, len(sorted_players)):
-            prev_score = sorted_players[i-1].average_score
+            prev_score = sorted_players[i - 1].average_score
             curr_score = sorted_players[i].average_score
 
             # If score drop is significant, start new tier
@@ -184,16 +194,15 @@ class TeamAnalysis:
         return tiers[:max_tiers]
 
     def calculate_value_over_replacement(
-        self,
-        player: Player,
-        available_players: List[Player]
+        self, player: Player, available_players: List[Player]
     ) -> float:
         if player.average_score is None:
             return 0
 
         # Find replacement level player (starter threshold)
         position_players = [
-            p for p in available_players
+            p
+            for p in available_players
             if p.position == player.position and p.average_score is not None
         ]
 
@@ -203,7 +212,9 @@ class TeamAnalysis:
         position_players.sort(key=lambda p: p.average_score, reverse=True)
 
         # Replacement level is the last starter-quality player
-        starters_needed = self.roster_requirements.get(player.position, 0) * self.num_teams
+        starters_needed = (
+            self.roster_requirements.get(player.position, 0) * self.num_teams
+        )
         replacement_index = min(starters_needed, len(position_players) - 1)
 
         if replacement_index < len(position_players):
@@ -218,7 +229,7 @@ class TeamAnalysis:
         available_players: List[Player],
         current_round: int,
         total_rounds: int,
-        max_recommendations: int = 3
+        max_recommendations: int = 3,
     ) -> List[Position]:
         # Get roster needs
         needs = self.analyze_roster_needs(team)
@@ -238,18 +249,16 @@ class TeamAnalysis:
                 # Find scarcity score for this position
                 scarcity_score = next(
                     (s.scarcity_score for s in scarcity if s.position == need.position),
-                    0
+                    0,
                 )
 
                 # Combined score (weighted average)
-                position_scores[need.position] = (0.6 * need_score) + (0.4 * scarcity_score)
+                position_scores[need.position] = (0.6 * need_score) + (
+                    0.4 * scarcity_score
+                )
 
         # Sort positions by combined score
-        recommended = sorted(
-            position_scores.items(),
-            key=lambda x: x[1],
-            reverse=True
-        )
+        recommended = sorted(position_scores.items(), key=lambda x: x[1], reverse=True)
 
         return [pos for pos, _ in recommended[:max_recommendations]]
 
@@ -259,7 +268,7 @@ class TeamAnalysis:
         team: Team,
         available_players: List[Player],
         current_round: int,
-        total_rounds: int
+        total_rounds: int,
     ) -> float:
         if player.average_score is None:
             return 0
@@ -279,10 +288,7 @@ class TeamAnalysis:
 
         # Roster need multiplier using RosterRules
         needs = self.analyze_roster_needs(team, consider_flex_depth=True)
-        position_need = next(
-            (n for n in needs if n.position == player.position),
-            None
-        )
+        position_need = next((n for n in needs if n.position == player.position), None)
 
         if position_need and position_need.deficit > 0:
             need_multiplier = 1 + (position_need.priority_score * 0.3)
@@ -290,11 +296,12 @@ class TeamAnalysis:
             # Check if player can fill FLEX slot
             if player.position in self.roster_rules.get_flex_eligible_positions():
                 flex_need = next(
-                    (n for n in needs if n.position == Position.FLEX),
-                    None
+                    (n for n in needs if n.position == Position.FLEX), None
                 )
                 if flex_need and flex_need.deficit > 0:
-                    need_multiplier = 1 + (flex_need.priority_score * 0.25)  # Slightly lower for FLEX
+                    need_multiplier = 1 + (
+                        flex_need.priority_score * 0.25
+                    )  # Slightly lower for FLEX
                 else:
                     need_multiplier = 0.8  # Some value for FLEX depth
             else:
@@ -311,8 +318,7 @@ class TeamAnalysis:
             available_players, current_round, total_rounds
         )
         position_scarcity = next(
-            (s for s in scarcity_list if s.position == player.position),
-            None
+            (s for s in scarcity_list if s.position == player.position), None
         )
 
         if position_scarcity:
@@ -324,9 +330,11 @@ class TeamAnalysis:
         flex_bonus = 1.0
         if player.position in self.roster_rules.get_flex_eligible_positions():
             flex_eligibility = self.roster_rules.calculate_flex_eligibility(team)
-            total_flex_options = (flex_eligibility.rb_options +
-                                flex_eligibility.wr_options +
-                                flex_eligibility.te_options)
+            total_flex_options = (
+                flex_eligibility.rb_options
+                + flex_eligibility.wr_options
+                + flex_eligibility.te_options
+            )
             if total_flex_options < 4:  # Need more FLEX depth
                 flex_bonus = 1.05
 
@@ -335,8 +343,13 @@ class TeamAnalysis:
         vor_bonus = vor / 100  # Normalize
 
         # Calculate final value
-        final_value = (base_value * need_multiplier * scarcity_multiplier *
-                      flex_bonus * warning_penalty) + vor_bonus
+        final_value = (
+            base_value
+            * need_multiplier
+            * scarcity_multiplier
+            * flex_bonus
+            * warning_penalty
+        ) + vor_bonus
 
         return min(1.0, final_value)  # Cap at 1.0
 
@@ -345,7 +358,7 @@ class TeamAnalysis:
         team: Team,
         available_players: List[Player],
         current_round: int,
-        total_rounds: int
+        total_rounds: int,
     ) -> Dict[str, Any]:
         """
         Get comprehensive draft strategy advice using RosterRules.
@@ -359,7 +372,7 @@ class TeamAnalysis:
             "opportunities": [],
             "position_limits": {},
             "flex_analysis": {},
-            "strategy_notes": []
+            "strategy_notes": [],
         }
 
         # Analyze current roster state
@@ -391,16 +404,22 @@ class TeamAnalysis:
                 )
 
         # FLEX analysis
-        total_flex_options = (flex_eligibility.rb_options +
-                            flex_eligibility.wr_options +
-                            flex_eligibility.te_options)
+        total_flex_options = (
+            flex_eligibility.rb_options
+            + flex_eligibility.wr_options
+            + flex_eligibility.te_options
+        )
 
         advice["flex_analysis"] = {
             "total_flex_options": total_flex_options,
             "rb_depth": flex_eligibility.rb_options,
             "wr_depth": flex_eligibility.wr_options,
             "te_depth": flex_eligibility.te_options,
-            "best_flex_option": flex_eligibility.best_flex_option.name if flex_eligibility.best_flex_option else None
+            "best_flex_option": (
+                flex_eligibility.best_flex_option.name
+                if flex_eligibility.best_flex_option
+                else None
+            ),
         }
 
         if total_flex_options < 3:
@@ -418,7 +437,10 @@ class TeamAnalysis:
             advice["strategy_notes"].append(
                 "Early rounds: prioritize guaranteed starters and elite talent"
             )
-            if any(n.position in [Position.RB, Position.WR] and n.deficit > 0 for n in needs):
+            if any(
+                n.position in [Position.RB, Position.WR] and n.deficit > 0
+                for n in needs
+            ):
                 advice["strategy_notes"].append(
                     "Consider RB/WR early for FLEX flexibility"
                 )

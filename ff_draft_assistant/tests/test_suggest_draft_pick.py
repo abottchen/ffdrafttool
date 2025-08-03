@@ -29,7 +29,7 @@ class TestSuggestDraftPick:
                     "team": "Team Alpha",
                     "player": "Christian McCaffrey",
                     "position": "RB",
-                    "bye_week": 7
+                    "bye_week": 7,
                 },
                 {
                     "pick_number": 2,
@@ -37,17 +37,11 @@ class TestSuggestDraftPick:
                     "team": "Test Team",  # Our team
                     "player": "Tyreek Hill",
                     "position": "WR",
-                    "bye_week": 10
-                }
+                    "bye_week": 10,
+                },
             ],
-            "teams": [{
-                "team_name": "Test Team",
-                "owner": "Test Owner"
-            }],
-            "current_team": {
-                "team_name": "Test Team",
-                "owner": "Test Owner"
-            },
+            "teams": [{"team_name": "Test Team", "owner": "Test Owner"}],
+            "current_team": {"team_name": "Test Team", "owner": "Test Owner"},
             "draft_state": {
                 "total_picks": 2,
                 "total_teams": 10,
@@ -56,9 +50,9 @@ class TestSuggestDraftPick:
                 "draft_rules": {
                     "auction_rounds": [1, 2, 3],
                     "keeper_round": 4,
-                    "snake_start_round": 5
-                }
-            }
+                    "snake_start_round": 5,
+                },
+            },
         }
 
     @pytest.fixture
@@ -71,7 +65,7 @@ class TestSuggestDraftPick:
                 "analyzed_count": 50,
                 "current_round": 2,
                 "round_type": "auction",
-                "strategy_note": "Focus on elite talent and positional scarcity"
+                "strategy_note": "Focus on elite talent and positional scarcity",
             },
             "players": [
                 {
@@ -85,19 +79,19 @@ class TestSuggestDraftPick:
                         "overall_value": 85.5,
                         "tier": "Tier 1",
                         "tier_rank": 2,
-                        "positional_rank": 2
+                        "positional_rank": 2,
                     },
                     "scarcity_analysis": {
                         "position_scarcity": "High",
-                        "available_at_position": 15
+                        "available_at_position": 15,
                     },
                     "bye_week_analysis": {
                         "bye_week": 14,
                         "bye_week_penalty": 1.0,
                         "conflict_severity": "None",
                         "conflicts_found": [],
-                        "helps_bye_diversity": True
-                    }
+                        "helps_bye_diversity": True,
+                    },
                 },
                 {
                     "name": "Josh Allen",
@@ -110,19 +104,19 @@ class TestSuggestDraftPick:
                         "overall_value": 75.2,
                         "tier": "Elite",
                         "tier_rank": 1,
-                        "positional_rank": 1
+                        "positional_rank": 1,
                     },
                     "scarcity_analysis": {
                         "position_scarcity": "Medium",
-                        "available_at_position": 12
+                        "available_at_position": 12,
                     },
                     "bye_week_analysis": {
                         "bye_week": 12,
                         "bye_week_penalty": 1.0,
                         "conflict_severity": "None",
                         "conflicts_found": [],
-                        "helps_bye_diversity": True
-                    }
+                        "helps_bye_diversity": True,
+                    },
                 },
                 {
                     "name": "Cooper Kupp",
@@ -135,33 +129,43 @@ class TestSuggestDraftPick:
                         "overall_value": 70.8,
                         "tier": "Tier 1",
                         "tier_rank": 2,
-                        "positional_rank": 5
+                        "positional_rank": 5,
                     },
                     "scarcity_analysis": {
                         "position_scarcity": "Low",
-                        "available_at_position": 30
+                        "available_at_position": 30,
                     },
                     "bye_week_analysis": {
                         "bye_week": 10,
                         "bye_week_penalty": 0.75,  # Conflict with Tyreek Hill
                         "conflict_severity": "Medium",
                         "conflicts_found": ["WR starter conflict on bye week 10"],
-                        "helps_bye_diversity": False
-                    }
-                }
+                        "helps_bye_diversity": False,
+                    },
+                },
             ],
             "bye_week_analysis": {
-                "current_conflicts": {10: {"total_players": 1, "positions_affected": ["WR"], "severity": "Medium"}},
+                "current_conflicts": {
+                    10: {
+                        "total_players": 1,
+                        "positions_affected": ["WR"],
+                        "severity": "Medium",
+                    }
+                },
                 "problematic_weeks": [10],
-                "roster_summary": {"WR": 1}
-            }
+                "roster_summary": {"WR": 1},
+            },
         }
 
     @pytest.mark.asyncio
-    async def test_suggest_basic_functionality(self, sample_draft_state, sample_analysis_response):
+    async def test_suggest_basic_functionality(
+        self, sample_draft_state, sample_analysis_response
+    ):
         """Test basic functionality of suggest_draft_pick"""
 
-        with patch("tools.mcp_tools.analyze_available_players", new_callable=AsyncMock) as mock_analysis:
+        with patch(
+            "tools.mcp_tools.analyze_available_players", new_callable=AsyncMock
+        ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
             result = await suggest_draft_pick(sample_draft_state)
@@ -188,10 +192,14 @@ class TestSuggestDraftPick:
             assert "detailed_reasoning" in primary_pick
 
     @pytest.mark.asyncio
-    async def test_strategy_balanced(self, sample_draft_state, sample_analysis_response):
+    async def test_strategy_balanced(
+        self, sample_draft_state, sample_analysis_response
+    ):
         """Test balanced strategy prioritizes roster needs + value"""
 
-        with patch("tools.mcp_tools.analyze_available_players", new_callable=AsyncMock) as mock_analysis:
+        with patch(
+            "tools.mcp_tools.analyze_available_players", new_callable=AsyncMock
+        ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
             result = await suggest_draft_pick(sample_draft_state, strategy="balanced")
@@ -207,16 +215,24 @@ class TestSuggestDraftPick:
             # Check reasoning mentions roster balance
             reasoning = primary_pick["detailed_reasoning"]
             reasoning_text = " ".join(reasoning)
-            assert "balance" in reasoning_text.lower() or "need" in reasoning_text.lower()
+            assert (
+                "balance" in reasoning_text.lower() or "need" in reasoning_text.lower()
+            )
 
     @pytest.mark.asyncio
-    async def test_strategy_best_available(self, sample_draft_state, sample_analysis_response):
+    async def test_strategy_best_available(
+        self, sample_draft_state, sample_analysis_response
+    ):
         """Test best available strategy prioritizes pure value"""
 
-        with patch("tools.mcp_tools.analyze_available_players", new_callable=AsyncMock) as mock_analysis:
+        with patch(
+            "tools.mcp_tools.analyze_available_players", new_callable=AsyncMock
+        ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
-            result = await suggest_draft_pick(sample_draft_state, strategy="best_available")
+            result = await suggest_draft_pick(
+                sample_draft_state, strategy="best_available"
+            )
 
             assert result["success"] is True
             primary_pick = result["recommendation"]["primary_pick"]
@@ -229,14 +245,20 @@ class TestSuggestDraftPick:
             # Check reasoning mentions best available strategy
             reasoning = primary_pick["detailed_reasoning"]
             reasoning_text = " ".join(reasoning).lower()
-            assert "best available" in reasoning_text or "value" in reasoning_text or "elite" in reasoning_text
+            assert (
+                "best available" in reasoning_text
+                or "value" in reasoning_text
+                or "elite" in reasoning_text
+            )
 
     @pytest.mark.asyncio
     async def test_strategy_upside(self, sample_draft_state, sample_analysis_response):
         """Test upside strategy in different rounds"""
 
         # Early round upside
-        with patch("tools.mcp_tools.analyze_available_players", new_callable=AsyncMock) as mock_analysis:
+        with patch(
+            "tools.mcp_tools.analyze_available_players", new_callable=AsyncMock
+        ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
             result = await suggest_draft_pick(sample_draft_state, strategy="upside")
@@ -251,13 +273,19 @@ class TestSuggestDraftPick:
 
             reasoning = primary_pick["detailed_reasoning"]
             reasoning_text = " ".join(reasoning).lower()
-            assert "upside" in reasoning_text or "ceiling" in reasoning_text or "potential" in reasoning_text
+            assert (
+                "upside" in reasoning_text
+                or "ceiling" in reasoning_text
+                or "potential" in reasoning_text
+            )
 
     @pytest.mark.asyncio
     async def test_strategy_safe(self, sample_draft_state, sample_analysis_response):
         """Test safe strategy prioritizes consistency"""
 
-        with patch("tools.mcp_tools.analyze_available_players", new_callable=AsyncMock) as mock_analysis:
+        with patch(
+            "tools.mcp_tools.analyze_available_players", new_callable=AsyncMock
+        ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
             result = await suggest_draft_pick(sample_draft_state, strategy="safe")
@@ -272,17 +300,28 @@ class TestSuggestDraftPick:
 
             reasoning = primary_pick["detailed_reasoning"]
             reasoning_text = " ".join(reasoning).lower()
-            assert "safe" in reasoning_text or "reliable" in reasoning_text or "consistent" in reasoning_text or "floor" in reasoning_text
+            assert (
+                "safe" in reasoning_text
+                or "reliable" in reasoning_text
+                or "consistent" in reasoning_text
+                or "floor" in reasoning_text
+            )
 
     @pytest.mark.asyncio
-    async def test_bye_week_consideration(self, sample_draft_state, sample_analysis_response):
+    async def test_bye_week_consideration(
+        self, sample_draft_state, sample_analysis_response
+    ):
         """Test bye week conflicts are properly considered"""
 
-        with patch("tools.mcp_tools.analyze_available_players", new_callable=AsyncMock) as mock_analysis:
+        with patch(
+            "tools.mcp_tools.analyze_available_players", new_callable=AsyncMock
+        ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
             # Test with bye week consideration (default)
-            result = await suggest_draft_pick(sample_draft_state, consider_bye_weeks=True)
+            result = await suggest_draft_pick(
+                sample_draft_state, consider_bye_weeks=True
+            )
 
             assert result["success"] is True
             primary_pick = result["recommendation"]["primary_pick"]
@@ -293,16 +332,22 @@ class TestSuggestDraftPick:
             assert primary_pick["name"] != "Cooper Kupp"
 
             # Test without bye week consideration
-            result_no_bye = await suggest_draft_pick(sample_draft_state, consider_bye_weeks=False)
+            result_no_bye = await suggest_draft_pick(
+                sample_draft_state, consider_bye_weeks=False
+            )
 
             assert result_no_bye["success"] is True
             # Should potentially consider Cooper Kupp now
 
     @pytest.mark.asyncio
-    async def test_roster_needs_analysis(self, sample_draft_state, sample_analysis_response):
+    async def test_roster_needs_analysis(
+        self, sample_draft_state, sample_analysis_response
+    ):
         """Test roster needs are properly analyzed"""
 
-        with patch("tools.mcp_tools.analyze_available_players", new_callable=AsyncMock) as mock_analysis:
+        with patch(
+            "tools.mcp_tools.analyze_available_players", new_callable=AsyncMock
+        ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
             result = await suggest_draft_pick(sample_draft_state)
@@ -318,16 +363,28 @@ class TestSuggestDraftPick:
             position_needs = roster_analysis["position_needs"]
 
             # Should show critical need for all positions (roster appears empty)
-            assert position_needs["RB"]["urgency"] == "Critical"  # Need 2 starters, have 0
-            assert position_needs["QB"]["urgency"] == "Critical"  # Need 1 starter, have 0
-            assert position_needs["WR"]["urgency"] == "Critical"  # Need 2 starters, have 0
-            assert position_needs["TE"]["urgency"] == "Critical"  # Need 1 starter, have 0
+            assert (
+                position_needs["RB"]["urgency"] == "Critical"
+            )  # Need 2 starters, have 0
+            assert (
+                position_needs["QB"]["urgency"] == "Critical"
+            )  # Need 1 starter, have 0
+            assert (
+                position_needs["WR"]["urgency"] == "Critical"
+            )  # Need 2 starters, have 0
+            assert (
+                position_needs["TE"]["urgency"] == "Critical"
+            )  # Need 1 starter, have 0
 
     @pytest.mark.asyncio
-    async def test_round_specific_guidance(self, sample_draft_state, sample_analysis_response):
+    async def test_round_specific_guidance(
+        self, sample_draft_state, sample_analysis_response
+    ):
         """Test round-specific strategic guidance"""
 
-        with patch("tools.mcp_tools.analyze_available_players", new_callable=AsyncMock) as mock_analysis:
+        with patch(
+            "tools.mcp_tools.analyze_available_players", new_callable=AsyncMock
+        ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
             # Test auction round guidance
@@ -338,7 +395,9 @@ class TestSuggestDraftPick:
 
             assert guidance["round_type"] == "auction"
             assert "target specific players" in guidance["key_focus"].lower()
-            assert any("elite talent" in note.lower() for note in guidance["strategy_notes"])
+            assert any(
+                "elite talent" in note.lower() for note in guidance["strategy_notes"]
+            )
 
             # Test snake round guidance
             snake_draft_state = sample_draft_state.copy()
@@ -351,13 +410,20 @@ class TestSuggestDraftPick:
             guidance_snake = result_snake["strategic_guidance"]["round_guidance"]
 
             assert guidance_snake["round_type"] == "early_snake"
-            assert any("rb/wr scarcity" in note.lower() for note in guidance_snake["strategy_notes"])
+            assert any(
+                "rb/wr scarcity" in note.lower()
+                for note in guidance_snake["strategy_notes"]
+            )
 
     @pytest.mark.asyncio
-    async def test_position_specific_recommendations(self, sample_draft_state, sample_analysis_response):
+    async def test_position_specific_recommendations(
+        self, sample_draft_state, sample_analysis_response
+    ):
         """Test position-specific recommendations"""
 
-        with patch("tools.mcp_tools.analyze_available_players", new_callable=AsyncMock) as mock_analysis:
+        with patch(
+            "tools.mcp_tools.analyze_available_players", new_callable=AsyncMock
+        ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
             result = await suggest_draft_pick(sample_draft_state)
@@ -370,7 +436,14 @@ class TestSuggestDraftPick:
 
             # Check that each position recommendation has proper structure
             for position, pos_rec in position_recs.items():
-                assert position in ["QB", "RB", "WR", "TE", "K", "DST"]  # Valid positions
+                assert position in [
+                    "QB",
+                    "RB",
+                    "WR",
+                    "TE",
+                    "K",
+                    "DST",
+                ]  # Valid positions
                 assert "urgency" in pos_rec
                 assert "current_count" in pos_rec
                 assert "top_available" in pos_rec
@@ -385,10 +458,14 @@ class TestSuggestDraftPick:
                     assert "value" in top
 
     @pytest.mark.asyncio
-    async def test_confidence_factors(self, sample_draft_state, sample_analysis_response):
+    async def test_confidence_factors(
+        self, sample_draft_state, sample_analysis_response
+    ):
         """Test confidence factor calculations"""
 
-        with patch("tools.mcp_tools.analyze_available_players", new_callable=AsyncMock) as mock_analysis:
+        with patch(
+            "tools.mcp_tools.analyze_available_players", new_callable=AsyncMock
+        ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
             result = await suggest_draft_pick(sample_draft_state)
@@ -416,7 +493,9 @@ class TestSuggestDraftPick:
     async def test_invalid_strategy(self, sample_draft_state):
         """Test handling of invalid strategy parameter"""
 
-        result = await suggest_draft_pick(sample_draft_state, strategy="invalid_strategy")
+        result = await suggest_draft_pick(
+            sample_draft_state, strategy="invalid_strategy"
+        )
 
         assert result["success"] is False
         assert "Invalid strategy" in result["error"]
@@ -426,12 +505,11 @@ class TestSuggestDraftPick:
     async def test_analysis_failure_handling(self, sample_draft_state):
         """Test handling when player analysis fails"""
 
-        failed_analysis = {
-            "success": False,
-            "error": "Failed to analyze players"
-        }
+        failed_analysis = {"success": False, "error": "Failed to analyze players"}
 
-        with patch("tools.mcp_tools.analyze_available_players", new_callable=AsyncMock) as mock_analysis:
+        with patch(
+            "tools.mcp_tools.analyze_available_players", new_callable=AsyncMock
+        ) as mock_analysis:
             mock_analysis.return_value = failed_analysis
 
             result = await suggest_draft_pick(sample_draft_state)
@@ -447,10 +525,12 @@ class TestSuggestDraftPick:
         empty_analysis = {
             "success": True,
             "players": [],
-            "analysis": {"current_round": 2, "round_type": "auction"}
+            "analysis": {"current_round": 2, "round_type": "auction"},
         }
 
-        with patch("tools.mcp_tools.analyze_available_players", new_callable=AsyncMock) as mock_analysis:
+        with patch(
+            "tools.mcp_tools.analyze_available_players", new_callable=AsyncMock
+        ) as mock_analysis:
             mock_analysis.return_value = empty_analysis
 
             result = await suggest_draft_pick(sample_draft_state)
@@ -459,10 +539,14 @@ class TestSuggestDraftPick:
             assert "No available players found" in result["error"]
 
     @pytest.mark.asyncio
-    async def test_alternatives_generation(self, sample_draft_state, sample_analysis_response):
+    async def test_alternatives_generation(
+        self, sample_draft_state, sample_analysis_response
+    ):
         """Test that alternatives are properly generated"""
 
-        with patch("tools.mcp_tools.analyze_available_players", new_callable=AsyncMock) as mock_analysis:
+        with patch(
+            "tools.mcp_tools.analyze_available_players", new_callable=AsyncMock
+        ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
             result = await suggest_draft_pick(sample_draft_state)
@@ -484,10 +568,14 @@ class TestSuggestDraftPick:
                 assert "alternative" in reasoning_text.lower()
 
     @pytest.mark.asyncio
-    async def test_detailed_reasoning_generation(self, sample_draft_state, sample_analysis_response):
+    async def test_detailed_reasoning_generation(
+        self, sample_draft_state, sample_analysis_response
+    ):
         """Test detailed reasoning generation"""
 
-        with patch("tools.mcp_tools.analyze_available_players", new_callable=AsyncMock) as mock_analysis:
+        with patch(
+            "tools.mcp_tools.analyze_available_players", new_callable=AsyncMock
+        ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
             result = await suggest_draft_pick(sample_draft_state, strategy="balanced")
@@ -515,7 +603,9 @@ class TestSuggestDraftPick:
     async def test_error_handling(self, sample_draft_state):
         """Test general error handling"""
 
-        with patch("tools.mcp_tools.analyze_available_players", new_callable=AsyncMock) as mock_analysis:
+        with patch(
+            "tools.mcp_tools.analyze_available_players", new_callable=AsyncMock
+        ) as mock_analysis:
             mock_analysis.side_effect = Exception("Unexpected error")
 
             result = await suggest_draft_pick(sample_draft_state)

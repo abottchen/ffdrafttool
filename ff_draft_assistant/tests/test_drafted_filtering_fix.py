@@ -33,7 +33,7 @@ class TestDraftedPlayerFilteringFix:
                         "team": "DET",
                         "rank": 1,
                         "score": 95,
-                        "bye_week": 8
+                        "bye_week": 8,
                     },
                     {
                         "name": "Bijan Robinson (ATL)",
@@ -41,7 +41,7 @@ class TestDraftedPlayerFilteringFix:
                         "team": "ATL",
                         "rank": 2,
                         "score": 94,
-                        "bye_week": 12
+                        "bye_week": 12,
                     },
                     {
                         "name": "A.J. Brown (PHI)",  # This player is drafted with punctuation
@@ -49,7 +49,7 @@ class TestDraftedPlayerFilteringFix:
                         "team": "PHI",
                         "rank": 3,
                         "score": 93,
-                        "bye_week": 7
+                        "bye_week": 7,
                     },
                     {
                         "name": "Marvin Harrison Jr. (ARI)",  # This player is drafted with suffix
@@ -57,7 +57,7 @@ class TestDraftedPlayerFilteringFix:
                         "team": "ARI",
                         "rank": 4,
                         "score": 92,
-                        "bye_week": 14
+                        "bye_week": 14,
                     },
                     {
                         "name": "Amon-Ra St. Brown (DET)",  # Available player - not drafted
@@ -65,28 +65,45 @@ class TestDraftedPlayerFilteringFix:
                         "team": "DET",
                         "rank": 5,
                         "score": 91,
-                        "bye_week": 8
-                    }
+                        "bye_week": 8,
+                    },
                 ]
-            }
+            },
         }
 
         # Draft state where some players are drafted (without team abbreviations)
         draft_state = {
             "picks": [
-                {"pick_number": 1, "player": "Jahmyr Gibbs", "position": "RB", "team": "Team A"},
-                {"pick_number": 2, "player": "A.J. Brown", "position": "WR", "team": "Team B"},
-                {"pick_number": 3, "player": "Marvin Harrison Jr.", "position": "WR", "team": "Team C"},
+                {
+                    "pick_number": 1,
+                    "player": "Jahmyr Gibbs",
+                    "position": "RB",
+                    "team": "Team A",
+                },
+                {
+                    "pick_number": 2,
+                    "player": "A.J. Brown",
+                    "position": "WR",
+                    "team": "Team B",
+                },
+                {
+                    "pick_number": 3,
+                    "player": "Marvin Harrison Jr.",
+                    "position": "WR",
+                    "team": "Team C",
+                },
             ],
             "teams": [
                 {"team_name": "Team A", "owner": "Owner A"},
                 {"team_name": "Team B", "owner": "Owner B"},
                 {"team_name": "Team C", "owner": "Owner C"},
-            ]
+            ],
         }
 
         # Mock the get_player_rankings function
-        with patch('tools.mcp_tools.get_player_rankings', new_callable=AsyncMock) as mock_rankings:
+        with patch(
+            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+        ) as mock_rankings:
             mock_rankings.return_value = mock_rankings_response
 
             # Analyze available players
@@ -94,7 +111,7 @@ class TestDraftedPlayerFilteringFix:
                 draft_state=draft_state,
                 position_filter=None,  # Get all positions
                 limit=10,
-                force_refresh=False
+                force_refresh=False,
             )
 
         # Verify the result
@@ -123,7 +140,9 @@ class TestDraftedPlayerFilteringFix:
                 drafted_norm = normalize(drafted_player)
                 available_norm = normalize(available_name)
 
-                assert drafted_norm != available_norm, f"Drafted player '{drafted_player}' (normalized: '{drafted_norm}') found in available players as '{available_name}' (normalized: '{available_norm}')"
+                assert (
+                    drafted_norm != available_norm
+                ), f"Drafted player '{drafted_player}' (normalized: '{drafted_norm}') found in available players as '{available_name}' (normalized: '{available_norm}')"
 
         # Available players should include only non-drafted players
         # "Amon-Ra St. Brown" should be available, and "Bijan Robinson" should be available
@@ -132,11 +151,15 @@ class TestDraftedPlayerFilteringFix:
 
         for expected in expected_available:
             for available_name in available_names:
-                if expected.lower().replace("-", "").replace(".", "") in available_name.lower().replace("-", "").replace(".", ""):
+                if expected.lower().replace("-", "").replace(
+                    ".", ""
+                ) in available_name.lower().replace("-", "").replace(".", ""):
                     found_available.append(expected)
                     break
 
-        assert len(found_available) == 2, f"Expected to find available players {expected_available}, but found {found_available}"
+        assert (
+            len(found_available) == 2
+        ), f"Expected to find available players {expected_available}, but found {found_available}"
 
     @pytest.mark.asyncio
     async def test_exact_normalization_bug_scenario(self):
@@ -153,27 +176,34 @@ class TestDraftedPlayerFilteringFix:
                         "team": "DET",
                         "rank": 1,
                         "score": 95,
-                        "bye_week": 8
+                        "bye_week": 8,
                     }
                 ]
-            }
+            },
         }
 
         draft_state = {
             "picks": [
-                {"pick_number": 1, "player": "Jahmyr Gibbs", "position": "RB", "team": "Team A"},  # Drafted without team
+                {
+                    "pick_number": 1,
+                    "player": "Jahmyr Gibbs",
+                    "position": "RB",
+                    "team": "Team A",
+                },  # Drafted without team
             ],
-            "teams": [{"team_name": "Team A", "owner": "Owner A"}]
+            "teams": [{"team_name": "Team A", "owner": "Owner A"}],
         }
 
-        with patch('tools.mcp_tools.get_player_rankings', new_callable=AsyncMock) as mock_rankings:
+        with patch(
+            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+        ) as mock_rankings:
             mock_rankings.return_value = mock_rankings_response
 
             result = await analyze_available_players(
                 draft_state=draft_state,
                 position_filter="RB",
                 limit=5,
-                force_refresh=False
+                force_refresh=False,
             )
 
         # The bug was that Jahmyr Gibbs would appear in available players
@@ -182,4 +212,6 @@ class TestDraftedPlayerFilteringFix:
         available_players = result["players"]
 
         # No players should be available since the only player in rankings is drafted
-        assert len(available_players) == 0, f"Expected 0 available players, but found {len(available_players)}: {[p['name'] for p in available_players]}"
+        assert (
+            len(available_players) == 0
+        ), f"Expected 0 available players, but found {len(available_players)}: {[p['name'] for p in available_players]}"
