@@ -2,7 +2,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
-from src.models.player import Position
+from src.models.player import InjuryStatus, Position
 from src.services.sheets_service import (
     GoogleSheetsProvider,
     SheetsService,
@@ -199,7 +199,46 @@ async def get_player_rankings(
             "bye_week": player.bye_week,
             "average_rank": player.average_rank,
             "average_score": player.average_score,
+            "injury_status": (
+                player.injury_status.value
+                if player.injury_status != InjuryStatus.HEALTHY
+                else None
+            ),
         }
+
+        # Add injury warning for long-term injuries
+        if (
+            hasattr(player, "commentary")
+            and player.commentary
+            and "injury:" in player.commentary.lower()
+        ):
+            injury_commentary = player.commentary
+            # Check for long-term injury indicators in commentary
+            if any(
+                indicator in injury_commentary.lower()
+                for indicator in [
+                    "season",
+                    "year",
+                    "months",
+                    "week 8",
+                    "week 9",
+                    "week 10",
+                    "week 11",
+                    "week 12",
+                    "week 13",
+                    "week 14",
+                    "week 15",
+                    "week 16",
+                    "week 17",
+                    "week 18",
+                    "playoffs",
+                ]
+            ):
+                player_dict["injury_warning"] = (
+                    f"⚠️ LONG-TERM INJURY: {injury_commentary}"
+                )
+            elif player.injury_status in [InjuryStatus.OUT, InjuryStatus.DOUBTFUL]:
+                player_dict["injury_warning"] = f"⚠️ INJURY: {injury_commentary}"
 
         # Only include primary ranking source to save tokens
         if player.rankings:

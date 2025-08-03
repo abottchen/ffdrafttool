@@ -122,7 +122,8 @@ class TestGetPlayerInfo:
                             "receiving_tds": 6,
                             "receptions": 65,
                         },
-                        "injury_status": "Questionable",
+                        "injury_status": "QUESTIONABLE",
+                        "injury_warning": "⚠️ INJURY: Injury: Ankle sprain, game-time decision",
                     }
                 ]
             },
