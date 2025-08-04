@@ -9,5 +9,8 @@
   "cache": {
     "rankings_cache_hours": 24,
     "draft_cache_minutes": 5
+  },
+  "logging": {
+    "level": "INFO"
   }
 }

@@ -42,6 +42,12 @@ async def get_player_rankings(
     Returns:
         Dict containing player data with rankings from each source
     """
+    import time
+
+    start_time = time.time()
+    logger.info(
+        f"Starting get_player_rankings - sources: {sources}, position: {position}, limit: {limit}"
+    )
     global _rankings_cache
 
     # Check if we have valid cached data
@@ -273,6 +279,9 @@ async def get_player_rankings(
         _rankings_cache["timestamp"] = datetime.now()
         logger.info(f"Cached {len(aggregated_players)} players for future requests")
 
+    logger.info(
+        f"get_player_rankings completed in {time.time() - start_time:.2f} seconds"
+    )
     return result
 
 
@@ -298,6 +307,9 @@ async def read_draft_progress(
     Returns:
         Dict containing draft state, picks, and available players
     """
+    import time
+
+    start_time = time.time()
     logger.info(f"Reading draft progress from sheet {sheet_id}, range {sheet_range}")
 
     try:
@@ -377,6 +389,9 @@ async def read_draft_progress(
                 }
             )
 
+        logger.info(
+            f"read_draft_progress completed in {time.time() - start_time:.2f} seconds"
+        )
         return {
             "success": True,
             "sheet_id": sheet_id,
@@ -547,6 +562,9 @@ async def analyze_available_players(
     Returns:
         Dict containing analyzed players with value metrics, scarcity info, and recommendations
     """
+    import time
+
+    start_time = time.time()
     logger.info(
         f"Analyzing available players with position filter: {position_filter}, limit: {limit}, force_refresh: {force_refresh}"
     )
@@ -757,18 +775,6 @@ async def analyze_available_players(
                             ):
                                 is_drafted = True
                                 break
-
-            # Special debug logging for Jahmyr Gibbs
-            if "jahmyr" in rankings_name.lower() and "gibbs" in rankings_name.lower():
-                logger.info(
-                    f"GIBBS_DEBUG: Original='{player['name']}' Clean='{clean_name}' Normalized='{rankings_name}' Team='{player_team}' CompositeKey='{available_composite_key}'"
-                )
-                logger.info(
-                    f"GIBBS_DEBUG: Checking against drafted_players: {sorted(drafted_players)}"
-                )
-                logger.info(
-                    f"GIBBS_DEBUG: is_drafted={is_drafted} (composite_check={available_composite_key in drafted_players}, name_check={rankings_name in drafted_players})"
-                )
 
             if not is_drafted:
                 # Update the player object with the cleaned name
@@ -1127,6 +1133,9 @@ async def analyze_available_players(
                         "severity": "High" if total_conflicts >= 3 else "Medium",
                     }
 
+        logger.info(
+            f"analyze_available_players completed in {time.time() - start_time:.2f} seconds"
+        )
         return {
             "success": True,
             "analysis": {
@@ -1217,6 +1226,9 @@ async def suggest_draft_pick(
     Returns:
         Dict containing recommended pick, alternatives, reasoning, and strategic analysis
     """
+    import time
+
+    start_time = time.time()
     logger.info(
         f"Generating draft pick suggestion with strategy: {strategy}, consider_bye_weeks: {consider_bye_weeks}"
     )
@@ -1362,6 +1374,9 @@ async def suggest_draft_pick(
             available_players, roster_analysis, strategy
         )
 
+        logger.info(
+            f"Draft pick suggestion completed in {time.time() - start_time:.2f} seconds"
+        )
         return {
             "success": True,
             "recommendation": {
@@ -1929,6 +1944,9 @@ async def get_player_info(
     Returns:
         Dict containing array of matching players with their full info
     """
+    import time
+
+    start_time = time.time()
     logger.info(
         f"Fetching player info for: last_name={last_name}, first_name={first_name}, "
         f"team={team}, position={position}"
@@ -2008,6 +2026,9 @@ async def get_player_info(
                 + (f" at {position}" if position else ""),
             }
 
+        logger.info(
+            f"get_player_info completed in {time.time() - start_time:.2f} seconds"
+        )
         return {
             "success": True,
             "players": matched_players,

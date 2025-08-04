@@ -13,9 +13,13 @@ import logging
 # Configure logging to stderr only (stdout is for MCP protocol)
 import sys
 
+# Configure logging to both stderr and file
+# Create logs directory if it doesn't exist
+from pathlib import Path
+
 from mcp.server.fastmcp import FastMCP
 
-from config import DEFAULT_SHEET_ID, DEFAULT_SHEET_RANGE, USER_OWNER_NAME
+from config import DEFAULT_SHEET_ID, DEFAULT_SHEET_RANGE, LOG_LEVEL, USER_OWNER_NAME
 from tools.mcp_tools import (
     analyze_available_players,
     get_player_info,
@@ -24,10 +28,18 @@ from tools.mcp_tools import (
     suggest_draft_pick,
 )
 
+logs_dir = Path(__file__).parent.parent / "logs"
+logs_dir.mkdir(exist_ok=True)
+
 logging.basicConfig(
-    level=logging.INFO,
-    stream=sys.stderr,
+    level=getattr(logging, LOG_LEVEL.upper()),
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.StreamHandler(sys.stderr),
+        logging.FileHandler(
+            logs_dir / "fantasy_football_mcp.log", mode="a", encoding="utf-8"
+        ),
+    ],
 )
 logger = logging.getLogger("fantasy-football-mcp")
 
