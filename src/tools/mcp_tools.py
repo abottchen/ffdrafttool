@@ -1454,7 +1454,9 @@ def _analyze_roster_needs(
         picks = draft_state.get("picks", [])
 
         for pick in picks:
-            if pick.get("team") == team_name:
+            # Handle both "team" and "column_team" fields (column_team from sheets data)
+            pick_team = pick.get("column_team") or pick.get("team")
+            if pick_team == team_name:
                 position = pick.get("position", "").upper()
                 if position in current_roster:
                     current_roster[position].append(pick)
@@ -1489,7 +1491,7 @@ def _analyze_roster_needs(
             "depth_needed": depth_needed,
             "urgency": urgency,
             "urgency_multiplier": urgency_multiplier,
-            "current_players": [p["player_name"] for p in current_roster[position]],
+            "current_players": [p.get("player_name") or p.get("player", "") for p in current_roster[position]],
         }
 
     return {
