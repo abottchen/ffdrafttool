@@ -1200,6 +1200,7 @@ async def analyze_available_players(
 
 async def suggest_draft_pick(
     draft_state: Dict[str, Any],
+    owner_name: str,
     strategy: str = "balanced",
     consider_bye_weeks: bool = True,
     force_refresh: bool = False,
@@ -1209,6 +1210,7 @@ async def suggest_draft_pick(
 
     Args:
         draft_state: Current draft state including roster and available players
+        owner_name: Name of the team owner to provide suggestions for (e.g., "Adam", "Jodi")
         strategy: Draft strategy ("balanced", "best_available", "upside", "safe")
         consider_bye_weeks: Whether to consider bye week conflicts (default: True)
 
@@ -1247,46 +1249,23 @@ async def suggest_draft_pick(
                 "error": "No available players found for draft suggestion",
             }
 
-        # Analyze current roster needs - ALWAYS find FF_OWNER's team by owner name
-        # Note: draft_state.current_team represents who's "on the clock", not who we're analyzing for
-        from config import USER_OWNER_NAME
-
+        # Find the specified team by owner
         teams = draft_state.get("teams", [])
-        analysis_team = (
-            None  # The team we're providing suggestions for (FF_OWNER's team)
-        )
+        analysis_team = None
 
-        # Always try to find user's team by owner name (ignore current_team as it's who's on the clock)
-        if teams:
-            # Try exact match first
-            for team in teams:
-                owner_name = team.get("owner", "").strip()
-                if owner_name.lower() == USER_OWNER_NAME.lower():
-                    analysis_team = team
-                    logger.info(
-                        f"Found FF_OWNER's team for draft suggestion: {team.get('team_name')} (owner: {owner_name})"
-                    )
-                    break
-
-            # If exact match fails, try partial match
-            if not analysis_team:
-                for team in teams:
-                    owner_name = team.get("owner", "").strip()
-                    if (
-                        USER_OWNER_NAME.lower() in owner_name.lower()
-                        or owner_name.lower() in USER_OWNER_NAME.lower()
-                    ):
-                        analysis_team = team
-                        logger.info(
-                            f"Found FF_OWNER's team by partial match for draft suggestion: {team.get('team_name')} (owner: {owner_name})"
-                        )
-                        break
-
-            # If no owner match found, provide general suggestions instead of fallback
-            if not analysis_team:
+        for team in teams:
+            if team.get("owner") == owner_name:
+                analysis_team = team
                 logger.info(
-                    f"Could not find team for owner '{USER_OWNER_NAME}' for draft suggestion, will provide general best available recommendations"
+                    f"Found team for draft suggestion - Owner: {owner_name}, Team: {team.get('team_name')}"
                 )
+                break
+
+        if not analysis_team:
+            return {
+                "success": False,
+                "error": f"Owner '{owner_name}' not found in draft data. Available owners: {[t.get('owner') for t in teams]}",
+            }
 
         roster_analysis = _analyze_roster_needs(draft_state, analysis_team)
 
@@ -1477,7 +1456,9 @@ def _analyze_roster_needs(
         picks = draft_state.get("picks", [])
 
         for pick in picks:
-            if pick.get("team") == team_name:
+            # Handle both "team" and "column_team" fields (column_team from sheets data)
+            pick_team = pick.get("column_team") or pick.get("team")
+            if pick_team == team_name:
                 position = pick.get("position", "").upper()
                 if position in current_roster:
                     current_roster[position].append(pick)
@@ -1512,7 +1493,10 @@ def _analyze_roster_needs(
             "depth_needed": depth_needed,
             "urgency": urgency,
             "urgency_multiplier": urgency_multiplier,
-            "current_players": [p["player_name"] for p in current_roster[position]],
+            "current_players": [
+                p.get("player_name") or p.get("player", "")
+                for p in current_roster[position]
+            ],
         }
 
     return {

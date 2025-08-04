@@ -170,15 +170,22 @@ class TestSuggestDraftPick:
     @pytest.mark.asyncio
     async def test_suggest_draft_pick_basic(self):
         draft_state = {
-            "num_teams": 12,
+            "picks": [],
             "current_pick": 10,
-            "current_round": 1,
-            "my_team_name": "My Team",
-            "my_roster": [],
-            "roster_requirements": {"QB": 2, "RB": 4, "WR": 4, "TE": 2},
+            "teams": [
+                {"team_name": "My Team", "owner": "Test Owner", "draft_position": 1}
+            ],
+            "draft_state": {
+                "total_picks": 9,
+                "total_teams": 12,
+                "current_round": 1,
+                "completed_rounds": 0,
+            },
         }
 
-        result = await suggest_draft_pick(draft_state=draft_state, strategy="balanced")
+        result = await suggest_draft_pick(
+            draft_state=draft_state, owner_name="Test Owner", strategy="balanced"
+        )
 
         assert "recommendation" in result
         assert "primary_pick" in result["recommendation"]
@@ -192,21 +199,46 @@ class TestSuggestDraftPick:
     @pytest.mark.asyncio
     async def test_suggest_draft_pick_with_existing_roster(self):
         draft_state = {
-            "num_teams": 12,
-            "current_pick": 49,
-            "current_round": 5,
-            "my_team_name": "My Team",
-            "my_roster": [
-                {"name": "Josh Allen", "position": "QB"},
-                {"name": "Christian McCaffrey", "position": "RB"},
-                {"name": "Tyreek Hill", "position": "WR"},
-                {"name": "CeeDee Lamb", "position": "WR"},
+            "picks": [
+                {
+                    "pick_number": 1,
+                    "team": "My Team",
+                    "player_name": "Josh Allen",
+                    "position": "QB",
+                },
+                {
+                    "pick_number": 2,
+                    "team": "My Team",
+                    "player_name": "Christian McCaffrey",
+                    "position": "RB",
+                },
+                {
+                    "pick_number": 3,
+                    "team": "My Team",
+                    "player_name": "Tyreek Hill",
+                    "position": "WR",
+                },
+                {
+                    "pick_number": 4,
+                    "team": "My Team",
+                    "player_name": "CeeDee Lamb",
+                    "position": "WR",
+                },
             ],
-            "roster_requirements": {"QB": 2, "RB": 4, "WR": 4, "TE": 2},
+            "current_pick": 49,
+            "teams": [
+                {"team_name": "My Team", "owner": "Test Owner", "draft_position": 1}
+            ],
+            "draft_state": {
+                "total_picks": 48,
+                "total_teams": 12,
+                "current_round": 5,
+                "completed_rounds": 4,
+            },
         }
 
         result = await suggest_draft_pick(
-            draft_state=draft_state, strategy="best_available"
+            draft_state=draft_state, owner_name="Test Owner", strategy="best_available"
         )
 
         # Should consider roster needs
@@ -218,14 +250,30 @@ class TestSuggestDraftPick:
     @pytest.mark.asyncio
     async def test_suggest_draft_pick_different_strategies(self):
         draft_state = {
-            "num_teams": 12,
-            "current_pick": 25,
-            "current_round": 3,
-            "my_team_name": "My Team",
-            "my_roster": [
-                {"name": "Lamar Jackson", "position": "QB"},
-                {"name": "Derrick Henry", "position": "RB"},
+            "picks": [
+                {
+                    "pick_number": 1,
+                    "team": "My Team",
+                    "player_name": "Lamar Jackson",
+                    "position": "QB",
+                },
+                {
+                    "pick_number": 2,
+                    "team": "My Team",
+                    "player_name": "Derrick Henry",
+                    "position": "RB",
+                },
             ],
+            "current_pick": 25,
+            "teams": [
+                {"team_name": "My Team", "owner": "Test Owner", "draft_position": 1}
+            ],
+            "draft_state": {
+                "total_picks": 24,
+                "total_teams": 12,
+                "current_round": 3,
+                "completed_rounds": 2,
+            },
         }
 
         # Test different strategies
@@ -234,7 +282,7 @@ class TestSuggestDraftPick:
 
         for strategy in strategies:
             result = await suggest_draft_pick(
-                draft_state=draft_state, strategy=strategy
+                draft_state=draft_state, owner_name="Test Owner", strategy=strategy
             )
             results[strategy] = result
 
@@ -244,36 +292,96 @@ class TestSuggestDraftPick:
     @pytest.mark.asyncio
     async def test_suggest_draft_pick_late_round(self):
         draft_state = {
-            "num_teams": 12,
-            "current_pick": 145,
-            "current_round": 13,
-            "my_team_name": "My Team",
-            "my_roster": [
+            "picks": [
                 # Full roster except K and DST
-                {"name": "QB1", "position": "QB"},
-                {"name": "QB2", "position": "QB"},
-                {"name": "RB1", "position": "RB"},
-                {"name": "RB2", "position": "RB"},
-                {"name": "RB3", "position": "RB"},
-                {"name": "RB4", "position": "RB"},
-                {"name": "WR1", "position": "WR"},
-                {"name": "WR2", "position": "WR"},
-                {"name": "WR3", "position": "WR"},
-                {"name": "WR4", "position": "WR"},
-                {"name": "TE1", "position": "TE"},
-                {"name": "TE2", "position": "TE"},
+                {
+                    "pick_number": 1,
+                    "team": "My Team",
+                    "player_name": "QB1",
+                    "position": "QB",
+                },
+                {
+                    "pick_number": 2,
+                    "team": "My Team",
+                    "player_name": "QB2",
+                    "position": "QB",
+                },
+                {
+                    "pick_number": 3,
+                    "team": "My Team",
+                    "player_name": "RB1",
+                    "position": "RB",
+                },
+                {
+                    "pick_number": 4,
+                    "team": "My Team",
+                    "player_name": "RB2",
+                    "position": "RB",
+                },
+                {
+                    "pick_number": 5,
+                    "team": "My Team",
+                    "player_name": "RB3",
+                    "position": "RB",
+                },
+                {
+                    "pick_number": 6,
+                    "team": "My Team",
+                    "player_name": "RB4",
+                    "position": "RB",
+                },
+                {
+                    "pick_number": 7,
+                    "team": "My Team",
+                    "player_name": "WR1",
+                    "position": "WR",
+                },
+                {
+                    "pick_number": 8,
+                    "team": "My Team",
+                    "player_name": "WR2",
+                    "position": "WR",
+                },
+                {
+                    "pick_number": 9,
+                    "team": "My Team",
+                    "player_name": "WR3",
+                    "position": "WR",
+                },
+                {
+                    "pick_number": 10,
+                    "team": "My Team",
+                    "player_name": "WR4",
+                    "position": "WR",
+                },
+                {
+                    "pick_number": 11,
+                    "team": "My Team",
+                    "player_name": "TE1",
+                    "position": "TE",
+                },
+                {
+                    "pick_number": 12,
+                    "team": "My Team",
+                    "player_name": "TE2",
+                    "position": "TE",
+                },
             ],
-            "roster_requirements": {
-                "QB": 2,
-                "RB": 4,
-                "WR": 4,
-                "TE": 2,
-                "K": 1,
-                "DST": 1,
+            "current_pick": 145,
+            "teams": [
+                {"team_name": "My Team", "owner": "Test Owner", "draft_position": 1}
+            ],
+            "draft_state": {
+                "total_picks": 144,
+                "total_teams": 12,
+                "current_round": 13,
+                "completed_rounds": 12,
             },
         }
 
-        result = await suggest_draft_pick(draft_state=draft_state, strategy="balanced")
+        result = await suggest_draft_pick(
+            draft_state=draft_state, owner_name="Test Owner", strategy="balanced"
+        )
 
         # Should provide a recommendation for the roster gaps
         pick = result["recommendation"]["primary_pick"]
@@ -291,19 +399,46 @@ class TestSuggestDraftPick:
     @pytest.mark.asyncio
     async def test_suggest_draft_pick_considers_bye_weeks(self):
         draft_state = {
-            "num_teams": 12,
-            "current_pick": 61,
-            "current_round": 6,
-            "my_team_name": "My Team",
-            "my_roster": [
-                {"name": "Player1", "position": "RB", "bye_week": 7},
-                {"name": "Player2", "position": "RB", "bye_week": 7},
-                {"name": "Player3", "position": "WR", "bye_week": 7},
+            "picks": [
+                {
+                    "pick_number": 1,
+                    "team": "My Team",
+                    "player_name": "Player1",
+                    "position": "RB",
+                    "bye_week": 7,
+                },
+                {
+                    "pick_number": 2,
+                    "team": "My Team",
+                    "player_name": "Player2",
+                    "position": "RB",
+                    "bye_week": 7,
+                },
+                {
+                    "pick_number": 3,
+                    "team": "My Team",
+                    "player_name": "Player3",
+                    "position": "WR",
+                    "bye_week": 7,
+                },
             ],
+            "current_pick": 61,
+            "teams": [
+                {"team_name": "My Team", "owner": "Test Owner", "draft_position": 1}
+            ],
+            "draft_state": {
+                "total_picks": 60,
+                "total_teams": 12,
+                "current_round": 6,
+                "completed_rounds": 5,
+            },
         }
 
         result = await suggest_draft_pick(
-            draft_state=draft_state, strategy="balanced", consider_bye_weeks=True
+            draft_state=draft_state,
+            owner_name="Test Owner",
+            strategy="balanced",
+            consider_bye_weeks=True,
         )
 
         # Should mention bye week consideration in strategic guidance
@@ -314,13 +449,22 @@ class TestSuggestDraftPick:
     @pytest.mark.asyncio
     async def test_suggest_draft_pick_very_late_round(self):
         draft_state = {
-            "num_teams": 12,
+            "picks": [],
             "current_pick": 200,
-            "current_round": 17,
-            "my_team_name": "My Team",
+            "teams": [
+                {"team_name": "My Team", "owner": "Test Owner", "draft_position": 1}
+            ],
+            "draft_state": {
+                "total_picks": 199,
+                "total_teams": 12,
+                "current_round": 17,
+                "completed_rounds": 16,
+            },
         }
 
-        result = await suggest_draft_pick(draft_state=draft_state, strategy="balanced")
+        result = await suggest_draft_pick(
+            draft_state=draft_state, owner_name="Test Owner", strategy="balanced"
+        )
 
         # Should still provide a recommendation even in very late rounds
         assert result["success"] is True

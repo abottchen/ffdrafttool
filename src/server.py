@@ -215,11 +215,12 @@ async def analyze_available_players_tool(
 @mcp.tool()
 async def suggest_draft_pick_tool(
     draft_state: dict,
+    owner_name: str,
     strategy: str = "balanced",
     consider_bye_weeks: bool = True,
     force_refresh: bool = False,
 ) -> str:
-    f"""
+    """
     **USE THIS TOOL** when the user asks for draft pick recommendations or "who should I pick".
 
     Get personalized draft pick recommendations based on team needs, strategy, and roster construction.
@@ -237,12 +238,9 @@ async def suggest_draft_pick_tool(
     Do NOT guess, assume, or make up player teams, positions, or other details not in the response.
     Base recommendations only on the data provided in the draft state and rankings.
 
-    CONTEXT: When the user asks "who should I pick next?" or "what's best for my team?", they are
-    referring to the team owned by "{USER_OWNER_NAME}". Focus recommendations on improving {USER_OWNER_NAME}'s roster based on
-    their current picks, team needs, and draft position.
-
     Args:
         draft_state: Current draft state from read_draft_progress_tool (REQUIRED)
+        owner_name: Name of the team owner to provide recommendations for (e.g., "Adam", "Jodi") (REQUIRED)
         strategy: Draft strategy to use (balanced, best_available, upside, safe)
         consider_bye_weeks: Whether to consider bye week conflicts in recommendations
         force_refresh: If True, bypass cache and fetch fresh rankings data for analysis
@@ -256,7 +254,7 @@ async def suggest_draft_pick_tool(
 
     try:
         result = await suggest_draft_pick(
-            draft_state, strategy, consider_bye_weeks, force_refresh
+            draft_state, owner_name, strategy, consider_bye_weeks, force_refresh
         )
         return json.dumps(result, indent=2)
     except Exception as e:
