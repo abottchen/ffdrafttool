@@ -141,7 +141,7 @@ class TestRosterAnalysisAdam:
         with patch("src.tools.mcp_tools.get_player_rankings") as mock_rankings:
             mock_rankings.return_value = mock_rankings_result
 
-            result = await suggest_draft_pick(mock_draft_state, team_name="Lambs")
+            result = await suggest_draft_pick(mock_draft_state, owner_name="Adam")
 
             # Debug: Print the result if it failed
             if not result.get("success", False):
@@ -262,7 +262,7 @@ class TestRosterAnalysisAdam:
         with patch("src.tools.mcp_tools.get_player_rankings") as mock_rankings:
             mock_rankings.return_value = mock_rankings_result
 
-            result = await suggest_draft_pick(mock_draft_state, team_name="Lambs")
+            result = await suggest_draft_pick(mock_draft_state, owner_name="Adam")
 
             # Debug: Print the result if it failed
             if not result.get("success", False):
@@ -341,7 +341,7 @@ class TestRosterAnalysisAdam:
         with patch("src.tools.mcp_tools.get_player_rankings") as mock_rankings:
             mock_rankings.return_value = mock_rankings_result
 
-            result = await suggest_draft_pick(mock_draft_state, team_name="Adam's Team")
+            result = await suggest_draft_pick(mock_draft_state, owner_name="Adam")
 
             # Debug: Print the result if it failed
             if not result.get("success", False):

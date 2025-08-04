@@ -1200,7 +1200,7 @@ async def analyze_available_players(
 
 async def suggest_draft_pick(
     draft_state: Dict[str, Any],
-    team_name: str,
+    owner_name: str,
     strategy: str = "balanced",
     consider_bye_weeks: bool = True,
     force_refresh: bool = False,
@@ -1210,7 +1210,7 @@ async def suggest_draft_pick(
 
     Args:
         draft_state: Current draft state including roster and available players
-        team_name: Name of the team to provide suggestions for
+        owner_name: Name of the team owner to provide suggestions for (e.g., "Adam", "Jodi")
         strategy: Draft strategy ("balanced", "best_available", "upside", "safe")
         consider_bye_weeks: Whether to consider bye week conflicts (default: True)
 
@@ -1249,20 +1249,22 @@ async def suggest_draft_pick(
                 "error": "No available players found for draft suggestion",
             }
 
-        # Find the specified team
+        # Find the specified team by owner
         teams = draft_state.get("teams", [])
         analysis_team = None
 
         for team in teams:
-            if team.get("team_name") == team_name:
+            if team.get("owner") == owner_name:
                 analysis_team = team
-                logger.info(f"Found team for draft suggestion: {team_name}")
+                logger.info(
+                    f"Found team for draft suggestion - Owner: {owner_name}, Team: {team.get('team_name')}"
+                )
                 break
 
         if not analysis_team:
             return {
                 "success": False,
-                "error": f"Team '{team_name}' not found in draft data. Available teams: {[t.get('team_name') for t in teams]}",
+                "error": f"Owner '{owner_name}' not found in draft data. Available owners: {[t.get('owner') for t in teams]}",
             }
 
         roster_analysis = _analyze_roster_needs(draft_state, analysis_team)
@@ -1491,7 +1493,10 @@ def _analyze_roster_needs(
             "depth_needed": depth_needed,
             "urgency": urgency,
             "urgency_multiplier": urgency_multiplier,
-            "current_players": [p.get("player_name") or p.get("player", "") for p in current_roster[position]],
+            "current_players": [
+                p.get("player_name") or p.get("player", "")
+                for p in current_roster[position]
+            ],
         }
 
     return {

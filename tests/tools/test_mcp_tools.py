@@ -184,7 +184,7 @@ class TestSuggestDraftPick:
         }
 
         result = await suggest_draft_pick(
-            draft_state=draft_state, team_name="My Team", strategy="balanced"
+            draft_state=draft_state, owner_name="Test Owner", strategy="balanced"
         )
 
         assert "recommendation" in result
@@ -238,7 +238,7 @@ class TestSuggestDraftPick:
         }
 
         result = await suggest_draft_pick(
-            draft_state=draft_state, team_name="My Team", strategy="best_available"
+            draft_state=draft_state, owner_name="Test Owner", strategy="best_available"
         )
 
         # Should consider roster needs
@@ -282,7 +282,7 @@ class TestSuggestDraftPick:
 
         for strategy in strategies:
             result = await suggest_draft_pick(
-                draft_state=draft_state, team_name="My Team", strategy=strategy
+                draft_state=draft_state, owner_name="Test Owner", strategy=strategy
             )
             results[strategy] = result
 
@@ -380,7 +380,7 @@ class TestSuggestDraftPick:
         }
 
         result = await suggest_draft_pick(
-            draft_state=draft_state, team_name="My Team", strategy="balanced"
+            draft_state=draft_state, owner_name="Test Owner", strategy="balanced"
         )
 
         # Should provide a recommendation for the roster gaps
@@ -436,7 +436,7 @@ class TestSuggestDraftPick:
 
         result = await suggest_draft_pick(
             draft_state=draft_state,
-            team_name="My Team",
+            owner_name="Test Owner",
             strategy="balanced",
             consider_bye_weeks=True,
         )
@@ -463,7 +463,7 @@ class TestSuggestDraftPick:
         }
 
         result = await suggest_draft_pick(
-            draft_state=draft_state, team_name="My Team", strategy="balanced"
+            draft_state=draft_state, owner_name="Test Owner", strategy="balanced"
         )
 
         # Should still provide a recommendation even in very late rounds

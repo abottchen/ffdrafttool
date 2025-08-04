@@ -108,15 +108,15 @@ Get personalized draft pick recommendations based on team needs and strategy.
 
 **Parameters:**
 - `draft_state` (required): Current draft state from `read_draft_progress_tool`
-- `team_name` (required): Name of the team to provide recommendations for
+- `owner_name` (required): Name of the team owner to provide recommendations for (e.g., "Adam", "Jodi")
 - `strategy` (default: "balanced"): Draft strategy - "balanced", "best_available", "upside", "safe"
 - `consider_bye_weeks` (default: true): Factor in bye week conflicts
 - `force_refresh` (default: false): Use fresh rankings data
 
 **Usage:**
-- Get balanced recommendation: `suggest_draft_pick_tool(draft_state, team_name="My Team")`
-- Use upside strategy: `suggest_draft_pick_tool(draft_state, team_name="My Team", strategy="upside")`
-- Ignore bye weeks: `suggest_draft_pick_tool(draft_state, team_name="My Team", consider_bye_weeks=false)`
+- Get balanced recommendation: `suggest_draft_pick_tool(draft_state, owner_name="Adam")`
+- Use upside strategy: `suggest_draft_pick_tool(draft_state, owner_name="Jodi", strategy="upside")`
+- Ignore bye weeks: `suggest_draft_pick_tool(draft_state, owner_name="Chuck", consider_bye_weeks=false)`
 
 ### 5. `get_player_info_tool`
 Get detailed information about specific players by name.
