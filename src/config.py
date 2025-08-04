@@ -46,3 +46,7 @@ RANKINGS_CACHE_HOURS = _config["cache"]["rankings_cache_hours"]
 
 DRAFT_CACHE_MINUTES = _config["cache"]["draft_cache_minutes"]
 """How many minutes to cache draft state data."""
+
+# Logging Configuration
+LOG_LEVEL = _config.get("logging", {}).get("level", "INFO")
+"""Logging level for the application (DEBUG, INFO, WARNING, ERROR, CRITICAL)."""

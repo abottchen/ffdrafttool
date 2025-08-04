@@ -59,5 +59,6 @@ Thumbs.db
 
 # Project specific
 *.log
+logs/
 temp/
 cache/
