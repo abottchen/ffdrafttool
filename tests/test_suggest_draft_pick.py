@@ -27,7 +27,7 @@ class TestSuggestDraftPick:
                     "pick_number": 1,
                     "round": 1,
                     "team": "Team Alpha",
-                    "player": "Christian McCaffrey",
+                    "player_name": "Christian McCaffrey",
                     "position": "RB",
                     "bye_week": 7,
                 },
@@ -35,7 +35,7 @@ class TestSuggestDraftPick:
                     "pick_number": 2,
                     "round": 1,
                     "team": "Test Team",  # Our team
-                    "player": "Tyreek Hill",
+                    "player_name": "Tyreek Hill",
                     "position": "WR",
                     "bye_week": 10,
                 },
@@ -168,7 +168,7 @@ class TestSuggestDraftPick:
         ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
-            result = await suggest_draft_pick(sample_draft_state)
+            result = await suggest_draft_pick(sample_draft_state, team_name="Test Team")
 
             # Verify basic structure
             assert result["success"] is True
@@ -202,7 +202,9 @@ class TestSuggestDraftPick:
         ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
-            result = await suggest_draft_pick(sample_draft_state, strategy="balanced")
+            result = await suggest_draft_pick(
+                sample_draft_state, team_name="Test Team", strategy="balanced"
+            )
 
             assert result["success"] is True
             primary_pick = result["recommendation"]["primary_pick"]
@@ -231,7 +233,7 @@ class TestSuggestDraftPick:
             mock_analysis.return_value = sample_analysis_response
 
             result = await suggest_draft_pick(
-                sample_draft_state, strategy="best_available"
+                sample_draft_state, team_name="Test Team", strategy="best_available"
             )
 
             assert result["success"] is True
@@ -261,7 +263,9 @@ class TestSuggestDraftPick:
         ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
-            result = await suggest_draft_pick(sample_draft_state, strategy="upside")
+            result = await suggest_draft_pick(
+                sample_draft_state, team_name="Test Team", strategy="upside"
+            )
 
             assert result["success"] is True
             primary_pick = result["recommendation"]["primary_pick"]
@@ -288,7 +292,9 @@ class TestSuggestDraftPick:
         ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
-            result = await suggest_draft_pick(sample_draft_state, strategy="safe")
+            result = await suggest_draft_pick(
+                sample_draft_state, team_name="Test Team", strategy="safe"
+            )
 
             assert result["success"] is True
             primary_pick = result["recommendation"]["primary_pick"]
@@ -320,7 +326,7 @@ class TestSuggestDraftPick:
 
             # Test with bye week consideration (default)
             result = await suggest_draft_pick(
-                sample_draft_state, consider_bye_weeks=True
+                sample_draft_state, team_name="Test Team", consider_bye_weeks=True
             )
 
             assert result["success"] is True
@@ -333,7 +339,7 @@ class TestSuggestDraftPick:
 
             # Test without bye week consideration
             result_no_bye = await suggest_draft_pick(
-                sample_draft_state, consider_bye_weeks=False
+                sample_draft_state, team_name="Test Team", consider_bye_weeks=False
             )
 
             assert result_no_bye["success"] is True
@@ -350,7 +356,7 @@ class TestSuggestDraftPick:
         ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
-            result = await suggest_draft_pick(sample_draft_state)
+            result = await suggest_draft_pick(sample_draft_state, team_name="Test Team")
 
             assert result["success"] is True
             roster_analysis = result["roster_analysis"]
@@ -388,7 +394,9 @@ class TestSuggestDraftPick:
             mock_analysis.return_value = sample_analysis_response
 
             # Test auction round guidance
-            result = await suggest_draft_pick(sample_draft_state)  # Round 2 = auction
+            result = await suggest_draft_pick(
+                sample_draft_state, team_name="Test Team"
+            )  # Round 2 = auction
 
             assert result["success"] is True
             guidance = result["strategic_guidance"]["round_guidance"]
@@ -404,7 +412,9 @@ class TestSuggestDraftPick:
             snake_draft_state["draft_state"]["current_round"] = 6
             sample_analysis_response["analysis"]["current_round"] = 6
 
-            result_snake = await suggest_draft_pick(snake_draft_state)
+            result_snake = await suggest_draft_pick(
+                snake_draft_state, team_name="Test Team"
+            )
 
             assert result_snake["success"] is True
             guidance_snake = result_snake["strategic_guidance"]["round_guidance"]
@@ -426,7 +436,7 @@ class TestSuggestDraftPick:
         ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
-            result = await suggest_draft_pick(sample_draft_state)
+            result = await suggest_draft_pick(sample_draft_state, team_name="Test Team")
 
             assert result["success"] is True
             position_recs = result["strategic_guidance"]["position_recommendations"]
@@ -468,7 +478,7 @@ class TestSuggestDraftPick:
         ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
-            result = await suggest_draft_pick(sample_draft_state)
+            result = await suggest_draft_pick(sample_draft_state, team_name="Test Team")
 
             assert result["success"] is True
             confidence = result["confidence_factors"]
@@ -494,7 +504,7 @@ class TestSuggestDraftPick:
         """Test handling of invalid strategy parameter"""
 
         result = await suggest_draft_pick(
-            sample_draft_state, strategy="invalid_strategy"
+            sample_draft_state, team_name="Test Team", strategy="invalid_strategy"
         )
 
         assert result["success"] is False
@@ -512,7 +522,7 @@ class TestSuggestDraftPick:
         ) as mock_analysis:
             mock_analysis.return_value = failed_analysis
 
-            result = await suggest_draft_pick(sample_draft_state)
+            result = await suggest_draft_pick(sample_draft_state, team_name="Test Team")
 
             assert result["success"] is False
             assert "Failed to analyze available players" in result["error"]
@@ -533,7 +543,7 @@ class TestSuggestDraftPick:
         ) as mock_analysis:
             mock_analysis.return_value = empty_analysis
 
-            result = await suggest_draft_pick(sample_draft_state)
+            result = await suggest_draft_pick(sample_draft_state, team_name="Test Team")
 
             assert result["success"] is False
             assert "No available players found" in result["error"]
@@ -549,7 +559,7 @@ class TestSuggestDraftPick:
         ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
-            result = await suggest_draft_pick(sample_draft_state)
+            result = await suggest_draft_pick(sample_draft_state, team_name="Test Team")
 
             assert result["success"] is True
             alternatives = result["recommendation"]["alternatives"]
@@ -578,7 +588,9 @@ class TestSuggestDraftPick:
         ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
-            result = await suggest_draft_pick(sample_draft_state, strategy="balanced")
+            result = await suggest_draft_pick(
+                sample_draft_state, team_name="Test Team", strategy="balanced"
+            )
 
             assert result["success"] is True
             primary_pick = result["recommendation"]["primary_pick"]
@@ -608,7 +620,7 @@ class TestSuggestDraftPick:
         ) as mock_analysis:
             mock_analysis.side_effect = Exception("Unexpected error")
 
-            result = await suggest_draft_pick(sample_draft_state)
+            result = await suggest_draft_pick(sample_draft_state, team_name="Test Team")
 
             assert result["success"] is False
             assert "error" in result
