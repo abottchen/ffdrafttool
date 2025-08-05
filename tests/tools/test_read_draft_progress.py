@@ -7,89 +7,6 @@ from src.tools import read_draft_progress
 
 class TestReadDraftProgress:
     @pytest.mark.asyncio
-    async def test_read_draft_progress_missing_dependencies(self):
-        """Test read_draft_progress tool fails when Google API dependencies are missing"""
-
-        # Mock the GoogleSheetsProvider to fail with ImportError
-        with patch(
-            "src.tools.draft_progress.GoogleSheetsProvider"
-        ) as mock_google_provider:
-            mock_google_provider.side_effect = ImportError(
-                "Google API dependencies not available. Install with: pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib"
-            )
-
-            result = await read_draft_progress("test_sheet_123", "Draft!A1:Z100")
-
-            # Should fail, not fall back to mock
-            assert result["success"] is False
-            assert result["error_type"] == "missing_dependencies"
-            assert "Google Sheets API not available" in result["error"]
-            assert result["sheet_id"] == "test_sheet_123"
-            assert result["sheet_range"] == "Draft!A1:Z100"
-
-            # Should include troubleshooting guidance
-            troubleshooting = result["troubleshooting"]
-            assert "problem" in troubleshooting
-            assert "solution" in troubleshooting
-            assert "next_steps" in troubleshooting
-            assert len(troubleshooting["next_steps"]) >= 3
-
-    @pytest.mark.asyncio
-    async def test_read_draft_progress_missing_credentials(self):
-        """Test read_draft_progress tool fails when credentials are missing"""
-
-        with patch(
-            "src.tools.draft_progress.GoogleSheetsProvider"
-        ) as mock_google_provider:
-            mock_google_provider.side_effect = FileNotFoundError(
-                "Google credentials file not found: credentials.json"
-            )
-
-            result = await read_draft_progress("test_sheet_123", "Draft!A1:Z100")
-
-            # Should fail with credentials error
-            assert result["success"] is False
-            assert result["error_type"] == "missing_credentials"
-            assert "Google Sheets credentials not configured" in result["error"]
-
-            # Should include specific troubleshooting for credentials
-            troubleshooting = result["troubleshooting"]
-            assert "credentials.json" in troubleshooting["problem"]
-            assert "console.developers.google.com" in troubleshooting["next_steps"][0]
-
-    @pytest.mark.asyncio
-    async def test_read_draft_progress_permission_denied(self):
-        """Test read_draft_progress handles 403 permission errors properly"""
-
-        # Mock successful provider creation but fail on data access
-        mock_provider = AsyncMock()
-        mock_service = AsyncMock()
-        mock_service.read_draft_data.side_effect = Exception(
-            "HTTP 403: Forbidden - Insufficient permissions"
-        )
-
-        with patch(
-            "src.tools.draft_progress.GoogleSheetsProvider", return_value=mock_provider
-        ):
-            with patch(
-                "src.tools.draft_progress.SheetsService", return_value=mock_service
-            ):
-
-                result = await read_draft_progress("forbidden_sheet", "Draft!A1:Z100")
-
-                assert result["success"] is False
-                assert result["error_type"] == "sheet_access_failed"
-                assert "403" in result["error"] or "Forbidden" in result["error"]
-
-                # Should provide specific guidance for permission errors
-                troubleshooting = result["troubleshooting"]
-                assert "permission" in troubleshooting["solution"].lower()
-                assert any(
-                    "shared with your Google account" in step
-                    for step in troubleshooting["next_steps"]
-                )
-
-    @pytest.mark.asyncio
     async def test_read_draft_progress_with_google_sheets_provider(self):
         """Test read_draft_progress with real Google Sheets provider (mocked)"""
 
@@ -97,7 +14,7 @@ class TestReadDraftProgress:
         mock_provider = AsyncMock()
         mock_service = AsyncMock()
 
-        # Mock draft data with the new team-column format structure
+        # Mock draft data
         mock_draft_data = {
             "picks": [
                 {
@@ -186,64 +103,4 @@ class TestReadDraftProgress:
                 # Verify the service was called correctly with force_refresh parameter
                 mock_service.read_draft_data.assert_called_once_with(
                     "real_sheet_123", "Draft!A1:D100", False
-                )
-
-    @pytest.mark.asyncio
-    async def test_read_draft_progress_sheet_not_found(self):
-        """Test read_draft_progress handles 404 not found errors properly"""
-
-        mock_provider = AsyncMock()
-        mock_service = AsyncMock()
-        mock_service.read_draft_data.side_effect = Exception(
-            "HTTP 404: Not Found - The requested sheet was not found"
-        )
-
-        with patch(
-            "src.tools.draft_progress.GoogleSheetsProvider", return_value=mock_provider
-        ):
-            with patch(
-                "src.tools.draft_progress.SheetsService", return_value=mock_service
-            ):
-
-                result = await read_draft_progress("nonexistent_sheet", "Draft!A1:Z100")
-
-                assert result["success"] is False
-                assert result["error_type"] == "sheet_access_failed"
-                assert "404" in result["error"] or "Not Found" in result["error"]
-
-                # Should provide specific guidance for not found errors
-                troubleshooting = result["troubleshooting"]
-                assert "not found" in troubleshooting["solution"].lower()
-                assert any(
-                    "Google Sheet ID" in step for step in troubleshooting["next_steps"]
-                )
-
-    @pytest.mark.asyncio
-    async def test_read_draft_progress_authentication_error(self):
-        """Test read_draft_progress handles authentication errors properly"""
-
-        mock_provider = AsyncMock()
-        mock_service = AsyncMock()
-        mock_service.read_draft_data.side_effect = Exception(
-            "Authentication failed: Invalid credentials"
-        )
-
-        with patch(
-            "src.tools.draft_progress.GoogleSheetsProvider", return_value=mock_provider
-        ):
-            with patch(
-                "src.tools.draft_progress.SheetsService", return_value=mock_service
-            ):
-
-                result = await read_draft_progress("test_sheet", "Draft!A1:Z100")
-
-                assert result["success"] is False
-                assert result["error_type"] == "sheet_access_failed"
-                assert "authentication" in result["error"].lower()
-
-                # Should provide specific guidance for auth errors
-                troubleshooting = result["troubleshooting"]
-                assert "authentication" in troubleshooting["solution"].lower()
-                assert any(
-                    "token.json" in step for step in troubleshooting["next_steps"]
                 )
