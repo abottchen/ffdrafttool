@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from src.tools.mcp_tools import read_draft_progress
+from src.tools import read_draft_progress
 
 
 class TestReadDraftProgress:
@@ -11,7 +11,9 @@ class TestReadDraftProgress:
         """Test read_draft_progress tool fails when Google API dependencies are missing"""
 
         # Mock the GoogleSheetsProvider to fail with ImportError
-        with patch("src.tools.mcp_tools.GoogleSheetsProvider") as mock_google_provider:
+        with patch(
+            "src.tools.draft_progress.GoogleSheetsProvider"
+        ) as mock_google_provider:
             mock_google_provider.side_effect = ImportError(
                 "Google API dependencies not available. Install with: pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib"
             )
@@ -36,7 +38,9 @@ class TestReadDraftProgress:
     async def test_read_draft_progress_missing_credentials(self):
         """Test read_draft_progress tool fails when credentials are missing"""
 
-        with patch("src.tools.mcp_tools.GoogleSheetsProvider") as mock_google_provider:
+        with patch(
+            "src.tools.draft_progress.GoogleSheetsProvider"
+        ) as mock_google_provider:
             mock_google_provider.side_effect = FileNotFoundError(
                 "Google credentials file not found: credentials.json"
             )
@@ -65,9 +69,11 @@ class TestReadDraftProgress:
         )
 
         with patch(
-            "src.tools.mcp_tools.GoogleSheetsProvider", return_value=mock_provider
+            "src.tools.draft_progress.GoogleSheetsProvider", return_value=mock_provider
         ):
-            with patch("src.tools.mcp_tools.SheetsService", return_value=mock_service):
+            with patch(
+                "src.tools.draft_progress.SheetsService", return_value=mock_service
+            ):
 
                 result = await read_draft_progress("forbidden_sheet", "Draft!A1:Z100")
 
@@ -149,9 +155,11 @@ class TestReadDraftProgress:
         mock_service.read_draft_data.return_value = mock_draft_data
 
         with patch(
-            "src.tools.mcp_tools.GoogleSheetsProvider", return_value=mock_provider
+            "src.tools.draft_progress.GoogleSheetsProvider", return_value=mock_provider
         ):
-            with patch("src.tools.mcp_tools.SheetsService", return_value=mock_service):
+            with patch(
+                "src.tools.draft_progress.SheetsService", return_value=mock_service
+            ):
 
                 result = await read_draft_progress("real_sheet_123", "Draft!A1:D100")
 
@@ -191,9 +199,11 @@ class TestReadDraftProgress:
         )
 
         with patch(
-            "src.tools.mcp_tools.GoogleSheetsProvider", return_value=mock_provider
+            "src.tools.draft_progress.GoogleSheetsProvider", return_value=mock_provider
         ):
-            with patch("src.tools.mcp_tools.SheetsService", return_value=mock_service):
+            with patch(
+                "src.tools.draft_progress.SheetsService", return_value=mock_service
+            ):
 
                 result = await read_draft_progress("nonexistent_sheet", "Draft!A1:Z100")
 
@@ -219,9 +229,11 @@ class TestReadDraftProgress:
         )
 
         with patch(
-            "src.tools.mcp_tools.GoogleSheetsProvider", return_value=mock_provider
+            "src.tools.draft_progress.GoogleSheetsProvider", return_value=mock_provider
         ):
-            with patch("src.tools.mcp_tools.SheetsService", return_value=mock_service):
+            with patch(
+                "src.tools.draft_progress.SheetsService", return_value=mock_service
+            ):
 
                 result = await read_draft_progress("test_sheet", "Draft!A1:Z100")
 

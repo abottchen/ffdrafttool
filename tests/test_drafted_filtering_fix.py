@@ -12,7 +12,7 @@ import pytest
 # Add src to path
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
-from tools.mcp_tools import analyze_available_players
+from src.tools import analyze_available_players
 
 
 class TestDraftedPlayerFilteringFix:
@@ -102,7 +102,7 @@ class TestDraftedPlayerFilteringFix:
 
         # Mock the get_player_rankings function
         with patch(
-            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+            "src.tools.analyze_players.get_player_rankings", new_callable=AsyncMock
         ) as mock_rankings:
             mock_rankings.return_value = mock_rankings_response
 
@@ -195,7 +195,7 @@ class TestDraftedPlayerFilteringFix:
         }
 
         with patch(
-            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+            "src.tools.analyze_players.get_player_rankings", new_callable=AsyncMock
         ) as mock_rankings:
             mock_rankings.return_value = mock_rankings_response
 

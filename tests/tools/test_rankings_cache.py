@@ -13,7 +13,8 @@ import pytest
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
-from tools.mcp_tools import _rankings_cache, clear_rankings_cache, get_player_rankings
+from src.tools import clear_rankings_cache, get_player_rankings
+from src.tools.player_rankings import _rankings_cache
 
 
 class TestRankingsCache:
@@ -21,7 +22,7 @@ class TestRankingsCache:
 
     @pytest.fixture(autouse=True)
     def setup_method(self):
-        """Clear cache before each test"""
+        """Clear cache before and after each test"""
         clear_rankings_cache()
         yield
         clear_rankings_cache()
@@ -29,22 +30,15 @@ class TestRankingsCache:
     @pytest.fixture
     def mock_scraper_results(self):
         """Mock scraper results for testing"""
-        return [
-            {
-                "name": "Player One",
-                "position": "QB",
-                "team": "KC",
-                "bye_week": 10,
-                "rankings": {"fantasysharks": {"rank": 1, "score": 95.0}},
-            },
-            {
-                "name": "Player Two",
-                "position": "RB",
-                "team": "SF",
-                "bye_week": 9,
-                "rankings": {"fantasysharks": {"rank": 2, "score": 92.0}},
-            },
-        ]
+        from src.models.player import Player, Position, RankingSource
+
+        player1 = Player("Player One", Position.QB, "KC", 10)
+        player1.add_ranking(RankingSource.OTHER, 1, 95.0)
+
+        player2 = Player("Player Two", Position.RB, "SF", 9)
+        player2.add_ranking(RankingSource.OTHER, 2, 92.0)
+
+        return [player1, player2]
 
     @pytest.mark.asyncio
     async def test_initial_fetch_populates_cache(self, mock_scraper_results):
@@ -52,10 +46,10 @@ class TestRankingsCache:
 
         # Mock all scrapers
         with (
-            patch("tools.mcp_tools.FantasySharksScraper") as MockSharks,
-            patch("tools.mcp_tools.ESPNScraper") as MockESPN,
-            patch("tools.mcp_tools.YahooScraper") as MockYahoo,
-            patch("tools.mcp_tools.FantasyProsScraper") as MockPros,
+            patch("src.tools.player_rankings.FantasySharksScraper") as MockSharks,
+            patch("src.tools.player_rankings.ESPNScraper") as MockESPN,
+            patch("src.tools.player_rankings.YahooScraper") as MockYahoo,
+            patch("src.tools.player_rankings.FantasyProsScraper") as MockPros,
         ):
 
             # Setup mock scrapers to return data
@@ -66,7 +60,18 @@ class TestRankingsCache:
                 )
 
             # First call should fetch fresh data
-            result = await get_player_rankings(["fantasysharks"])
+            result = await get_player_rankings(
+                ["fantasysharks"], position=None, limit=None
+            )
+
+            # Debug: Check if mock was called
+            print(f"Mock called: {MockSharks.return_value.scrape_rankings.called}")
+            print(f"Result success: {result['success']}")
+            print(f"Result keys: {list(result.keys())}")
+            print(f"Result position: {result.get('position')}")
+            print(f"Result limit: {result.get('limit')}")
+            print(f"Aggregated players count: {result['aggregated']['count']}")
+            print(f"Cache data exists: {_rankings_cache['data'] is not None}")
 
             assert result["success"] is True
             assert "from_cache" not in result  # First call is not from cache
@@ -80,10 +85,10 @@ class TestRankingsCache:
         """Test that subsequent calls use cached data"""
 
         with (
-            patch("tools.mcp_tools.FantasySharksScraper") as MockSharks,
-            patch("tools.mcp_tools.ESPNScraper") as MockESPN,
-            patch("tools.mcp_tools.YahooScraper") as MockYahoo,
-            patch("tools.mcp_tools.FantasyProsScraper") as MockPros,
+            patch("src.tools.player_rankings.FantasySharksScraper") as MockSharks,
+            patch("src.tools.player_rankings.ESPNScraper") as MockESPN,
+            patch("src.tools.player_rankings.YahooScraper") as MockYahoo,
+            patch("src.tools.player_rankings.FantasyProsScraper") as MockPros,
         ):
 
             # Setup mock scrapers
@@ -112,10 +117,10 @@ class TestRankingsCache:
         """Test that position filtering works with cached data"""
 
         with (
-            patch("tools.mcp_tools.FantasySharksScraper") as MockSharks,
-            patch("tools.mcp_tools.ESPNScraper") as MockESPN,
-            patch("tools.mcp_tools.YahooScraper") as MockYahoo,
-            patch("tools.mcp_tools.FantasyProsScraper") as MockPros,
+            patch("src.tools.player_rankings.FantasySharksScraper") as MockSharks,
+            patch("src.tools.player_rankings.ESPNScraper") as MockESPN,
+            patch("src.tools.player_rankings.YahooScraper") as MockYahoo,
+            patch("src.tools.player_rankings.FantasyProsScraper") as MockPros,
         ):
 
             # Setup mock scrapers
@@ -145,10 +150,10 @@ class TestRankingsCache:
         """Test that force_refresh bypasses the cache"""
 
         with (
-            patch("tools.mcp_tools.FantasySharksScraper") as MockSharks,
-            patch("tools.mcp_tools.ESPNScraper") as MockESPN,
-            patch("tools.mcp_tools.YahooScraper") as MockYahoo,
-            patch("tools.mcp_tools.FantasyProsScraper") as MockPros,
+            patch("src.tools.player_rankings.FantasySharksScraper") as MockSharks,
+            patch("src.tools.player_rankings.ESPNScraper") as MockESPN,
+            patch("src.tools.player_rankings.YahooScraper") as MockYahoo,
+            patch("src.tools.player_rankings.FantasyProsScraper") as MockPros,
         ):
 
             # Setup mock scrapers
@@ -174,10 +179,10 @@ class TestRankingsCache:
         """Test that cache expires after duration"""
 
         with (
-            patch("tools.mcp_tools.FantasySharksScraper") as MockSharks,
-            patch("tools.mcp_tools.ESPNScraper") as MockESPN,
-            patch("tools.mcp_tools.YahooScraper") as MockYahoo,
-            patch("tools.mcp_tools.FantasyProsScraper") as MockPros,
+            patch("src.tools.player_rankings.FantasySharksScraper") as MockSharks,
+            patch("src.tools.player_rankings.ESPNScraper") as MockESPN,
+            patch("src.tools.player_rankings.YahooScraper") as MockYahoo,
+            patch("src.tools.player_rankings.FantasyProsScraper") as MockPros,
         ):
 
             # Setup mock scrapers
@@ -204,10 +209,10 @@ class TestRankingsCache:
         """Test that clear_rankings_cache works correctly"""
 
         with (
-            patch("tools.mcp_tools.FantasySharksScraper") as MockSharks,
-            patch("tools.mcp_tools.ESPNScraper") as MockESPN,
-            patch("tools.mcp_tools.YahooScraper") as MockYahoo,
-            patch("tools.mcp_tools.FantasyProsScraper") as MockPros,
+            patch("src.tools.player_rankings.FantasySharksScraper") as MockSharks,
+            patch("src.tools.player_rankings.ESPNScraper") as MockESPN,
+            patch("src.tools.player_rankings.YahooScraper") as MockYahoo,
+            patch("src.tools.player_rankings.FantasyProsScraper") as MockPros,
         ):
 
             # Setup mock scrapers

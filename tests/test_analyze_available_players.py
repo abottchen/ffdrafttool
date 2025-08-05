@@ -12,7 +12,7 @@ import pytest
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from tools.mcp_tools import analyze_available_players
+from src.tools import analyze_available_players
 
 
 class TestAnalyzeAvailablePlayers:
@@ -170,7 +170,7 @@ class TestAnalyzeAvailablePlayers:
         """Test basic functionality of analyze_available_players"""
 
         with patch(
-            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+            "src.tools.analyze_players.get_player_rankings", new_callable=AsyncMock
         ) as mock_rankings:
             mock_rankings.return_value = sample_rankings_response
 
@@ -224,7 +224,7 @@ class TestAnalyzeAvailablePlayers:
         }
 
         with patch(
-            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+            "src.tools.analyze_players.get_player_rankings", new_callable=AsyncMock
         ) as mock_rankings:
             mock_rankings.return_value = rb_only_response
 
@@ -288,7 +288,7 @@ class TestAnalyzeAvailablePlayers:
                 return sample_rankings_response  # All positions
 
         with patch(
-            "tools.mcp_tools.get_player_rankings",
+            "src.tools.analyze_players.get_player_rankings",
             new_callable=AsyncMock,
             side_effect=mock_get_rankings,
         ) as mock_rankings:
@@ -372,7 +372,7 @@ class TestAnalyzeAvailablePlayers:
         """Test limit parameter functionality"""
 
         with patch(
-            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+            "src.tools.analyze_players.get_player_rankings", new_callable=AsyncMock
         ) as mock_rankings:
             mock_rankings.return_value = sample_rankings_response
 
@@ -396,7 +396,7 @@ class TestAnalyzeAvailablePlayers:
         """Test value metrics are calculated correctly"""
 
         with patch(
-            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+            "src.tools.analyze_players.get_player_rankings", new_callable=AsyncMock
         ) as mock_rankings:
             mock_rankings.return_value = sample_rankings_response
 
@@ -430,7 +430,7 @@ class TestAnalyzeAvailablePlayers:
         """Test scarcity analysis calculations"""
 
         with patch(
-            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+            "src.tools.analyze_players.get_player_rankings", new_callable=AsyncMock
         ) as mock_rankings:
             mock_rankings.return_value = sample_rankings_response
 
@@ -461,7 +461,7 @@ class TestAnalyzeAvailablePlayers:
         """Test position breakdown functionality"""
 
         with patch(
-            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+            "src.tools.analyze_players.get_player_rankings", new_callable=AsyncMock
         ) as mock_rankings:
             mock_rankings.return_value = sample_rankings_response
 
@@ -491,7 +491,7 @@ class TestAnalyzeAvailablePlayers:
         """Test recommendations generation"""
 
         with patch(
-            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+            "src.tools.analyze_players.get_player_rankings", new_callable=AsyncMock
         ) as mock_rankings:
             mock_rankings.return_value = sample_rankings_response
 
@@ -518,7 +518,7 @@ class TestAnalyzeAvailablePlayers:
 
         # Test auction round
         with patch(
-            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+            "src.tools.analyze_players.get_player_rankings", new_callable=AsyncMock
         ) as mock_rankings:
             mock_rankings.return_value = sample_rankings_response
 
@@ -534,7 +534,7 @@ class TestAnalyzeAvailablePlayers:
         draft_state_keeper["draft_state"]["current_round"] = 4
 
         with patch(
-            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+            "src.tools.analyze_players.get_player_rankings", new_callable=AsyncMock
         ) as mock_rankings:
             mock_rankings.return_value = sample_rankings_response
 
@@ -550,7 +550,7 @@ class TestAnalyzeAvailablePlayers:
         draft_state_snake["draft_state"]["current_round"] = 5
 
         with patch(
-            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+            "src.tools.analyze_players.get_player_rankings", new_callable=AsyncMock
         ) as mock_rankings:
             mock_rankings.return_value = sample_rankings_response
 
@@ -565,7 +565,7 @@ class TestAnalyzeAvailablePlayers:
         """Test that drafted players are properly filtered out"""
 
         with patch(
-            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+            "src.tools.analyze_players.get_player_rankings", new_callable=AsyncMock
         ) as mock_rankings:
             mock_rankings.return_value = sample_rankings_response
 
@@ -607,7 +607,7 @@ class TestAnalyzeAvailablePlayers:
         }
 
         with patch(
-            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+            "src.tools.analyze_players.get_player_rankings", new_callable=AsyncMock
         ) as mock_rankings:
             mock_rankings.return_value = failed_rankings_response
 
@@ -635,7 +635,7 @@ class TestAnalyzeAvailablePlayers:
         }
 
         with patch(
-            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+            "src.tools.analyze_players.get_player_rankings", new_callable=AsyncMock
         ) as mock_rankings:
             mock_rankings.return_value = sample_rankings_response
 
@@ -652,7 +652,7 @@ class TestAnalyzeAvailablePlayers:
         """Test general error handling"""
 
         with patch(
-            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+            "src.tools.analyze_players.get_player_rankings", new_callable=AsyncMock
         ) as mock_rankings:
             mock_rankings.side_effect = Exception("Unexpected error")
 

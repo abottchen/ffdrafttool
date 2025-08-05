@@ -1,6 +1,6 @@
 import pytest
 
-from src.tools.mcp_tools import (
+from src.tools import (
     analyze_available_players,
     get_player_rankings,
     suggest_draft_pick,

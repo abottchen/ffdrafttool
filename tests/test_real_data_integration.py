@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from src.tools.mcp_tools import analyze_available_players
+from src.tools import analyze_available_players
 from tests.fixtures import (
     get_real_draft_state_sample,
     get_sample_drafted_players,
@@ -87,7 +87,7 @@ class TestRealDataIntegration:
         }
 
         with patch(
-            "src.tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+            "src.tools.player_rankings.get_player_rankings", new_callable=AsyncMock
         ) as mock_rankings:
             mock_rankings.return_value = mock_rankings_response
 

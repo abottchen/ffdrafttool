@@ -9,7 +9,7 @@ from pathlib import Path
 # Add src to path
 sys.path.append(str(Path(__file__).parent.parent.parent / "src"))
 
-from tools.mcp_tools import _extract_player_name_and_team
+from tools.analyze_players import _extract_player_name_and_team
 
 
 class TestPlayerExtraction:
