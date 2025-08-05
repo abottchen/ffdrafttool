@@ -2,7 +2,7 @@
 
 A Model Context Protocol (MCP) server that provides real-time fantasy football draft assistance by analyzing player rankings, draft progress from Google Sheets, and generating intelligent draft recommendations.
 
-## 🏈 Features
+## Features
 
 - **Multi-source player rankings** - Aggregates data from FantasySharks, ESPN, Yahoo, and FantasyPros
 - **Real-time draft tracking** - Integrates with Google Sheets to track live draft progress
@@ -13,7 +13,7 @@ A Model Context Protocol (MCP) server that provides real-time fantasy football d
 - **Caching system** - Optimized performance with in-memory caching
 - **Multiple draft formats** - Supports auction, keeper, and snake draft formats
 
-## 📊 Data Sources
+## Data Sources
 
 This tool aggregates data from publicly accessible fantasy football websites:
 - **FantasySharks**: Expert rankings and analysis
@@ -23,7 +23,7 @@ This tool aggregates data from publicly accessible fantasy football websites:
 
 No API keys are required - all data is gathered from public web pages.
 
-## 🛠️ Installation
+## Installation
 
 1. **Clone and install dependencies**:
    ```bash
@@ -53,14 +53,14 @@ No API keys are required - all data is gathered from public web pages.
 
 The assistant can be personalized to recognize first-person references ("I", "me", "my team") as referring to your team.
 
-## 🧪 Testing
+## Testing
 
 Run the test suite:
 ```bash
 pytest
 ```
 
-## 🔧 Available MCP Tools
+## Available MCP Tools
 
 The server provides the following MCP tools for fantasy football draft assistance:
 
@@ -133,7 +133,7 @@ Get detailed information about specific players by name.
 - Narrow by first name: `get_player_info_tool(first_name="Patrick", last_name="Mahomes")`
 - Filter by team: `get_player_info_tool(last_name="Williams", team="NYJ")`
 
-## 💡 Usage Examples
+## Usage Examples
 
 ### Basic Draft Assistance
 ```
@@ -165,14 +165,14 @@ Get the next page of running backs
 Show me 10 wide receivers starting from rank 31
 ```
 
-## 🏆 Performance Features
+## Performance Features
 
 - **In-memory caching** for player rankings (reduces API calls)
 - **Draft state caching** (avoids redundant Google Sheets reads)  
 - **Token optimization** (responses under 25k tokens for faster processing)
 - **Incremental updates** (only processes new draft picks)
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 ffdrafttool/
