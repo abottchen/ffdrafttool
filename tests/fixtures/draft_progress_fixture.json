@@ -1,0 +1,51 @@
+{
+  "picks": [
+    {
+      "pick_number": 1,
+      "round": 1,
+      "pick_in_round": 1,
+      "team": "Cock N Bulls",
+      "owner": "Levi",
+      "player": "Isiah Pacheco   KC",
+      "position": "RB"
+    },
+    {
+      "pick_number": 2,
+      "round": 1,
+      "pick_in_round": 2,
+      "team": "Jodi's Broncos",
+      "owner": "Jodi",
+      "player": "Derrick Henry   BAL",
+      "position": "RB"
+    }
+  ],
+  "teams": [
+    {
+      "team_name": "Cock N Bulls",
+      "owner": "Levi",
+      "team_number": 1,
+      "player_col": 1,
+      "position_col": 2
+    },
+    {
+      "team_name": "Jodi's Broncos",
+      "owner": "Jodi",
+      "team_number": 2,
+      "player_col": 3,
+      "position_col": 4
+    }
+  ],
+  "current_team": {
+    "team_name": "Royal Chiefs",
+    "owner": "Scott",
+    "team_number": 3,
+    "player_col": 5,
+    "position_col": 6
+  },
+  "draft_state": {
+    "total_picks": 2,
+    "total_teams": 10,
+    "completed_rounds": 1,
+    "current_round": 1
+  }
+}

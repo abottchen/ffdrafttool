@@ -12,7 +12,15 @@ import pytest
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from tools.draft_suggestions import suggest_draft_pick
+from src.tools.draft_suggestions import suggest_draft_pick
+from src.models.test_data import (
+    DraftData, 
+    Pick, 
+    Team, 
+    DraftStateInfo, 
+    DraftRules,
+    create_basic_pick
+)
 
 
 class TestSuggestDraftPick:
@@ -21,39 +29,36 @@ class TestSuggestDraftPick:
     @pytest.fixture
     def sample_draft_state(self):
         """Sample draft state with picks and team info"""
-        return {
-            "picks": [
-                {
-                    "pick_number": 1,
-                    "round": 1,
-                    "team": "Team Alpha",
-                    "player_name": "Christian McCaffrey",
-                    "position": "RB",
-                    "bye_week": 7,
-                },
-                {
-                    "pick_number": 2,
-                    "round": 1,
-                    "team": "Test Team",  # Our team
-                    "player_name": "Tyreek Hill",
-                    "position": "WR",
-                    "bye_week": 10,
-                },
-            ],
-            "teams": [{"team_name": "Test Team", "owner": "Test Owner"}],
-            "current_team": {"team_name": "Test Team", "owner": "Test Owner"},
-            "draft_state": {
-                "total_picks": 2,
-                "total_teams": 10,
-                "current_round": 2,
-                "completed_rounds": 1,
-                "draft_rules": {
-                    "auction_rounds": [1, 2, 3],
-                    "keeper_round": 4,
-                    "snake_start_round": 5,
-                },
-            },
-        }
+        picks = [
+            create_basic_pick(1, 1, "Team Alpha", "Christian McCaffrey", "RB", bye_week=7),
+            create_basic_pick(2, 1, "Test Team", "Tyreek Hill", "WR", bye_week=10),
+        ]
+        
+        teams = [
+            Team(team_name="Test Team", owner="Test Owner")
+        ]
+        
+        draft_state = DraftStateInfo(
+            total_picks=2,
+            total_teams=10,
+            current_round=2,
+            completed_rounds=1,
+            draft_rules=DraftRules(
+                auction_rounds=[1, 2, 3],
+                keeper_round=4,
+                snake_start_round=5,
+            ),
+        )
+        
+        current_team = Team(team_name="Test Team", owner="Test Owner")
+        
+        draft_data = DraftData(
+            picks=picks, 
+            draft_state=draft_state, 
+            teams=teams,
+            current_team=current_team
+        )
+        return draft_data.to_dict()
 
     @pytest.fixture
     def sample_analysis_response(self):
@@ -164,7 +169,7 @@ class TestSuggestDraftPick:
         """Test basic functionality of suggest_draft_pick"""
 
         with patch(
-            "tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
+            "src.tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
         ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
@@ -200,7 +205,7 @@ class TestSuggestDraftPick:
         """Test balanced strategy prioritizes roster needs + value"""
 
         with patch(
-            "tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
+            "src.tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
         ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
@@ -230,7 +235,7 @@ class TestSuggestDraftPick:
         """Test best available strategy prioritizes pure value"""
 
         with patch(
-            "tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
+            "src.tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
         ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
@@ -261,7 +266,7 @@ class TestSuggestDraftPick:
 
         # Early round upside
         with patch(
-            "tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
+            "src.tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
         ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
@@ -290,7 +295,7 @@ class TestSuggestDraftPick:
         """Test safe strategy prioritizes consistency"""
 
         with patch(
-            "tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
+            "src.tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
         ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
@@ -322,7 +327,7 @@ class TestSuggestDraftPick:
         """Test bye week conflicts are properly considered"""
 
         with patch(
-            "tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
+            "src.tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
         ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
@@ -354,7 +359,7 @@ class TestSuggestDraftPick:
         """Test roster needs are properly analyzed"""
 
         with patch(
-            "tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
+            "src.tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
         ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
@@ -393,7 +398,7 @@ class TestSuggestDraftPick:
         """Test round-specific strategic guidance"""
 
         with patch(
-            "tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
+            "src.tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
         ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
@@ -436,7 +441,7 @@ class TestSuggestDraftPick:
         """Test position-specific recommendations"""
 
         with patch(
-            "tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
+            "src.tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
         ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
@@ -480,7 +485,7 @@ class TestSuggestDraftPick:
         """Test confidence factor calculations"""
 
         with patch(
-            "tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
+            "src.tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
         ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
@@ -526,7 +531,7 @@ class TestSuggestDraftPick:
         failed_analysis = {"success": False, "error": "Failed to analyze players"}
 
         with patch(
-            "tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
+            "src.tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
         ) as mock_analysis:
             mock_analysis.return_value = failed_analysis
 
@@ -549,7 +554,7 @@ class TestSuggestDraftPick:
         }
 
         with patch(
-            "tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
+            "src.tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
         ) as mock_analysis:
             mock_analysis.return_value = empty_analysis
 
@@ -567,7 +572,7 @@ class TestSuggestDraftPick:
         """Test that alternatives are properly generated"""
 
         with patch(
-            "tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
+            "src.tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
         ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
@@ -598,7 +603,7 @@ class TestSuggestDraftPick:
         """Test detailed reasoning generation"""
 
         with patch(
-            "tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
+            "src.tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
         ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
@@ -630,7 +635,7 @@ class TestSuggestDraftPick:
         """Test general error handling"""
 
         with patch(
-            "tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
+            "src.tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
         ) as mock_analysis:
             mock_analysis.side_effect = Exception("Unexpected error")
 

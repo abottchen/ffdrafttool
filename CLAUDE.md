@@ -65,3 +65,21 @@ pytest tests/models/
 pytest tests/services/
 pytest tests/tools/
 ```
+
+## TODOs
+
+### Code Quality Issues
+
+- **URGENT: Standardize field naming** - Investigate and fix inconsistent field names across codebase:
+  - Some code uses `player` field for draft picks
+  - Other code uses `player_name` field for draft picks
+  - This inconsistency suggests poor API design and could lead to bugs
+  - Need to audit all data structures and standardize on single field name
+  - Update all code to use consistent naming convention
+  - Remove the hacky `__post_init__` workaround in `src/models/test_data.py` once standardized
+
+- **Consider creating more JSON fixtures** - Evaluate other tests for fixture opportunities:
+  - Many tests still manually construct draft data (DRY violation)
+  - Could create fixtures for common scenarios: simple draft, multi-round, different team configurations
+  - Move repetitive test data construction to reusable fixtures in `tests/fixtures/`
+

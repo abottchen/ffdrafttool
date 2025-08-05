@@ -13,6 +13,14 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from src.tools import analyze_available_players
+from src.models.test_data import (
+    DraftData, 
+    Pick, 
+    Team, 
+    DraftStateInfo, 
+    DraftRules,
+    create_basic_pick
+)
 
 
 class TestAnalyzeAvailablePlayers:
@@ -21,56 +29,28 @@ class TestAnalyzeAvailablePlayers:
     @pytest.fixture
     def sample_draft_state(self):
         """Sample draft state with picks and team info"""
-        return {
-            "picks": [
-                {
-                    "pick_number": 1,
-                    "round": 1,
-                    "team": "Team Alpha",
-                    "player": "Christian McCaffrey",
-                    "position": "RB",
-                },
-                {
-                    "pick_number": 2,
-                    "round": 1,
-                    "team": "Team Beta",
-                    "player": "Tyreek Hill",
-                    "position": "WR",
-                },
-                {
-                    "pick_number": 3,
-                    "round": 1,
-                    "team": "Team Gamma",
-                    "player": "Justin Jefferson",
-                    "position": "WR",
-                },
-                {
-                    "pick_number": 4,
-                    "round": 1,
-                    "team": "Team Delta",
-                    "player": "Jahmyr Gibbs DET",
-                    "position": "RB",
-                },
-                {
-                    "pick_number": 5,
-                    "round": 1,
-                    "team": "Team Echo",
-                    "player": "Mike Williams NYJ",
-                    "position": "WR",
-                },
-            ],
-            "draft_state": {
-                "total_picks": 5,
-                "total_teams": 10,
-                "current_round": 1,
-                "completed_rounds": 0,
-                "draft_rules": {
-                    "auction_rounds": [1, 2, 3],
-                    "keeper_round": 4,
-                    "snake_start_round": 5,
-                },
-            },
-        }
+        picks = [
+            create_basic_pick(1, 1, "Team Alpha", "Christian McCaffrey", "RB"),
+            create_basic_pick(2, 1, "Team Beta", "Tyreek Hill", "WR"),
+            create_basic_pick(3, 1, "Team Gamma", "Justin Jefferson", "WR"),
+            create_basic_pick(4, 1, "Team Delta", "Jahmyr Gibbs DET", "RB"),
+            create_basic_pick(5, 1, "Team Echo", "Mike Williams NYJ", "WR"),
+        ]
+        
+        draft_state = DraftStateInfo(
+            total_picks=5,
+            total_teams=10,
+            current_round=1,
+            completed_rounds=0,
+            draft_rules=DraftRules(
+                auction_rounds=[1, 2, 3],
+                keeper_round=4,
+                snake_start_round=5,
+            ),
+        )
+        
+        draft_data = DraftData(picks=picks, draft_state=draft_state)
+        return draft_data.to_dict()
 
     @pytest.fixture
     def sample_rankings_response(self):

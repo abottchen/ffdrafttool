@@ -7,69 +7,15 @@ from src.tools import read_draft_progress
 
 class TestReadDraftProgress:
     @pytest.mark.asyncio
-    async def test_read_draft_progress_with_google_sheets_provider(self):
+    async def test_read_draft_progress_with_google_sheets_provider(self, draft_progress_data):
         """Test read_draft_progress with real Google Sheets provider (mocked)"""
 
         # Mock the Google Sheets provider to return test data
         mock_provider = AsyncMock()
         mock_service = AsyncMock()
 
-        # Mock draft data
-        mock_draft_data = {
-            "picks": [
-                {
-                    "pick_number": 1,
-                    "round": 1,
-                    "pick_in_round": 1,
-                    "team": "Cock N Bulls",
-                    "owner": "Levi",
-                    "player_name": "Isiah Pacheco   KC",
-                    "position": "RB",
-                },
-                {
-                    "pick_number": 2,
-                    "round": 1,
-                    "pick_in_round": 2,
-                    "team": "Jodi's Broncos",
-                    "owner": "Jodi",
-                    "player_name": "Derrick Henry   BAL",
-                    "position": "RB",
-                },
-            ],
-            "current_pick": 3,
-            "teams": [
-                {
-                    "team_number": 1,
-                    "owner": "Levi",
-                    "team_name": "Cock N Bulls",
-                    "player_col": 1,
-                    "position_col": 2,
-                },
-                {
-                    "team_number": 2,
-                    "owner": "Jodi",
-                    "team_name": "Jodi's Broncos",
-                    "player_col": 3,
-                    "position_col": 4,
-                },
-            ],
-            "current_team": {
-                "team_number": 3,
-                "owner": "Scott",
-                "team_name": "Royal Chiefs",
-                "player_col": 5,
-                "position_col": 6,
-            },
-            "draft_state": {
-                "total_picks": 2,
-                "total_teams": 10,
-                "completed_rounds": 1,
-                "current_round": 1,
-            },
-            "available_players": [],
-        }
-
-        mock_service.read_draft_data.return_value = mock_draft_data
+        # Use fixture data instead of manual construction
+        mock_service.read_draft_data.return_value = draft_progress_data
 
         with patch(
             "src.tools.draft_progress.GoogleSheetsProvider", return_value=mock_provider

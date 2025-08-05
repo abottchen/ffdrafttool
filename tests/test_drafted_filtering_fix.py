@@ -13,6 +13,13 @@ import pytest
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
 from src.tools import analyze_available_players
+from src.models.test_data import (
+    DraftData,
+    Pick,
+    Team,
+    DraftStateInfo,
+    create_basic_pick
+)
 
 
 class TestDraftedPlayerFilteringFix:
@@ -72,33 +79,29 @@ class TestDraftedPlayerFilteringFix:
         }
 
         # Draft state where some players are drafted (without team abbreviations)
-        draft_state = {
-            "picks": [
-                {
-                    "pick_number": 1,
-                    "player": "Jahmyr Gibbs",
-                    "position": "RB",
-                    "team": "Team A",
-                },
-                {
-                    "pick_number": 2,
-                    "player": "A.J. Brown",
-                    "position": "WR",
-                    "team": "Team B",
-                },
-                {
-                    "pick_number": 3,
-                    "player": "Marvin Harrison Jr.",
-                    "position": "WR",
-                    "team": "Team C",
-                },
-            ],
-            "teams": [
-                {"team_name": "Team A", "owner": "Owner A"},
-                {"team_name": "Team B", "owner": "Owner B"},
-                {"team_name": "Team C", "owner": "Owner C"},
-            ],
-        }
+        picks = [
+            create_basic_pick(1, 1, "Team A", "Jahmyr Gibbs", "RB"),
+            create_basic_pick(2, 1, "Team B", "A.J. Brown", "WR"),
+            create_basic_pick(3, 1, "Team C", "Marvin Harrison Jr.", "WR"),
+        ]
+        
+        teams = [
+            Team(team_name="Team A", owner="Owner A"),
+            Team(team_name="Team B", owner="Owner B"),
+            Team(team_name="Team C", owner="Owner C"),
+        ]
+        
+        draft_data = DraftData(
+            picks=picks,
+            teams=teams,
+            draft_state=DraftStateInfo(
+                total_picks=3,
+                total_teams=3,
+                current_round=1,
+                completed_rounds=0,
+            )
+        )
+        draft_state = draft_data.to_dict()
 
         # Mock the get_player_rankings function
         with patch(
