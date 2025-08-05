@@ -12,7 +12,7 @@ import pytest
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from tools.mcp_tools import suggest_draft_pick
+from tools.draft_suggestions import suggest_draft_pick
 
 
 class TestSuggestDraftPick:
@@ -164,7 +164,7 @@ class TestSuggestDraftPick:
         """Test basic functionality of suggest_draft_pick"""
 
         with patch(
-            "tools.mcp_tools.analyze_available_players", new_callable=AsyncMock
+            "tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
         ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
@@ -200,7 +200,7 @@ class TestSuggestDraftPick:
         """Test balanced strategy prioritizes roster needs + value"""
 
         with patch(
-            "tools.mcp_tools.analyze_available_players", new_callable=AsyncMock
+            "tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
         ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
@@ -230,7 +230,7 @@ class TestSuggestDraftPick:
         """Test best available strategy prioritizes pure value"""
 
         with patch(
-            "tools.mcp_tools.analyze_available_players", new_callable=AsyncMock
+            "tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
         ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
@@ -261,7 +261,7 @@ class TestSuggestDraftPick:
 
         # Early round upside
         with patch(
-            "tools.mcp_tools.analyze_available_players", new_callable=AsyncMock
+            "tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
         ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
@@ -290,7 +290,7 @@ class TestSuggestDraftPick:
         """Test safe strategy prioritizes consistency"""
 
         with patch(
-            "tools.mcp_tools.analyze_available_players", new_callable=AsyncMock
+            "tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
         ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
@@ -322,7 +322,7 @@ class TestSuggestDraftPick:
         """Test bye week conflicts are properly considered"""
 
         with patch(
-            "tools.mcp_tools.analyze_available_players", new_callable=AsyncMock
+            "tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
         ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
@@ -354,7 +354,7 @@ class TestSuggestDraftPick:
         """Test roster needs are properly analyzed"""
 
         with patch(
-            "tools.mcp_tools.analyze_available_players", new_callable=AsyncMock
+            "tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
         ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
@@ -393,7 +393,7 @@ class TestSuggestDraftPick:
         """Test round-specific strategic guidance"""
 
         with patch(
-            "tools.mcp_tools.analyze_available_players", new_callable=AsyncMock
+            "tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
         ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
@@ -436,7 +436,7 @@ class TestSuggestDraftPick:
         """Test position-specific recommendations"""
 
         with patch(
-            "tools.mcp_tools.analyze_available_players", new_callable=AsyncMock
+            "tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
         ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
@@ -480,7 +480,7 @@ class TestSuggestDraftPick:
         """Test confidence factor calculations"""
 
         with patch(
-            "tools.mcp_tools.analyze_available_players", new_callable=AsyncMock
+            "tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
         ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
@@ -526,7 +526,7 @@ class TestSuggestDraftPick:
         failed_analysis = {"success": False, "error": "Failed to analyze players"}
 
         with patch(
-            "tools.mcp_tools.analyze_available_players", new_callable=AsyncMock
+            "tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
         ) as mock_analysis:
             mock_analysis.return_value = failed_analysis
 
@@ -549,7 +549,7 @@ class TestSuggestDraftPick:
         }
 
         with patch(
-            "tools.mcp_tools.analyze_available_players", new_callable=AsyncMock
+            "tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
         ) as mock_analysis:
             mock_analysis.return_value = empty_analysis
 
@@ -567,7 +567,7 @@ class TestSuggestDraftPick:
         """Test that alternatives are properly generated"""
 
         with patch(
-            "tools.mcp_tools.analyze_available_players", new_callable=AsyncMock
+            "tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
         ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
@@ -598,7 +598,7 @@ class TestSuggestDraftPick:
         """Test detailed reasoning generation"""
 
         with patch(
-            "tools.mcp_tools.analyze_available_players", new_callable=AsyncMock
+            "tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
         ) as mock_analysis:
             mock_analysis.return_value = sample_analysis_response
 
@@ -630,7 +630,7 @@ class TestSuggestDraftPick:
         """Test general error handling"""
 
         with patch(
-            "tools.mcp_tools.analyze_available_players", new_callable=AsyncMock
+            "tools.draft_suggestions.analyze_available_players", new_callable=AsyncMock
         ) as mock_analysis:
             mock_analysis.side_effect = Exception("Unexpected error")
 

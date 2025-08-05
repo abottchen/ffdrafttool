@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 import pytest
 
-from src.tools.mcp_tools import get_player_info
+from src.tools import get_player_info
 
 
 class TestGetPlayerInfo:
@@ -49,7 +49,7 @@ class TestGetPlayerInfo:
             },
         }
 
-        with patch("src.tools.mcp_tools.get_player_rankings") as mock_get_rankings:
+        with patch("src.tools.player_info.get_player_rankings") as mock_get_rankings:
             mock_get_rankings.return_value = mock_rankings_data
 
             result = await get_player_info(last_name="Mahomes")
@@ -91,7 +91,7 @@ class TestGetPlayerInfo:
             },
         }
 
-        with patch("src.tools.mcp_tools.get_player_rankings") as mock_get_rankings:
+        with patch("src.tools.player_info.get_player_rankings") as mock_get_rankings:
             mock_get_rankings.return_value = mock_rankings_data
 
             result = await get_player_info(first_name="Patrick", last_name="Mahomes")
@@ -129,7 +129,7 @@ class TestGetPlayerInfo:
             },
         }
 
-        with patch("src.tools.mcp_tools.get_player_rankings") as mock_get_rankings:
+        with patch("src.tools.player_info.get_player_rankings") as mock_get_rankings:
             # get_player_rankings should be called with position="WR"
             mock_get_rankings.return_value = mock_rankings_data_wr
 
@@ -175,7 +175,7 @@ class TestGetPlayerInfo:
             },
         }
 
-        with patch("src.tools.mcp_tools.get_player_rankings") as mock_get_rankings:
+        with patch("src.tools.player_info.get_player_rankings") as mock_get_rankings:
             mock_get_rankings.return_value = mock_rankings_data
 
             result = await get_player_info(last_name="Hill", team="MIA")
@@ -207,7 +207,7 @@ class TestGetPlayerInfo:
             },
         }
 
-        with patch("src.tools.mcp_tools.get_player_rankings") as mock_get_rankings:
+        with patch("src.tools.player_info.get_player_rankings") as mock_get_rankings:
             mock_get_rankings.return_value = mock_rankings_data
 
             result = await get_player_info(last_name="NonExistentPlayer")
@@ -221,7 +221,7 @@ class TestGetPlayerInfo:
         """Test handling when rankings fetch fails"""
         mock_rankings_data = {"success": False, "error": "Failed to fetch rankings"}
 
-        with patch("src.tools.mcp_tools.get_player_rankings") as mock_get_rankings:
+        with patch("src.tools.player_info.get_player_rankings") as mock_get_rankings:
             mock_get_rankings.return_value = mock_rankings_data
 
             result = await get_player_info(last_name="Mahomes")
@@ -252,7 +252,7 @@ class TestGetPlayerInfo:
             },
         }
 
-        with patch("src.tools.mcp_tools.get_player_rankings") as mock_get_rankings:
+        with patch("src.tools.player_info.get_player_rankings") as mock_get_rankings:
             mock_get_rankings.return_value = mock_rankings_data
 
             # Test with lowercase
@@ -328,7 +328,7 @@ class TestGetPlayerInfo:
             },
         }
 
-        with patch("src.tools.mcp_tools.get_player_rankings") as mock_get_rankings:
+        with patch("src.tools.player_info.get_player_rankings") as mock_get_rankings:
             mock_get_rankings.return_value = mock_rankings_data
 
             # Test searching for "Penix" should find "Michael Penix Jr."
@@ -408,7 +408,7 @@ class TestGetPlayerInfo:
             },
         }
 
-        with patch("src.tools.mcp_tools.get_player_rankings") as mock_get_rankings:
+        with patch("src.tools.player_info.get_player_rankings") as mock_get_rankings:
             mock_get_rankings.return_value = mock_rankings_data
 
             # Test searching for "Walker" should find "Kenneth Walker III"

@@ -14,7 +14,8 @@ import pytest
 # Add src to path
 sys.path.append(str(Path(__file__).parent.parent.parent / "src"))
 
-from tools.mcp_tools import _extract_player_name_and_team, analyze_available_players
+from src.tools import analyze_available_players
+from src.tools.analyze_players import _extract_player_name_and_team
 
 
 class TestNameSuffixHandling:
@@ -111,7 +112,7 @@ class TestNameSuffixHandling:
         }
 
         with patch(
-            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+            "src.tools.analyze_players.get_player_rankings", new_callable=AsyncMock
         ) as mock_rankings:
             mock_rankings.return_value = mock_rankings_response
 
@@ -196,7 +197,7 @@ class TestNameSuffixHandling:
         }
 
         with patch(
-            "tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+            "src.tools.analyze_players.get_player_rankings", new_callable=AsyncMock
         ) as mock_rankings:
             mock_rankings.return_value = mock_rankings_response
 

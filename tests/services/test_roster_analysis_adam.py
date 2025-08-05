@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 import pytest
 
-from src.tools.mcp_tools import suggest_draft_pick
+from src.tools.draft_suggestions import suggest_draft_pick
 
 
 class TestRosterAnalysisAdam:
@@ -138,7 +138,7 @@ class TestRosterAnalysisAdam:
             },
         }
 
-        with patch("src.tools.mcp_tools.get_player_rankings") as mock_rankings:
+        with patch("src.tools.player_rankings.get_player_rankings") as mock_rankings:
             mock_rankings.return_value = mock_rankings_result
 
             result = await suggest_draft_pick(mock_draft_state, owner_name="Adam")
@@ -259,7 +259,7 @@ class TestRosterAnalysisAdam:
             },
         }
 
-        with patch("src.tools.mcp_tools.get_player_rankings") as mock_rankings:
+        with patch("src.tools.player_rankings.get_player_rankings") as mock_rankings:
             mock_rankings.return_value = mock_rankings_result
 
             result = await suggest_draft_pick(mock_draft_state, owner_name="Adam")
@@ -338,7 +338,7 @@ class TestRosterAnalysisAdam:
             },
         }
 
-        with patch("src.tools.mcp_tools.get_player_rankings") as mock_rankings:
+        with patch("src.tools.player_rankings.get_player_rankings") as mock_rankings:
             mock_rankings.return_value = mock_rankings_result
 
             result = await suggest_draft_pick(mock_draft_state, owner_name="Adam")

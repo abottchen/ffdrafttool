@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from src.tools.mcp_tools import analyze_available_players
+from src.tools import analyze_available_players
 
 
 class TestTeamAbbreviationMatching:
@@ -97,7 +97,7 @@ class TestTeamAbbreviationMatching:
         }
 
         with patch(
-            "src.tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+            "src.tools.analyze_players.get_player_rankings", new_callable=AsyncMock
         ) as mock_rankings:
             mock_rankings.return_value = mock_rankings_response
 
@@ -172,7 +172,7 @@ class TestTeamAbbreviationMatching:
         }
 
         with patch(
-            "src.tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+            "src.tools.analyze_players.get_player_rankings", new_callable=AsyncMock
         ) as mock_rankings:
             mock_rankings.return_value = mock_rankings_response
 
@@ -217,7 +217,7 @@ class TestTeamAbbreviationMatching:
         }
 
         with patch(
-            "src.tools.mcp_tools.get_player_rankings", new_callable=AsyncMock
+            "src.tools.analyze_players.get_player_rankings", new_callable=AsyncMock
         ) as mock_rankings:
             mock_rankings.return_value = mock_rankings_response
 

@@ -20,7 +20,7 @@ from pathlib import Path
 from mcp.server.fastmcp import FastMCP
 
 from config import DEFAULT_SHEET_ID, DEFAULT_SHEET_RANGE, LOG_LEVEL, USER_OWNER_NAME
-from tools.mcp_tools import (
+from tools import (
     analyze_available_players,
     get_player_info,
     get_player_rankings,
