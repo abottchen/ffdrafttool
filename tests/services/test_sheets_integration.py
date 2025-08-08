@@ -28,7 +28,7 @@ class TestSheetsIntegration:
             "teams": [
                 {"team_name": "Sunnydale Slayers", "owner": "Buffy", "team_number": 1},
                 {"team_name": "Willow's Warriors", "owner": "Willow", "team_number": 2},
-                {"team_name": "Xander's Crew", "owner": "Xander", "team_number": 3}
+                {"team_name": "Xander's Crew", "owner": "Xander", "team_number": 3},
             ],
             "picks": [
                 {
@@ -36,23 +36,23 @@ class TestSheetsIntegration:
                     "round": 1,
                     "player": "Christian McCaffrey",
                     "position": "RB",
-                    "column_team": "Sunnydale Slayers"
+                    "column_team": "Sunnydale Slayers",
                 },
                 {
                     "pick": 2,
                     "round": 1,
                     "player": "Tyreek Hill",
                     "position": "WR",
-                    "column_team": "Willow's Warriors"
+                    "column_team": "Willow's Warriors",
                 },
                 {
                     "pick": 3,
                     "round": 1,
                     "player": "Justin Jefferson",
                     "position": "WR",
-                    "column_team": "Xander's Crew"
-                }
-            ]
+                    "column_team": "Xander's Crew",
+                },
+            ],
         }
 
         # Convert using adapter
@@ -106,7 +106,7 @@ class TestSheetsIntegration:
             "total_picks": 3,
             "teams": [
                 {"team_name": "The Chosen Ones", "owner": "Buffy", "team_number": 1},
-                {"team_name": "Wiccan Warriors", "owner": "Willow", "team_number": 2}
+                {"team_name": "Wiccan Warriors", "owner": "Willow", "team_number": 2},
             ],
             "picks": [
                 {
@@ -114,29 +114,29 @@ class TestSheetsIntegration:
                     "round": 1,
                     "player": "Josh Allen",
                     "position": "QB",
-                    "column_team": "The Chosen Ones"
+                    "column_team": "The Chosen Ones",
                 },
                 {
                     "pick": 2,
                     "round": 1,
                     "player": "Christian McCaffrey",
                     "position": "RB",
-                    "column_team": "Wiccan Warriors"
+                    "column_team": "Wiccan Warriors",
                 },
                 {
                     "pick": 3,
                     "round": 1,
                     "player": "Tyreek Hill",
                     "position": "WR",
-                    "column_team": "The Chosen Ones"
-                }
+                    "column_team": "The Chosen Ones",
+                },
             ],
             "draft_state": {
                 "picks": [],  # This gets populated but we don't need it
                 "teams": [],
                 "current_pick": 4,
-                "current_team": "Wiccan Warriors"
-            }
+                "current_team": "Wiccan Warriors",
+            },
         }
 
         adapter = SheetsAdapter()
@@ -151,7 +151,9 @@ class TestSheetsIntegration:
         josh_pick = next(p for p in draft_state.picks if p.player.name == "Josh Allen")
         assert josh_pick.owner == "Buffy"
 
-        cmc_pick = next(p for p in draft_state.picks if p.player.name == "Christian McCaffrey")
+        cmc_pick = next(
+            p for p in draft_state.picks if p.player.name == "Christian McCaffrey"
+        )
         assert cmc_pick.owner == "Willow"
 
     def test_error_propagation_through_workflow(self):
@@ -160,7 +162,7 @@ class TestSheetsIntegration:
         failed_sheets_data = {
             "success": False,
             "error": "Sheet not found",
-            "error_type": "sheet_not_found"
+            "error_type": "sheet_not_found",
         }
 
         adapter = SheetsAdapter()

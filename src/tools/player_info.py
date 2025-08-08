@@ -13,18 +13,17 @@ def _search_cached_players(
     last_name: str,
     first_name: Optional[str] = None,
     team: Optional[str] = None,
-    position: Optional[str] = None
+    position: Optional[str] = None,
 ) -> List[Player]:
     """Search for players in the cached rankings data."""
     matching_players = []
 
     # Use PlayerRankings search method if available
-    if hasattr(_rankings_cache, 'search_players') and callable(_rankings_cache.search_players):
+    if hasattr(_rankings_cache, "search_players") and callable(
+        _rankings_cache.search_players
+    ):
         matching_players = _rankings_cache.search_players(
-            last_name=last_name,
-            first_name=first_name,
-            team=team,
-            position=position
+            last_name=last_name, first_name=first_name, team=team, position=position
         )
     else:
         # Fallback: search all cached positions manually
@@ -93,30 +92,38 @@ async def get_player_info(
 
             if rankings_result.get("success"):
                 # Try searching again after loading position data
-                matching_players = _search_cached_players(last_name, first_name, team, position)
+                matching_players = _search_cached_players(
+                    last_name, first_name, team, position
+                )
             else:
                 # If loading rankings failed, still return player not found error
-                logger.warning(f"Failed to load {position} rankings: {rankings_result.get('error')}")
+                logger.warning(
+                    f"Failed to load {position} rankings: {rankings_result.get('error')}"
+                )
 
         # If no matches found after all search attempts
         if not matching_players:
             if not position:
                 # No position provided, suggest providing one
-                error_msg = f"No players found for '{last_name}'" + \
-                           (f" {first_name}" if first_name else "") + \
-                           (f" ({team})" if team else "") + \
-                           ". Try providing a position to search more data."
+                error_msg = (
+                    f"No players found for '{last_name}'"
+                    + (f" {first_name}" if first_name else "")
+                    + (f" ({team})" if team else "")
+                    + ". Try providing a position to search more data."
+                )
             else:
                 # Position was provided but still no matches
-                error_msg = f"No players found for '{last_name}'" + \
-                           (f" {first_name}" if first_name else "") + \
-                           (f" ({team})" if team else "") + \
-                           (f" at {position}" if position else "")
+                error_msg = (
+                    f"No players found for '{last_name}'"
+                    + (f" {first_name}" if first_name else "")
+                    + (f" ({team})" if team else "")
+                    + (f" at {position}" if position else "")
+                )
 
             return {
                 "success": False,
                 "error": error_msg,
-                "error_type": "player_not_found"
+                "error_type": "player_not_found",
             }
 
         # Convert Player objects to dictionaries
@@ -130,14 +137,16 @@ async def get_player_info(
                 "ranking": player.ranking,
                 "projected_points": player.projected_points,
                 "injury_status": player.injury_status.value,
-                "notes": player.notes
+                "notes": player.notes,
             }
             player_results.append(player_dict)
 
         # Sort by ranking (lower is better)
         player_results.sort(key=lambda p: p["ranking"])
 
-        logger.info(f"get_player_info completed in {time.time() - start_time:.2f} seconds")
+        logger.info(
+            f"get_player_info completed in {time.time() - start_time:.2f} seconds"
+        )
         return {
             "success": True,
             "players": player_results,
@@ -146,8 +155,8 @@ async def get_player_info(
                 "last_name": last_name,
                 "first_name": first_name,
                 "team": team,
-                "position": position
-            }
+                "position": position,
+            },
         }
 
     except Exception as e:
@@ -162,6 +171,6 @@ async def get_player_info(
                 "last_name": last_name,
                 "first_name": first_name,
                 "team": team,
-                "position": position
-            }
+                "position": position,
+            },
         }

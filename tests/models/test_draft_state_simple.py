@@ -10,7 +10,7 @@ class TestDraftState:
         """Test creating an empty draft state."""
         teams = [
             {"owner": "Buffy", "team_name": "Team Buffy"},
-            {"owner": "Willow", "team_name": "Team Willow"}
+            {"owner": "Willow", "team_name": "Team Willow"},
         ]
 
         draft_state = DraftState(picks=[], teams=teams)
@@ -22,7 +22,7 @@ class TestDraftState:
         """Test creating draft state with picks."""
         teams = [
             {"owner": "Buffy", "team_name": "Team Buffy"},
-            {"owner": "Willow", "team_name": "Team Willow"}
+            {"owner": "Willow", "team_name": "Team Willow"},
         ]
 
         player1 = Player(
@@ -31,7 +31,7 @@ class TestDraftState:
             position="QB",
             bye_week=12,
             ranking=1,
-            projected_points=325.5
+            projected_points=325.5,
         )
 
         player2 = Player(
@@ -40,12 +40,12 @@ class TestDraftState:
             position="RB",
             bye_week=9,
             ranking=1,
-            projected_points=285.2
+            projected_points=285.2,
         )
 
         picks = [
             DraftPick(player=player1, owner="Buffy"),
-            DraftPick(player=player2, owner="Willow")
+            DraftPick(player=player2, owner="Willow"),
         ]
 
         draft_state = DraftState(picks=picks, teams=teams)
@@ -58,7 +58,7 @@ class TestDraftState:
         """Test getting all picks for a specific owner."""
         teams = [
             {"owner": "Buffy", "team_name": "Team Buffy"},
-            {"owner": "Willow", "team_name": "Team Willow"}
+            {"owner": "Willow", "team_name": "Team Willow"},
         ]
 
         player1 = Player(
@@ -67,7 +67,7 @@ class TestDraftState:
             position="QB",
             bye_week=12,
             ranking=1,
-            projected_points=325.5
+            projected_points=325.5,
         )
 
         player2 = Player(
@@ -76,7 +76,7 @@ class TestDraftState:
             position="RB",
             bye_week=9,
             ranking=1,
-            projected_points=285.2
+            projected_points=285.2,
         )
 
         player3 = Player(
@@ -85,13 +85,13 @@ class TestDraftState:
             position="WR",
             bye_week=6,
             ranking=1,
-            projected_points=270.8
+            projected_points=270.8,
         )
 
         picks = [
             DraftPick(player=player1, owner="Buffy"),
             DraftPick(player=player2, owner="Willow"),
-            DraftPick(player=player3, owner="Buffy")
+            DraftPick(player=player3, owner="Buffy"),
         ]
 
         draft_state = DraftState(picks=picks, teams=teams)
@@ -115,7 +115,7 @@ class TestDraftState:
             position="QB",
             bye_week=12,
             ranking=1,
-            projected_points=325.5
+            projected_points=325.5,
         )
 
         player2 = Player(
@@ -124,12 +124,12 @@ class TestDraftState:
             position="RB",
             bye_week=9,
             ranking=1,
-            projected_points=285.2
+            projected_points=285.2,
         )
 
         picks = [
             DraftPick(player=player1, owner="Buffy"),
-            DraftPick(player=player2, owner="Buffy")
+            DraftPick(player=player2, owner="Buffy"),
         ]
 
         draft_state = DraftState(picks=picks, teams=teams)
@@ -149,7 +149,7 @@ class TestDraftState:
             position="QB",
             bye_week=12,
             ranking=1,
-            projected_points=325.5
+            projected_points=325.5,
         )
 
         undrafted_player = Player(
@@ -158,7 +158,7 @@ class TestDraftState:
             position="QB",
             bye_week=14,
             ranking=2,
-            projected_points=315.0
+            projected_points=315.0,
         )
 
         picks = [DraftPick(player=drafted_player, owner="Buffy")]
@@ -177,7 +177,7 @@ class TestDraftState:
             position="QB",
             bye_week=12,
             ranking=1,
-            projected_points=325.5
+            projected_points=325.5,
         )
 
         picks = [DraftPick(player=player, owner="Buffy")]
@@ -196,10 +196,10 @@ class TestDraftState:
                         "injury_status": "HEALTHY",
                         "ranking": 1,
                         "projected_points": 325.5,
-                        "notes": ""
-                    }
+                        "notes": "",
+                    },
                 }
-            ]
+            ],
         }
 
         assert draft_state.to_dict() == expected
@@ -219,10 +219,10 @@ class TestDraftState:
                         "injury_status": "HEALTHY",
                         "ranking": 1,
                         "projected_points": 325.5,
-                        "notes": ""
-                    }
+                        "notes": "",
+                    },
                 }
-            ]
+            ],
         }
 
         draft_state = DraftState.from_dict(data)

@@ -1,6 +1,6 @@
 """Test helper classes and utilities for Fantasy Football Draft Assistant tests."""
 
-from typing import Any, Dict, List
+from typing import Any, List
 
 from src.services.sheets_service import SheetsProvider
 
@@ -25,4 +25,3 @@ class MockSheetsProvider(SheetsProvider):
         if sheet_id in self.mock_data and range_name in self.mock_data[sheet_id]:
             return self.mock_data[sheet_id][range_name]
         return []
-

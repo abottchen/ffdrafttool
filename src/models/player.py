@@ -69,10 +69,12 @@ class Player:
         return {
             "source": best_source,
             "rank": self.rankings[best_source]["rank"],
-            "score": self.rankings[best_source]["score"]
+            "score": self.rankings[best_source]["score"],
         }
 
-    def get_ranking_by_source(self, source: RankingSource) -> Optional[Dict[str, float]]:
+    def get_ranking_by_source(
+        self, source: RankingSource
+    ) -> Optional[Dict[str, float]]:
         """Get ranking data from a specific source."""
         return self.rankings.get(source)
 
@@ -82,10 +84,16 @@ class Player:
             InjuryStatus.PROBABLE,
             InjuryStatus.QUESTIONABLE,
             InjuryStatus.DOUBTFUL,
-            InjuryStatus.OUT
+            InjuryStatus.OUT,
         ]
 
     def __str__(self) -> str:
-        injury_note = f" ({self.injury_status.value})" if self.injury_status != InjuryStatus.HEALTHY else ""
-        avg_rank = f"Avg Rank: {self.average_rank:.1f}" if self.average_rank else "No rankings"
+        injury_note = (
+            f" ({self.injury_status.value})"
+            if self.injury_status != InjuryStatus.HEALTHY
+            else ""
+        )
+        avg_rank = (
+            f"Avg Rank: {self.average_rank:.1f}" if self.average_rank else "No rankings"
+        )
         return f"{self.name} ({self.position.value}, {self.team}){injury_note} - {avg_rank}"

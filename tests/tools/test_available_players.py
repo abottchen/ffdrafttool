@@ -19,7 +19,7 @@ class TestAvailablePlayers:
         """Mock draft state with some picks."""
         teams = [
             {"team_name": "Sunnydale Slayers", "owner": "Buffy", "team_number": 1},
-            {"team_name": "Willow's Witches", "owner": "Willow", "team_number": 2}
+            {"team_name": "Willow's Witches", "owner": "Willow", "team_number": 2},
         ]
 
         picks = [
@@ -32,8 +32,8 @@ class TestAvailablePlayers:
                     bye_week=12,
                     ranking=1,
                     projected_points=99.0,
-                    injury_status=InjuryStatus.HEALTHY
-                )
+                    injury_status=InjuryStatus.HEALTHY,
+                ),
             ),
             DraftPick(
                 owner="Willow",
@@ -44,9 +44,9 @@ class TestAvailablePlayers:
                     bye_week=9,
                     ranking=2,
                     projected_points=98.0,
-                    injury_status=InjuryStatus.HEALTHY
-                )
-            )
+                    injury_status=InjuryStatus.HEALTHY,
+                ),
+            ),
         ]
 
         return DraftState(teams=teams, picks=picks)
@@ -65,7 +65,7 @@ class TestAvailablePlayers:
                     "ranking": 3,
                     "projected_points": 96.0,
                     "injury_status": "HEALTHY",
-                    "notes": "Dual-threat QB"
+                    "notes": "Dual-threat QB",
                 },
                 {
                     "name": "Josh Allen",  # This one is drafted
@@ -75,7 +75,7 @@ class TestAvailablePlayers:
                     "ranking": 1,
                     "projected_points": 99.0,
                     "injury_status": "HEALTHY",
-                    "notes": "Elite QB"
+                    "notes": "Elite QB",
                 },
                 {
                     "name": "Dak Prescott",
@@ -85,7 +85,7 @@ class TestAvailablePlayers:
                     "ranking": 5,
                     "projected_points": 90.0,
                     "injury_status": "HEALTHY",
-                    "notes": "Solid QB"
+                    "notes": "Solid QB",
                 },
                 {
                     "name": "Tua Tagovailoa",
@@ -95,22 +95,22 @@ class TestAvailablePlayers:
                     "ranking": 8,
                     "projected_points": 85.0,
                     "injury_status": "HEALTHY",
-                    "notes": "Accurate passer"
-                }
-            ]
+                    "notes": "Accurate passer",
+                },
+            ],
         }
 
     @pytest.mark.asyncio
-    async def test_get_available_players_success(self, mock_draft_state, mock_rankings_response):
+    async def test_get_available_players_success(
+        self, mock_draft_state, mock_rankings_response
+    ):
         """Test successful retrieval of available players."""
 
-        with patch('src.tools.available_players.get_player_rankings') as mock_rankings:
+        with patch("src.tools.available_players.get_player_rankings") as mock_rankings:
             mock_rankings.return_value = mock_rankings_response
 
             result = await get_available_players(
-                draft_state=mock_draft_state,
-                position="QB",
-                limit=3
+                draft_state=mock_draft_state, position="QB", limit=3
             )
 
             assert result["success"] is True
@@ -129,23 +129,23 @@ class TestAvailablePlayers:
             # Should be sorted by projected_points (descending)
             players = result["players"]
             assert players[0]["name"] == "Lamar Jackson"  # 96.0 points
-            assert players[1]["name"] == "Dak Prescott"   # 90.0 points
-            assert players[2]["name"] == "Tua Tagovailoa" # 85.0 points
+            assert players[1]["name"] == "Dak Prescott"  # 90.0 points
+            assert players[2]["name"] == "Tua Tagovailoa"  # 85.0 points
 
             # Verify rankings was called with correct position
             mock_rankings.assert_called_once_with(position="QB")
 
     @pytest.mark.asyncio
-    async def test_get_available_players_with_limit(self, mock_draft_state, mock_rankings_response):
+    async def test_get_available_players_with_limit(
+        self, mock_draft_state, mock_rankings_response
+    ):
         """Test that limit parameter works correctly."""
 
-        with patch('src.tools.available_players.get_player_rankings') as mock_rankings:
+        with patch("src.tools.available_players.get_player_rankings") as mock_rankings:
             mock_rankings.return_value = mock_rankings_response
 
             result = await get_available_players(
-                draft_state=mock_draft_state,
-                position="QB",
-                limit=2
+                draft_state=mock_draft_state, position="QB", limit=2
             )
 
             assert result["success"] is True
@@ -163,9 +163,7 @@ class TestAvailablePlayers:
         """Test error handling for invalid position."""
 
         result = await get_available_players(
-            draft_state=mock_draft_state,
-            position="INVALID",
-            limit=5
+            draft_state=mock_draft_state, position="INVALID", limit=5
         )
 
         assert result["success"] is False
@@ -177,9 +175,7 @@ class TestAvailablePlayers:
         """Test error handling for invalid limit."""
 
         result = await get_available_players(
-            draft_state=mock_draft_state,
-            position="QB",
-            limit=0
+            draft_state=mock_draft_state, position="QB", limit=0
         )
 
         assert result["success"] is False
@@ -190,16 +186,11 @@ class TestAvailablePlayers:
     async def test_get_available_players_rankings_fail(self, mock_draft_state):
         """Test handling when player rankings fails."""
 
-        with patch('src.tools.available_players.get_player_rankings') as mock_rankings:
-            mock_rankings.return_value = {
-                "success": False,
-                "error": "Network error"
-            }
+        with patch("src.tools.available_players.get_player_rankings") as mock_rankings:
+            mock_rankings.return_value = {"success": False, "error": "Network error"}
 
             result = await get_available_players(
-                draft_state=mock_draft_state,
-                position="QB",
-                limit=5
+                draft_state=mock_draft_state, position="QB", limit=5
             )
 
             assert result["success"] is False
@@ -222,18 +213,16 @@ class TestAvailablePlayers:
                     "ranking": 1,
                     "projected_points": 99.0,
                     "injury_status": "HEALTHY",
-                    "notes": "Elite QB"
+                    "notes": "Elite QB",
                 }
-            ]
+            ],
         }
 
-        with patch('src.tools.available_players.get_player_rankings') as mock_rankings:
+        with patch("src.tools.available_players.get_player_rankings") as mock_rankings:
             mock_rankings.return_value = drafted_only_response
 
             result = await get_available_players(
-                draft_state=mock_draft_state,
-                position="QB",
-                limit=5
+                draft_state=mock_draft_state, position="QB", limit=5
             )
 
             assert result["success"] is True
@@ -242,7 +231,9 @@ class TestAvailablePlayers:
             assert len(result["players"]) == 0
 
     @pytest.mark.asyncio
-    async def test_get_available_players_case_insensitive_matching(self, mock_rankings_response):
+    async def test_get_available_players_case_insensitive_matching(
+        self, mock_rankings_response
+    ):
         """Test case-insensitive player name matching."""
 
         # Create draft state with different case
@@ -257,19 +248,17 @@ class TestAvailablePlayers:
                     bye_week=12,
                     ranking=1,
                     projected_points=99.0,
-                    injury_status=InjuryStatus.HEALTHY
-                )
+                    injury_status=InjuryStatus.HEALTHY,
+                ),
             )
         ]
         draft_state = DraftState(teams=teams, picks=picks)
 
-        with patch('src.tools.available_players.get_player_rankings') as mock_rankings:
+        with patch("src.tools.available_players.get_player_rankings") as mock_rankings:
             mock_rankings.return_value = mock_rankings_response
 
             result = await get_available_players(
-                draft_state=draft_state,
-                position="QB",
-                limit=5
+                draft_state=draft_state, position="QB", limit=5
             )
 
             # "Josh Allen" should still be filtered out despite case difference
@@ -281,13 +270,11 @@ class TestAvailablePlayers:
     async def test_get_available_players_unexpected_error(self, mock_draft_state):
         """Test handling of unexpected errors."""
 
-        with patch('src.tools.available_players.get_player_rankings') as mock_rankings:
+        with patch("src.tools.available_players.get_player_rankings") as mock_rankings:
             mock_rankings.side_effect = Exception("Database connection failed")
 
             result = await get_available_players(
-                draft_state=mock_draft_state,
-                position="QB",
-                limit=5
+                draft_state=mock_draft_state, position="QB", limit=5
             )
 
             assert result["success"] is False
@@ -316,17 +303,17 @@ class TestAvailablePlayers:
         assert _normalize_player_name("  Josh   Allen  ") == "josh allen"
 
     @pytest.mark.asyncio
-    async def test_get_available_players_position_case_insensitive(self, mock_draft_state, mock_rankings_response):
+    async def test_get_available_players_position_case_insensitive(
+        self, mock_draft_state, mock_rankings_response
+    ):
         """Test position parameter is case insensitive."""
 
-        with patch('src.tools.available_players.get_player_rankings') as mock_rankings:
+        with patch("src.tools.available_players.get_player_rankings") as mock_rankings:
             mock_rankings.return_value = mock_rankings_response
 
             # Test lowercase
             result = await get_available_players(
-                draft_state=mock_draft_state,
-                position="qb",
-                limit=5
+                draft_state=mock_draft_state, position="qb", limit=5
             )
 
             assert result["success"] is True
@@ -336,16 +323,16 @@ class TestAvailablePlayers:
             mock_rankings.assert_called_with(position="QB")
 
     @pytest.mark.asyncio
-    async def test_get_available_players_includes_context(self, mock_draft_state, mock_rankings_response):
+    async def test_get_available_players_includes_context(
+        self, mock_draft_state, mock_rankings_response
+    ):
         """Test that result includes draft context information."""
 
-        with patch('src.tools.available_players.get_player_rankings') as mock_rankings:
+        with patch("src.tools.available_players.get_player_rankings") as mock_rankings:
             mock_rankings.return_value = mock_rankings_response
 
             result = await get_available_players(
-                draft_state=mock_draft_state,
-                position="QB",
-                limit=5
+                draft_state=mock_draft_state, position="QB", limit=5
             )
 
             assert result["success"] is True

@@ -20,7 +20,7 @@ class TestDraftProgress:
         return {
             "teams": [
                 {"team_name": "Sunnydale Slayers", "owner": "Buffy", "team_number": 1},
-                {"team_name": "Willow's Witches", "owner": "Willow", "team_number": 2}
+                {"team_name": "Willow's Witches", "owner": "Willow", "team_number": 2},
             ],
             "picks": [
                 {
@@ -29,7 +29,7 @@ class TestDraftProgress:
                     "column_team": 1,
                     "player": "Josh Allen",
                     "position": "QB",
-                    "team": "BUF"
+                    "team": "BUF",
                 },
                 {
                     "pick_number": 2,
@@ -37,9 +37,9 @@ class TestDraftProgress:
                     "column_team": 2,
                     "player": "Christian McCaffrey",
                     "position": "RB",
-                    "team": "SF"
-                }
-            ]
+                    "team": "SF",
+                },
+            ],
         }
 
     @pytest.fixture
@@ -47,7 +47,7 @@ class TestDraftProgress:
         """Mock simplified draft state after adapter conversion."""
         teams = [
             {"team_name": "Sunnydale Slayers", "owner": "Buffy", "team_number": 1},
-            {"team_name": "Willow's Witches", "owner": "Willow", "team_number": 2}
+            {"team_name": "Willow's Witches", "owner": "Willow", "team_number": 2},
         ]
 
         picks = [
@@ -60,8 +60,8 @@ class TestDraftProgress:
                     bye_week=12,
                     ranking=1,
                     projected_points=99.0,
-                    injury_status=InjuryStatus.HEALTHY
-                )
+                    injury_status=InjuryStatus.HEALTHY,
+                ),
             ),
             DraftPick(
                 owner="Willow",
@@ -72,27 +72,33 @@ class TestDraftProgress:
                     bye_week=9,
                     ranking=2,
                     projected_points=98.0,
-                    injury_status=InjuryStatus.HEALTHY
-                )
-            )
+                    injury_status=InjuryStatus.HEALTHY,
+                ),
+            ),
         ]
 
         return DraftState(teams=teams, picks=picks)
 
     @pytest.mark.asyncio
-    async def test_read_draft_progress_success(self, mock_processed_data, mock_draft_state):
+    async def test_read_draft_progress_success(
+        self, mock_processed_data, mock_draft_state
+    ):
         """Test successful draft progress read."""
 
-        with patch('src.tools.draft_progress.GoogleSheetsProvider') as mock_provider_class:
+        with patch(
+            "src.tools.draft_progress.GoogleSheetsProvider"
+        ) as mock_provider_class:
             mock_provider = MagicMock()
             mock_provider_class.return_value = mock_provider
 
-            with patch('src.tools.draft_progress.SheetsService') as mock_service_class:
+            with patch("src.tools.draft_progress.SheetsService") as mock_service_class:
                 mock_service = AsyncMock()
                 mock_service.read_draft_data.return_value = mock_processed_data
                 mock_service_class.return_value = mock_service
 
-                with patch('src.services.sheets_adapter.SheetsAdapter') as mock_adapter_class:
+                with patch(
+                    "src.services.sheets_adapter.SheetsAdapter"
+                ) as mock_adapter_class:
                     mock_adapter = MagicMock()
                     mock_adapter.convert_to_draft_state.return_value = mock_draft_state
                     mock_adapter_class.return_value = mock_adapter
@@ -134,8 +140,12 @@ class TestDraftProgress:
     async def test_read_draft_progress_missing_dependencies(self):
         """Test handling of missing Google Sheets dependencies."""
 
-        with patch('src.tools.draft_progress.GoogleSheetsProvider') as mock_provider_class:
-            mock_provider_class.side_effect = ImportError("google-api-python-client not found")
+        with patch(
+            "src.tools.draft_progress.GoogleSheetsProvider"
+        ) as mock_provider_class:
+            mock_provider_class.side_effect = ImportError(
+                "google-api-python-client not found"
+            )
 
             result = await read_draft_progress("test_sheet_id")
 
@@ -149,27 +159,38 @@ class TestDraftProgress:
     async def test_read_draft_progress_missing_credentials(self):
         """Test handling of missing credentials."""
 
-        with patch('src.tools.draft_progress.GoogleSheetsProvider') as mock_provider_class:
-            mock_provider_class.side_effect = FileNotFoundError("credentials.json not found")
+        with patch(
+            "src.tools.draft_progress.GoogleSheetsProvider"
+        ) as mock_provider_class:
+            mock_provider_class.side_effect = FileNotFoundError(
+                "credentials.json not found"
+            )
 
             result = await read_draft_progress("test_sheet_id")
 
             assert result["success"] is False
             assert result["error_type"] == "missing_credentials"
             assert "credentials not configured" in result["error"]
-            assert "console.developers.google.com" in result["troubleshooting"]["next_steps"][0]
+            assert (
+                "console.developers.google.com"
+                in result["troubleshooting"]["next_steps"][0]
+            )
 
     @pytest.mark.asyncio
     async def test_read_draft_progress_permission_error(self, mock_processed_data):
         """Test handling of permission errors."""
 
-        with patch('src.tools.draft_progress.GoogleSheetsProvider') as mock_provider_class:
+        with patch(
+            "src.tools.draft_progress.GoogleSheetsProvider"
+        ) as mock_provider_class:
             mock_provider = MagicMock()
             mock_provider_class.return_value = mock_provider
 
-            with patch('src.tools.draft_progress.SheetsService') as mock_service_class:
+            with patch("src.tools.draft_progress.SheetsService") as mock_service_class:
                 mock_service = AsyncMock()
-                mock_service.read_draft_data.side_effect = Exception("403 Forbidden - Permission denied")
+                mock_service.read_draft_data.side_effect = Exception(
+                    "403 Forbidden - Permission denied"
+                )
                 mock_service_class.return_value = mock_service
 
                 result = await read_draft_progress("test_sheet_id")
@@ -178,19 +199,26 @@ class TestDraftProgress:
                 assert result["error_type"] == "sheet_access_failed"
                 assert "403 Forbidden" in result["error"]
                 assert "check permissions" in result["troubleshooting"]["solution"]
-                assert "shared with your Google account" in result["troubleshooting"]["next_steps"][0]
+                assert (
+                    "shared with your Google account"
+                    in result["troubleshooting"]["next_steps"][0]
+                )
 
     @pytest.mark.asyncio
     async def test_read_draft_progress_not_found_error(self):
         """Test handling of sheet not found errors."""
 
-        with patch('src.tools.draft_progress.GoogleSheetsProvider') as mock_provider_class:
+        with patch(
+            "src.tools.draft_progress.GoogleSheetsProvider"
+        ) as mock_provider_class:
             mock_provider = MagicMock()
             mock_provider_class.return_value = mock_provider
 
-            with patch('src.tools.draft_progress.SheetsService') as mock_service_class:
+            with patch("src.tools.draft_progress.SheetsService") as mock_service_class:
                 mock_service = AsyncMock()
-                mock_service.read_draft_data.side_effect = Exception("404 Not Found - Sheet not found")
+                mock_service.read_draft_data.side_effect = Exception(
+                    "404 Not Found - Sheet not found"
+                )
                 mock_service_class.return_value = mock_service
 
                 result = await read_draft_progress("invalid_sheet_id")
@@ -198,20 +226,29 @@ class TestDraftProgress:
                 assert result["success"] is False
                 assert result["error_type"] == "sheet_access_failed"
                 assert "404 Not Found" in result["error"]
-                assert "check sheet ID and range" in result["troubleshooting"]["solution"]
-                assert "Verify the Google Sheet ID" in result["troubleshooting"]["next_steps"][0]
+                assert (
+                    "check sheet ID and range" in result["troubleshooting"]["solution"]
+                )
+                assert (
+                    "Verify the Google Sheet ID"
+                    in result["troubleshooting"]["next_steps"][0]
+                )
 
     @pytest.mark.asyncio
     async def test_read_draft_progress_authentication_error(self):
         """Test handling of authentication errors."""
 
-        with patch('src.tools.draft_progress.GoogleSheetsProvider') as mock_provider_class:
+        with patch(
+            "src.tools.draft_progress.GoogleSheetsProvider"
+        ) as mock_provider_class:
             mock_provider = MagicMock()
             mock_provider_class.return_value = mock_provider
 
-            with patch('src.tools.draft_progress.SheetsService') as mock_service_class:
+            with patch("src.tools.draft_progress.SheetsService") as mock_service_class:
                 mock_service = AsyncMock()
-                mock_service.read_draft_data.side_effect = Exception("Authentication failed - invalid credentials")
+                mock_service.read_draft_data.side_effect = Exception(
+                    "Authentication failed - invalid credentials"
+                )
                 mock_service_class.return_value = mock_service
 
                 result = await read_draft_progress("test_sheet_id")
@@ -223,26 +260,31 @@ class TestDraftProgress:
                 assert "Delete token.json" in result["troubleshooting"]["next_steps"][0]
 
     @pytest.mark.asyncio
-    async def test_read_draft_progress_with_custom_range(self, mock_processed_data, mock_draft_state):
+    async def test_read_draft_progress_with_custom_range(
+        self, mock_processed_data, mock_draft_state
+    ):
         """Test reading draft progress with custom sheet range."""
 
-        with patch('src.tools.draft_progress.GoogleSheetsProvider') as mock_provider_class:
+        with patch(
+            "src.tools.draft_progress.GoogleSheetsProvider"
+        ) as mock_provider_class:
             mock_provider = MagicMock()
             mock_provider_class.return_value = mock_provider
 
-            with patch('src.tools.draft_progress.SheetsService') as mock_service_class:
+            with patch("src.tools.draft_progress.SheetsService") as mock_service_class:
                 mock_service = AsyncMock()
                 mock_service.read_draft_data.return_value = mock_processed_data
                 mock_service_class.return_value = mock_service
 
-                with patch('src.services.sheets_adapter.SheetsAdapter') as mock_adapter_class:
+                with patch(
+                    "src.services.sheets_adapter.SheetsAdapter"
+                ) as mock_adapter_class:
                     mock_adapter = MagicMock()
                     mock_adapter.convert_to_draft_state.return_value = mock_draft_state
                     mock_adapter_class.return_value = mock_adapter
 
                     result = await read_draft_progress(
-                        "test_sheet_id",
-                        sheet_range="CustomRange!A1:Z30"
+                        "test_sheet_id", sheet_range="CustomRange!A1:Z30"
                     )
 
                     assert result["success"] is True
@@ -254,26 +296,31 @@ class TestDraftProgress:
                     )
 
     @pytest.mark.asyncio
-    async def test_read_draft_progress_force_refresh(self, mock_processed_data, mock_draft_state):
+    async def test_read_draft_progress_force_refresh(
+        self, mock_processed_data, mock_draft_state
+    ):
         """Test reading draft progress with force refresh."""
 
-        with patch('src.tools.draft_progress.GoogleSheetsProvider') as mock_provider_class:
+        with patch(
+            "src.tools.draft_progress.GoogleSheetsProvider"
+        ) as mock_provider_class:
             mock_provider = MagicMock()
             mock_provider_class.return_value = mock_provider
 
-            with patch('src.tools.draft_progress.SheetsService') as mock_service_class:
+            with patch("src.tools.draft_progress.SheetsService") as mock_service_class:
                 mock_service = AsyncMock()
                 mock_service.read_draft_data.return_value = mock_processed_data
                 mock_service_class.return_value = mock_service
 
-                with patch('src.services.sheets_adapter.SheetsAdapter') as mock_adapter_class:
+                with patch(
+                    "src.services.sheets_adapter.SheetsAdapter"
+                ) as mock_adapter_class:
                     mock_adapter = MagicMock()
                     mock_adapter.convert_to_draft_state.return_value = mock_draft_state
                     mock_adapter_class.return_value = mock_adapter
 
                     result = await read_draft_progress(
-                        "test_sheet_id",
-                        force_refresh=True
+                        "test_sheet_id", force_refresh=True
                     )
 
                     assert result["success"] is True
@@ -287,18 +334,24 @@ class TestDraftProgress:
     async def test_read_draft_progress_adapter_error(self, mock_processed_data):
         """Test handling of adapter conversion errors."""
 
-        with patch('src.tools.draft_progress.GoogleSheetsProvider') as mock_provider_class:
+        with patch(
+            "src.tools.draft_progress.GoogleSheetsProvider"
+        ) as mock_provider_class:
             mock_provider = MagicMock()
             mock_provider_class.return_value = mock_provider
 
-            with patch('src.tools.draft_progress.SheetsService') as mock_service_class:
+            with patch("src.tools.draft_progress.SheetsService") as mock_service_class:
                 mock_service = AsyncMock()
                 mock_service.read_draft_data.return_value = mock_processed_data
                 mock_service_class.return_value = mock_service
 
-                with patch('src.services.sheets_adapter.SheetsAdapter') as mock_adapter_class:
+                with patch(
+                    "src.services.sheets_adapter.SheetsAdapter"
+                ) as mock_adapter_class:
                     mock_adapter = MagicMock()
-                    mock_adapter.convert_to_draft_state.side_effect = Exception("Conversion failed")
+                    mock_adapter.convert_to_draft_state.side_effect = Exception(
+                        "Conversion failed"
+                    )
                     mock_adapter_class.return_value = mock_adapter
 
                     result = await read_draft_progress("test_sheet_id")
@@ -315,16 +368,20 @@ class TestDraftProgress:
         empty_processed_data = {"teams": [], "picks": []}
         empty_draft_state = DraftState(teams=[], picks=[])
 
-        with patch('src.tools.draft_progress.GoogleSheetsProvider') as mock_provider_class:
+        with patch(
+            "src.tools.draft_progress.GoogleSheetsProvider"
+        ) as mock_provider_class:
             mock_provider = MagicMock()
             mock_provider_class.return_value = mock_provider
 
-            with patch('src.tools.draft_progress.SheetsService') as mock_service_class:
+            with patch("src.tools.draft_progress.SheetsService") as mock_service_class:
                 mock_service = AsyncMock()
                 mock_service.read_draft_data.return_value = empty_processed_data
                 mock_service_class.return_value = mock_service
 
-                with patch('src.services.sheets_adapter.SheetsAdapter') as mock_adapter_class:
+                with patch(
+                    "src.services.sheets_adapter.SheetsAdapter"
+                ) as mock_adapter_class:
                     mock_adapter = MagicMock()
                     mock_adapter.convert_to_draft_state.return_value = empty_draft_state
                     mock_adapter_class.return_value = mock_adapter

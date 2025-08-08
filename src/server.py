@@ -58,7 +58,9 @@ async def get_player_rankings_tool(
     Returns:
         JSON string with player rankings data
     """
-    logger.info(f"get_player_rankings called with position={position}, force_refresh={force_refresh}")
+    logger.info(
+        f"get_player_rankings called with position={position}, force_refresh={force_refresh}"
+    )
 
     try:
         result = await get_player_rankings(position, force_refresh)
@@ -99,9 +101,7 @@ async def read_draft_progress_tool(
 
 @mcp.tool()
 async def get_available_players_tool(
-    draft_state: dict,
-    position: str,
-    limit: int
+    draft_state: dict, position: str, limit: int
 ) -> str:
     """
     Get a list of top undrafted players at a position.
@@ -114,9 +114,7 @@ async def get_available_players_tool(
     Returns:
         JSON string with list of available players
     """
-    logger.info(
-        f"get_available_players called with position={position}, limit={limit}"
-    )
+    logger.info(f"get_available_players called with position={position}, limit={limit}")
 
     try:
         # Convert dict to DraftState object
@@ -140,8 +138,10 @@ async def get_available_players_tool(
                     bye_week=player_data.get("bye_week", 0),
                     ranking=player_data.get("ranking", 999),
                     projected_points=player_data.get("projected_points", 0.0),
-                    injury_status=InjuryStatus(player_data.get("injury_status", "HEALTHY")),
-                    notes=player_data.get("notes", "")
+                    injury_status=InjuryStatus(
+                        player_data.get("injury_status", "HEALTHY")
+                    ),
+                    notes=player_data.get("notes", ""),
                 )
             else:
                 # String format - create basic player object
@@ -153,13 +153,10 @@ async def get_available_players_tool(
                     ranking=999,
                     projected_points=0.0,
                     injury_status=InjuryStatus.HEALTHY,
-                    notes=""
+                    notes="",
                 )
 
-            picks.append(DraftPick(
-                player=player,
-                owner=pick_data.get("owner", "")
-            ))
+            picks.append(DraftPick(player=player, owner=pick_data.get("owner", "")))
 
         draft_state_obj = DraftState(teams=teams, picks=picks)
 
@@ -168,8 +165,6 @@ async def get_available_players_tool(
     except Exception as e:
         logger.error(f"Error in get_available_players: {e}")
         return json.dumps({"success": False, "error": str(e)}, indent=2)
-
-
 
 
 @mcp.tool()

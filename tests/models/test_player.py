@@ -146,7 +146,7 @@ class TestPlayer:
             position=Position.RB,
             team="TEN",
             bye_week=6,
-            injury_status=InjuryStatus.HEALTHY
+            injury_status=InjuryStatus.HEALTHY,
         )
 
         player.add_ranking(RankingSource.ESPN, 15, 85.0)

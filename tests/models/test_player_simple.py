@@ -15,7 +15,7 @@ class TestPlayer:
             injury_status=InjuryStatus.HEALTHY,
             ranking=1,
             projected_points=325.5,
-            notes="Elite dual-threat QB with rushing upside"
+            notes="Elite dual-threat QB with rushing upside",
         )
 
         assert player.name == "Josh Allen"
@@ -35,7 +35,7 @@ class TestPlayer:
             position="RB",
             bye_week=9,
             ranking=1,
-            projected_points=285.2
+            projected_points=285.2,
         )
 
         assert player.name == "Christian McCaffrey"
@@ -55,7 +55,7 @@ class TestPlayer:
             position="QB",
             bye_week=12,
             ranking=1,
-            projected_points=325.5
+            projected_points=325.5,
         )
 
         player2 = Player(
@@ -64,7 +64,7 @@ class TestPlayer:
             position="QB",
             bye_week=12,
             ranking=2,  # Different ranking
-            projected_points=300.0  # Different projection
+            projected_points=300.0,  # Different projection
         )
 
         player3 = Player(
@@ -73,7 +73,7 @@ class TestPlayer:
             position="QB",
             bye_week=14,
             ranking=2,
-            projected_points=315.0
+            projected_points=315.0,
         )
 
         assert player1 == player2  # Same name/team/position
@@ -88,7 +88,7 @@ class TestPlayer:
             position="QB",
             bye_week=12,
             ranking=1,
-            projected_points=325.5
+            projected_points=325.5,
         )
 
         assert str(player) == "Josh Allen (QB - BUF)"
@@ -103,7 +103,7 @@ class TestPlayer:
             injury_status=InjuryStatus.QUESTIONABLE,
             ranking=1,
             projected_points=325.5,
-            notes="Elite dual-threat QB"
+            notes="Elite dual-threat QB",
         )
 
         expected = {
@@ -114,7 +114,7 @@ class TestPlayer:
             "injury_status": "Q",
             "ranking": 1,
             "projected_points": 325.5,
-            "notes": "Elite dual-threat QB"
+            "notes": "Elite dual-threat QB",
         }
 
         assert player.to_dict() == expected
@@ -129,7 +129,7 @@ class TestPlayer:
             "injury_status": "Q",
             "ranking": 1,
             "projected_points": 325.5,
-            "notes": "Elite dual-threat QB"
+            "notes": "Elite dual-threat QB",
         }
 
         player = Player.from_dict(data)
@@ -151,7 +151,7 @@ class TestPlayer:
             "position": "RB",
             "bye_week": 9,
             "ranking": 1,
-            "projected_points": 285.2
+            "projected_points": 285.2,
         }
 
         player = Player.from_dict(data)

@@ -24,7 +24,7 @@ class TestPlayerInfo:
                 ranking=1,
                 projected_points=99.0,
                 injury_status=InjuryStatus.HEALTHY,
-                notes="Elite QB"
+                notes="Elite QB",
             ),
             Player(
                 name="Christian McCaffrey",
@@ -34,7 +34,7 @@ class TestPlayerInfo:
                 ranking=2,
                 projected_points=98.0,
                 injury_status=InjuryStatus.HEALTHY,
-                notes="Top RB"
+                notes="Top RB",
             ),
             Player(
                 name="Tyreek Hill",
@@ -44,20 +44,20 @@ class TestPlayerInfo:
                 ranking=3,
                 projected_points=97.0,
                 injury_status=InjuryStatus.QUESTIONABLE,
-                notes="Speed demon WR"
-            )
+                notes="Speed demon WR",
+            ),
         ]
 
     def setup_method(self):
         """Clear any existing cache before tests."""
-        with patch('src.tools.player_info._rankings_cache') as mock_cache:
+        with patch("src.tools.player_info._rankings_cache") as mock_cache:
             mock_cache.clear_cache()
 
     @pytest.mark.asyncio
     async def test_get_player_info_found_in_cache(self, mock_players):
         """Test finding player in cached data."""
 
-        with patch('src.tools.player_info._search_cached_players') as mock_search:
+        with patch("src.tools.player_info._search_cached_players") as mock_search:
             mock_search.return_value = [mock_players[0]]  # Josh Allen
 
             result = await get_player_info(last_name="Allen")
@@ -80,14 +80,11 @@ class TestPlayerInfo:
     async def test_get_player_info_with_all_filters(self, mock_players):
         """Test searching with all available filters."""
 
-        with patch('src.tools.player_info._search_cached_players') as mock_search:
+        with patch("src.tools.player_info._search_cached_players") as mock_search:
             mock_search.return_value = [mock_players[0]]
 
             result = await get_player_info(
-                last_name="Allen",
-                first_name="Josh",
-                team="BUF",
-                position="QB"
+                last_name="Allen", first_name="Josh", team="BUF", position="QB"
             )
 
             assert result["success"] is True
@@ -107,12 +104,12 @@ class TestPlayerInfo:
     async def test_get_player_info_not_found_with_position(self, mock_players):
         """Test loading position data when player not found but position provided."""
 
-        with patch('src.tools.player_info._search_cached_players') as mock_search:
+        with patch("src.tools.player_info._search_cached_players") as mock_search:
             # First call returns empty (not in cache)
             # Second call returns player (after loading position data)
             mock_search.side_effect = [[], [mock_players[0]]]
 
-            with patch('src.tools.player_info.get_player_rankings') as mock_rankings:
+            with patch("src.tools.player_info.get_player_rankings") as mock_rankings:
                 mock_rankings.return_value = {"success": True}
 
                 result = await get_player_info(last_name="Allen", position="QB")
@@ -130,7 +127,7 @@ class TestPlayerInfo:
     async def test_get_player_info_not_found_no_position(self):
         """Test error when player not found and no position provided."""
 
-        with patch('src.tools.player_info._search_cached_players') as mock_search:
+        with patch("src.tools.player_info._search_cached_players") as mock_search:
             mock_search.return_value = []  # No players found
 
             result = await get_player_info(last_name="NonExistent")
@@ -144,11 +141,14 @@ class TestPlayerInfo:
     async def test_get_player_info_rankings_load_fails(self):
         """Test handling when loading position rankings fails."""
 
-        with patch('src.tools.player_info._search_cached_players') as mock_search:
+        with patch("src.tools.player_info._search_cached_players") as mock_search:
             mock_search.return_value = []  # No players found
 
-            with patch('src.tools.player_info.get_player_rankings') as mock_rankings:
-                mock_rankings.return_value = {"success": False, "error": "Network error"}
+            with patch("src.tools.player_info.get_player_rankings") as mock_rankings:
+                mock_rankings.return_value = {
+                    "success": False,
+                    "error": "Network error",
+                }
 
                 result = await get_player_info(last_name="Allen", position="QB")
 
@@ -169,10 +169,10 @@ class TestPlayerInfo:
             ranking=25,
             projected_points=85.0,
             injury_status=InjuryStatus.HEALTHY,
-            notes="Veteran WR"
+            notes="Veteran WR",
         )
 
-        with patch('src.tools.player_info._search_cached_players') as mock_search:
+        with patch("src.tools.player_info._search_cached_players") as mock_search:
             mock_search.return_value = [allen_wr, allen_qb]  # Return in wrong order
 
             result = await get_player_info(last_name="Allen")
@@ -191,7 +191,7 @@ class TestPlayerInfo:
     async def test_get_player_info_unexpected_error(self):
         """Test handling of unexpected errors."""
 
-        with patch('src.tools.player_info._search_cached_players') as mock_search:
+        with patch("src.tools.player_info._search_cached_players") as mock_search:
             mock_search.side_effect = Exception("Database connection failed")
 
             result = await get_player_info(last_name="Allen")
@@ -203,7 +203,7 @@ class TestPlayerInfo:
     def test_search_cached_players_with_search_method(self, mock_players):
         """Test searching when cache has search_players method."""
 
-        with patch('src.tools.player_info._rankings_cache') as mock_cache:
+        with patch("src.tools.player_info._rankings_cache") as mock_cache:
             mock_cache.search_players.return_value = [mock_players[0]]
 
             result = _search_cached_players("Allen", "Josh", "BUF", "QB")
@@ -213,16 +213,13 @@ class TestPlayerInfo:
 
             # Verify search method was called with correct parameters
             mock_cache.search_players.assert_called_once_with(
-                last_name="Allen",
-                first_name="Josh",
-                team="BUF",
-                position="QB"
+                last_name="Allen", first_name="Josh", team="BUF", position="QB"
             )
 
     def test_search_cached_players_manual_search(self, mock_players):
         """Test manual search when cache doesn't have search_players method."""
 
-        with patch('src.tools.player_info._rankings_cache') as mock_cache:
+        with patch("src.tools.player_info._rankings_cache") as mock_cache:
             # Remove search_players method
             mock_cache.search_players = None
 
@@ -231,7 +228,7 @@ class TestPlayerInfo:
             mock_cache.get_position_data.side_effect = [
                 [mock_players[0]],  # QB: Josh Allen
                 [mock_players[1]],  # RB: Christian McCaffrey
-                [mock_players[2]]   # WR: Tyreek Hill
+                [mock_players[2]],  # WR: Tyreek Hill
             ]
 
             # Search for "Allen" - should find Josh Allen
@@ -243,12 +240,12 @@ class TestPlayerInfo:
     def test_search_cached_players_position_filter(self, mock_players):
         """Test position filtering in manual search."""
 
-        with patch('src.tools.player_info._rankings_cache') as mock_cache:
+        with patch("src.tools.player_info._rankings_cache") as mock_cache:
             mock_cache.search_players = None
             mock_cache.get_all_positions.return_value = ["QB", "RB"]
             mock_cache.get_position_data.side_effect = [
                 [mock_players[0]],  # QB: Josh Allen
-                [mock_players[1]]   # RB: Christian McCaffrey
+                [mock_players[1]],  # RB: Christian McCaffrey
             ]
 
             # Search for position QB only
@@ -260,10 +257,12 @@ class TestPlayerInfo:
     def test_search_cached_players_team_filter(self, mock_players):
         """Test team filtering in manual search."""
 
-        with patch('src.tools.player_info._rankings_cache') as mock_cache:
+        with patch("src.tools.player_info._rankings_cache") as mock_cache:
             mock_cache.search_players = None
             mock_cache.get_all_positions.return_value = ["QB"]
-            mock_cache.get_position_data.return_value = [mock_players[0]]  # Josh Allen (BUF)
+            mock_cache.get_position_data.return_value = [
+                mock_players[0]
+            ]  # Josh Allen (BUF)
 
             # Search for wrong team - should find nothing
             result = _search_cached_players("Allen", team="MIA")
@@ -277,7 +276,7 @@ class TestPlayerInfo:
     def test_search_cached_players_name_matching(self, mock_players):
         """Test name matching logic."""
 
-        with patch('src.tools.player_info._rankings_cache') as mock_cache:
+        with patch("src.tools.player_info._rankings_cache") as mock_cache:
             mock_cache.search_players = None
             mock_cache.get_all_positions.return_value = ["QB"]
             mock_cache.get_position_data.return_value = [mock_players[0]]  # Josh Allen

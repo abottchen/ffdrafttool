@@ -81,6 +81,7 @@ async def read_draft_progress(
 
         # Convert to simplified DraftState using adapter
         from src.services.sheets_adapter import SheetsAdapter
+
         adapter = SheetsAdapter()
         draft_state = adapter.convert_to_draft_state(processed_data)
 
@@ -95,10 +96,7 @@ async def read_draft_progress(
             "total_teams": len(draft_state.teams),
             "total_picks": len(draft_state.picks),
             "teams": [
-                {
-                    "team_name": team["team_name"],
-                    "owner": team["owner"]
-                }
+                {"team_name": team["team_name"], "owner": team["owner"]}
                 for team in draft_state.teams
             ],
             "picks": [
@@ -112,12 +110,12 @@ async def read_draft_progress(
                         "ranking": pick.player.ranking,
                         "projected_points": pick.player.projected_points,
                         "injury_status": pick.player.injury_status.value,
-                        "notes": pick.player.notes
-                    }
+                        "notes": pick.player.notes,
+                    },
                 }
                 for pick in draft_state.picks
             ],
-            "draft_state": draft_state
+            "draft_state": draft_state,
         }
 
         # Pass through additional fields if they exist

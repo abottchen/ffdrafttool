@@ -25,7 +25,7 @@ class TestPlayerRankings:
                 position="QB",
                 bye_week=12,
                 ranking=1,
-                projected_points=325.5
+                projected_points=325.5,
             ),
             Player(
                 name="Lamar Jackson",
@@ -33,8 +33,8 @@ class TestPlayerRankings:
                 position="QB",
                 bye_week=14,
                 ranking=2,
-                projected_points=315.0
-            )
+                projected_points=315.0,
+            ),
         ]
 
         cache.set_position_data("QB", qb_players)
@@ -57,7 +57,7 @@ class TestPlayerRankings:
                 position="RB",
                 bye_week=9,
                 ranking=1,
-                projected_points=285.2
+                projected_points=285.2,
             )
         ]
 
@@ -89,7 +89,7 @@ class TestPlayerRankings:
                 position="QB",
                 bye_week=12,
                 ranking=1,
-                projected_points=325.5
+                projected_points=325.5,
             )
         ]
 
@@ -109,7 +109,7 @@ class TestPlayerRankings:
                 position="QB",
                 bye_week=12,
                 ranking=1,
-                projected_points=325.5
+                projected_points=325.5,
             ),
             Player(
                 name="Lamar Jackson",
@@ -117,8 +117,8 @@ class TestPlayerRankings:
                 position="QB",
                 bye_week=14,
                 ranking=2,
-                projected_points=315.0
-            )
+                projected_points=315.0,
+            ),
         ]
 
         rb_players = [
@@ -128,7 +128,7 @@ class TestPlayerRankings:
                 position="RB",
                 bye_week=9,
                 ranking=1,
-                projected_points=285.2
+                projected_points=285.2,
             ),
             Player(
                 name="Josh Jacobs",
@@ -136,8 +136,8 @@ class TestPlayerRankings:
                 position="RB",
                 bye_week=6,
                 ranking=8,
-                projected_points=220.5
-            )
+                projected_points=220.5,
+            ),
         ]
 
         cache.set_position_data("QB", qb_players)
@@ -178,7 +178,7 @@ class TestPlayerRankings:
                 position="QB",
                 bye_week=12,
                 ranking=1,
-                projected_points=325.5
+                projected_points=325.5,
             )
         ]
 

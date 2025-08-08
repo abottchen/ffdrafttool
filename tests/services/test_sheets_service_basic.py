@@ -16,7 +16,7 @@ class TestSheetsServiceBasic:
         """Test that MockSheetsProvider can be created."""
         provider = MockSheetsProvider()
         assert provider is not None
-        assert hasattr(provider, 'mock_data')
+        assert hasattr(provider, "mock_data")
 
     @pytest.mark.asyncio
     async def test_mock_sheets_provider_read_range(self):
@@ -80,7 +80,7 @@ class TestSheetsServiceBasic:
     def test_google_sheets_provider_handles_missing_dependencies(self):
         """Test that missing Google API dependencies are handled."""
         # Mock the import check
-        with patch('src.services.sheets_service.GOOGLE_AVAILABLE', False):
+        with patch("src.services.sheets_service.GOOGLE_AVAILABLE", False):
             with pytest.raises(ImportError):
                 GoogleSheetsProvider()
 

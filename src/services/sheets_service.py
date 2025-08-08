@@ -31,8 +31,6 @@ class SheetsProvider(ABC):
         pass
 
 
-
-
 class GoogleSheetsProvider(SheetsProvider):
     """Real Google Sheets provider using Google Sheets API"""
 
@@ -127,7 +125,6 @@ class GoogleSheetsProvider(SheetsProvider):
         except Exception as e:
             logger.error(f"Error reading from Google Sheets: {str(e)}")
             raise
-
 
 
 class SheetsService:

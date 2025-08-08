@@ -18,8 +18,7 @@ _cache_ttl_hours = 6
 
 
 async def get_player_rankings(
-    position: Optional[str] = None,
-    force_refresh: bool = False
+    position: Optional[str] = None, force_refresh: bool = False
 ) -> Dict[str, Any]:
     """
     Get player rankings with caching support.
@@ -47,7 +46,9 @@ async def get_player_rankings(
                 if position:
                     cached_players = _rankings_cache.get_position_data(position.upper())
                     if cached_players:
-                        logger.info(f"get_player_rankings (cached) completed in {time.time() - start_time:.2f} seconds")
+                        logger.info(
+                            f"get_player_rankings (cached) completed in {time.time() - start_time:.2f} seconds"
+                        )
                         return {
                             "success": True,
                             "position_filter": position,
@@ -64,10 +65,10 @@ async def get_player_rankings(
                                     "ranking": p.ranking,
                                     "projected_points": p.projected_points,
                                     "injury_status": p.injury_status.value,
-                                    "notes": p.notes
+                                    "notes": p.notes,
                                 }
                                 for p in cached_players
-                            ]
+                            ],
                         }
                 else:
                     # Get all cached players
@@ -78,7 +79,9 @@ async def get_player_rankings(
                             all_players.extend(pos_players)
 
                     if all_players:
-                        logger.info(f"get_player_rankings (cached) completed in {time.time() - start_time:.2f} seconds")
+                        logger.info(
+                            f"get_player_rankings (cached) completed in {time.time() - start_time:.2f} seconds"
+                        )
                         return {
                             "success": True,
                             "position_filter": position,
@@ -95,10 +98,10 @@ async def get_player_rankings(
                                     "ranking": p.ranking,
                                     "projected_points": p.projected_points,
                                     "injury_status": p.injury_status.value,
-                                    "notes": p.notes
+                                    "notes": p.notes,
                                 }
                                 for p in all_players
-                            ]
+                            ],
                         }
 
         # Fetch fresh data from FantasySharks
@@ -108,14 +111,20 @@ async def get_player_rankings(
         try:
             if position:
                 from src.models.player import Position
+
                 position_enum = Position(position.upper())
                 raw_players = await scraper.scrape_rankings(position_enum)
             else:
                 # Get all positions
                 from src.models.player import Position
+
                 raw_players = []
                 for pos_enum in Position:
-                    if pos_enum not in [Position.FLEX, Position.BE, Position.IR]:  # Skip non-draftable positions
+                    if pos_enum not in [
+                        Position.FLEX,
+                        Position.BE,
+                        Position.IR,
+                    ]:  # Skip non-draftable positions
                         pos_players = await scraper.scrape_rankings(pos_enum)
                         raw_players.extend(pos_players)
         except Exception as e:
@@ -131,10 +140,10 @@ async def get_player_rankings(
                         "1. Verify internet connection",
                         "2. Check if FantasySharks.com is accessible",
                         "3. Try again with force_refresh=True",
-                        "4. Check logs for detailed error information"
-                    ]
+                        "4. Check logs for detailed error information",
+                    ],
                 },
-                "position_filter": position
+                "position_filter": position,
             }
 
         if not raw_players:
@@ -143,7 +152,7 @@ async def get_player_rankings(
                 "success": False,
                 "error": "No player data available from FantasySharks",
                 "error_type": "no_data",
-                "position_filter": position
+                "position_filter": position,
             }
 
         # Convert to simplified Player models
@@ -164,7 +173,7 @@ async def get_player_rankings(
                 "success": False,
                 "error": "Failed to convert player data to simplified format",
                 "error_type": "conversion_failed",
-                "position_filter": position
+                "position_filter": position,
             }
 
         # Cache the new data by position
@@ -174,7 +183,9 @@ async def get_player_rankings(
         for player in simplified_players:
             pos = player.position.upper()
             if pos not in positions_cached:
-                pos_players = [p for p in simplified_players if p.position.upper() == pos]
+                pos_players = [
+                    p for p in simplified_players if p.position.upper() == pos
+                ]
                 _rankings_cache.set_position_data(pos, pos_players)
                 positions_cached.add(pos)
 
@@ -183,9 +194,13 @@ async def get_player_rankings(
         # Filter by position if requested
         players_to_return = simplified_players
         if position:
-            players_to_return = [p for p in simplified_players if p.position.upper() == position.upper()]
+            players_to_return = [
+                p for p in simplified_players if p.position.upper() == position.upper()
+            ]
 
-        logger.info(f"get_player_rankings completed in {time.time() - start_time:.2f} seconds")
+        logger.info(
+            f"get_player_rankings completed in {time.time() - start_time:.2f} seconds"
+        )
         return {
             "success": True,
             "position_filter": position,
@@ -202,10 +217,10 @@ async def get_player_rankings(
                     "ranking": p.ranking,
                     "projected_points": p.projected_points,
                     "injury_status": p.injury_status.value,
-                    "notes": p.notes
+                    "notes": p.notes,
                 }
                 for p in players_to_return
-            ]
+            ],
         }
 
     except Exception as e:
@@ -223,10 +238,10 @@ async def get_player_rankings(
                     "1. Check the application logs for stack traces",
                     "2. Verify all dependencies are installed",
                     "3. Try force_refresh=True to bypass any caching issues",
-                    "4. Contact support if error persists"
-                ]
+                    "4. Contact support if error persists",
+                ],
             },
-            "position_filter": position
+            "position_filter": position,
         }
 
 

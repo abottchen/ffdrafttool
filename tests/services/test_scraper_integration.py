@@ -62,7 +62,9 @@ class TestScraperIntegration:
         old_players = []
         i = 0
         while i < len(rows):
-            player = scraper._parse_player_row(rows[i], OldPosition.QB, len(old_players) + 1)
+            player = scraper._parse_player_row(
+                rows[i], OldPosition.QB, len(old_players) + 1
+            )
             if player:
                 # Check for commentary in next row
                 if i + 1 < len(rows):
@@ -113,7 +115,7 @@ class TestScraperIntegration:
             position=OldPosition.RB,
             team="SF",
             bye_week=9,
-            commentary="Elite RB1 with receiving upside when healthy."
+            commentary="Elite RB1 with receiving upside when healthy.",
         )
 
         # FantasySharks scraper stores data as RankingSource.OTHER
@@ -144,22 +146,21 @@ class TestScraperIntegration:
             ("Travis Kelce", OldPosition.TE, "KC", 10, 1, 195.5),
             ("Cooper Kupp", OldPosition.WR, "LAR", 7, 2, 245.0),
             ("Justin Tucker", OldPosition.K, "BAL", 14, 1, 125.0),
-            ("Buffalo Bills", OldPosition.DST, "BUF", 12, 3, 115.5)
+            ("Buffalo Bills", OldPosition.DST, "BUF", 12, 3, 115.5),
         ]
 
         for name, position, team, bye, rank, points in test_cases:
             old_player = OldPlayer(
-                name=name,
-                position=position,
-                team=team,
-                bye_week=bye
+                name=name, position=position, team=team, bye_week=bye
             )
             old_player.add_ranking(RankingSource.OTHER, rank, points)
 
             simple_player = adapter.convert_player(old_player)
 
             assert simple_player.name == name
-            assert simple_player.position == position.value  # Position enum value as string
+            assert (
+                simple_player.position == position.value
+            )  # Position enum value as string
             assert simple_player.team == team
             assert simple_player.bye_week == bye
             assert simple_player.ranking == rank

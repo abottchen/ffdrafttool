@@ -27,7 +27,7 @@ class CSVSheetsProvider(SheetsProvider):
         - Row 5+: Draft picks by round
         """
         try:
-            with open(self.csv_file_path, 'r', encoding='utf-8') as f:
+            with open(self.csv_file_path, "r", encoding="utf-8") as f:
                 reader = csv.reader(f)
                 rows = [row for row in reader]
 
@@ -45,11 +45,10 @@ class CSVSheetsProvider(SheetsProvider):
         except Exception as e:
             raise Exception(f"Failed to read CSV fixture: {e}")
 
-
     def get_row_count(self) -> int:
         """Helper method to get number of rows in CSV (including header)."""
         try:
-            with open(self.csv_file_path, 'r', encoding='utf-8') as f:
+            with open(self.csv_file_path, "r", encoding="utf-8") as f:
                 return sum(1 for _ in f)
         except Exception:
             return 0

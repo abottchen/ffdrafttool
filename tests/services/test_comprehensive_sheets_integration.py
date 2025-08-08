@@ -57,8 +57,18 @@ class TestComprehensiveSheetsIntegration:
 
         # Verify team structure with Buffy character names
         team_owners = {team["owner"] for team in draft_state.teams}
-        expected_owners = {"Buffy", "Willow", "Xander", "Giles", "Anya",
-                          "Tara", "Spike", "Dawn", "Joyce", "Riley"}
+        expected_owners = {
+            "Buffy",
+            "Willow",
+            "Xander",
+            "Giles",
+            "Anya",
+            "Tara",
+            "Spike",
+            "Dawn",
+            "Joyce",
+            "Riley",
+        }
         assert team_owners == expected_owners
 
         # Verify team names
@@ -85,24 +95,46 @@ class TestComprehensiveSheetsIntegration:
 
         # Test specific players from the fixture
         # Round 1, Pick 1 should be Buffy picking Isiah Pacheco
-        [p for p in draft_state.picks
-                        if any("Isiah Pacheco" in pick.get("player", "")
-                              for pick in processed_data["picks"]
-                              if pick.get("pick") == 1)]
+        [
+            p
+            for p in draft_state.picks
+            if any(
+                "Isiah Pacheco" in pick.get("player", "")
+                for pick in processed_data["picks"]
+                if pick.get("pick") == 1
+            )
+        ]
 
         # Find Buffy's first pick (should be Isiah Pacheco from fixture)
         buffy_picks = [p for p in draft_state.picks if p.owner == "Buffy"]
         assert len(buffy_picks) > 0
 
         # Check that players have reasonable data
-        expected_owners = {"Buffy", "Willow", "Xander", "Giles", "Anya",
-                          "Tara", "Spike", "Dawn", "Joyce", "Riley"}
+        expected_owners = {
+            "Buffy",
+            "Willow",
+            "Xander",
+            "Giles",
+            "Anya",
+            "Tara",
+            "Spike",
+            "Dawn",
+            "Joyce",
+            "Riley",
+        }
 
         for pick in draft_state.picks[:5]:  # Check first 5 picks
             assert isinstance(pick, DraftPick)
             assert isinstance(pick.player, Player)
             assert pick.player.name != ""  # Should have actual player name
-            assert pick.player.position in ["QB", "RB", "WR", "TE", "K", "DST"]  # Valid position
+            assert pick.player.position in [
+                "QB",
+                "RB",
+                "WR",
+                "TE",
+                "K",
+                "DST",
+            ]  # Valid position
             assert pick.owner in expected_owners  # Valid owner
 
     @pytest.mark.asyncio
@@ -152,7 +184,7 @@ class TestComprehensiveSheetsIntegration:
         import os
         import tempfile
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
             f.write("invalid,csv,format\n")
             temp_path = f.name
 

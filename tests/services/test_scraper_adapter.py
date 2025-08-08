@@ -19,9 +19,11 @@ class TestScraperAdapter:
             position=OldPosition.QB,
             team="BUF",
             bye_week=12,
-            commentary="Elite dual-threat QB with rushing upside"
+            commentary="Elite dual-threat QB with rushing upside",
         )
-        old_player.add_ranking(RankingSource.OTHER, 1, 325.5)  # FantasySharks uses OTHER
+        old_player.add_ranking(
+            RankingSource.OTHER, 1, 325.5
+        )  # FantasySharks uses OTHER
 
         adapter = ScraperAdapter()
         simple_player = adapter.convert_player(old_player)
@@ -46,15 +48,12 @@ class TestScraperAdapter:
             (OldPosition.WR, "WR"),
             (OldPosition.TE, "TE"),
             (OldPosition.K, "K"),
-            (OldPosition.DST, "DST")
+            (OldPosition.DST, "DST"),
         ]
 
         for old_pos, expected_pos_str in positions_to_test:
             old_player = OldPlayer(
-                name="Test Player",
-                position=old_pos,
-                team="TEST",
-                bye_week=5
+                name="Test Player", position=old_pos, team="TEST", bye_week=5
             )
             old_player.add_ranking(RankingSource.OTHER, 10, 100.0)
 
@@ -64,10 +63,7 @@ class TestScraperAdapter:
     def test_convert_player_with_no_rankings(self):
         """Test converting player with no rankings data."""
         old_player = OldPlayer(
-            name="Unknown Player",
-            position=OldPosition.RB,
-            team="UNK",
-            bye_week=8
+            name="Unknown Player", position=OldPosition.RB, team="UNK", bye_week=8
         )
 
         adapter = ScraperAdapter()
@@ -84,14 +80,17 @@ class TestScraperAdapter:
             position=OldPosition.WR,
             team="TEST",
             bye_week=6,
-            commentary="This player has detailed commentary about their season outlook."
+            commentary="This player has detailed commentary about their season outlook.",
         )
         old_player.add_ranking(RankingSource.OTHER, 15, 180.5)
 
         adapter = ScraperAdapter()
         simple_player = adapter.convert_player(old_player)
 
-        assert simple_player.notes == "This player has detailed commentary about their season outlook."
+        assert (
+            simple_player.notes
+            == "This player has detailed commentary about their season outlook."
+        )
 
     def test_convert_player_without_commentary(self):
         """Test that missing commentary becomes empty string."""
@@ -99,7 +98,7 @@ class TestScraperAdapter:
             name="Player Without Commentary",
             position=OldPosition.TE,
             team="TEST",
-            bye_week=9
+            bye_week=9,
         )
         old_player.add_ranking(RankingSource.OTHER, 8, 120.0)
 
@@ -111,9 +110,11 @@ class TestScraperAdapter:
     def test_convert_multiple_players(self):
         """Test converting a list of old players."""
         old_players = [
-            OldPlayer(name="Player 1", position=OldPosition.QB, team="BUF", bye_week=12),
+            OldPlayer(
+                name="Player 1", position=OldPosition.QB, team="BUF", bye_week=12
+            ),
             OldPlayer(name="Player 2", position=OldPosition.RB, team="SF", bye_week=9),
-            OldPlayer(name="Player 3", position=OldPosition.WR, team="MIA", bye_week=6)
+            OldPlayer(name="Player 3", position=OldPosition.WR, team="MIA", bye_week=6),
         ]
 
         # Add rankings to each
@@ -150,7 +151,7 @@ class TestScraperAdapter:
             OldPosition.WR: "WR",
             OldPosition.TE: "TE",
             OldPosition.K: "K",
-            OldPosition.DST: "DST"
+            OldPosition.DST: "DST",
         }
 
         for old_pos, expected_str in expected_mappings.items():

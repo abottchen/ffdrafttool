@@ -17,7 +17,7 @@ class TestSheetsAdapter:
             "teams": [
                 {"team_name": "Team Scooby", "owner": "Buffy", "team_number": 1},
                 {"team_name": "Team Mystery", "owner": "Willow", "team_number": 2},
-                {"team_name": "Team Slayer", "owner": "Xander", "team_number": 3}
+                {"team_name": "Team Slayer", "owner": "Xander", "team_number": 3},
             ],
             "picks": [
                 {
@@ -25,16 +25,16 @@ class TestSheetsAdapter:
                     "round": 1,
                     "player": "Christian McCaffrey",
                     "position": "RB",
-                    "column_team": "Team Scooby"
+                    "column_team": "Team Scooby",
                 },
                 {
                     "pick": 2,
                     "round": 1,
                     "player": "Tyreek Hill",
                     "position": "WR",
-                    "column_team": "Team Mystery"
-                }
-            ]
+                    "column_team": "Team Mystery",
+                },
+            ],
         }
 
         adapter = SheetsAdapter()
@@ -65,11 +65,7 @@ class TestSheetsAdapter:
 
     def test_convert_empty_sheets_data(self):
         """Test converting empty sheets data."""
-        sheets_data = {
-            "success": True,
-            "teams": [],
-            "picks": []
-        }
+        sheets_data = {"success": True, "teams": [], "picks": []}
 
         adapter = SheetsAdapter()
         draft_state = adapter.convert_to_draft_state(sheets_data)
@@ -80,10 +76,7 @@ class TestSheetsAdapter:
 
     def test_convert_failed_sheets_data(self):
         """Test handling failed sheets data."""
-        sheets_data = {
-            "success": False,
-            "error": "Sheet not found"
-        }
+        sheets_data = {"success": False, "error": "Sheet not found"}
 
         adapter = SheetsAdapter()
 
@@ -96,7 +89,7 @@ class TestSheetsAdapter:
             "success": True,
             "teams": [
                 {"team_name": "Sunnydale Slayers", "owner": "Buffy", "team_number": 1},
-                {"team_name": "Willow's Warriors", "owner": "Willow", "team_number": 2}
+                {"team_name": "Willow's Warriors", "owner": "Willow", "team_number": 2},
             ],
             "picks": [
                 {
@@ -104,16 +97,16 @@ class TestSheetsAdapter:
                     "round": 1,
                     "player": "Josh Allen",
                     "position": "QB",
-                    "column_team": "Sunnydale Slayers"
+                    "column_team": "Sunnydale Slayers",
                 },
                 {
                     "pick": 2,
                     "round": 1,
                     "player": "Lamar Jackson",
                     "position": "QB",
-                    "column_team": "Willow's Warriors"
-                }
-            ]
+                    "column_team": "Willow's Warriors",
+                },
+            ],
         }
 
         adapter = SheetsAdapter()
@@ -134,9 +127,9 @@ class TestSheetsAdapter:
                     "round": 1,
                     "player": "Unknown Player",
                     "position": "RB",
-                    "column_team": "Test Team"
+                    "column_team": "Test Team",
                 }
-            ]
+            ],
         }
 
         adapter = SheetsAdapter()
@@ -161,10 +154,10 @@ class TestSheetsAdapter:
                     "pick": 1,
                     "round": 1,
                     "player": "Josh Allen",
-                    "position": "QB"
+                    "position": "QB",
                     # Missing column_team
                 }
-            ]
+            ],
         }
 
         adapter = SheetsAdapter()
@@ -181,7 +174,11 @@ class TestSheetsAdapter:
             "success": True,
             "teams": [
                 {"team_name": "Team Alpha", "owner": "Buffy", "team_number": 1},
-                {"team_name": "Team Alpha", "owner": "Willow", "team_number": 2}  # Duplicate name
+                {
+                    "team_name": "Team Alpha",
+                    "owner": "Willow",
+                    "team_number": 2,
+                },  # Duplicate name
             ],
             "picks": [
                 {
@@ -189,9 +186,9 @@ class TestSheetsAdapter:
                     "round": 1,
                     "player": "Josh Allen",
                     "position": "QB",
-                    "column_team": "Team Alpha"
+                    "column_team": "Team Alpha",
                 }
-            ]
+            ],
         }
 
         adapter = SheetsAdapter()

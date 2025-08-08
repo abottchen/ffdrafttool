@@ -14,14 +14,17 @@ def _normalize_player_name(name: str) -> str:
     normalized = name.lower()
     # Remove common punctuation and suffixes
     normalized = normalized.replace(".", "").replace("'", "").replace("-", "")
-    normalized = normalized.replace(" jr", "").replace(" sr", "").replace(" iii", "").replace(" ii", "")
+    normalized = (
+        normalized.replace(" jr", "")
+        .replace(" sr", "")
+        .replace(" iii", "")
+        .replace(" ii", "")
+    )
     return " ".join(normalized.split()).strip()
 
 
 async def get_available_players(
-    draft_state: DraftState,
-    position: str,
-    limit: int
+    draft_state: DraftState, position: str, limit: int
 ) -> Dict[str, Any]:
     """
     Get a list of top undrafted players at a position.
@@ -46,14 +49,14 @@ async def get_available_players(
             return {
                 "success": False,
                 "error": f"Invalid position: {position}. Valid positions: {valid_positions}",
-                "error_type": "invalid_position"
+                "error_type": "invalid_position",
             }
 
         if limit <= 0:
             return {
                 "success": False,
                 "error": "Limit must be greater than 0",
-                "error_type": "invalid_limit"
+                "error_type": "invalid_limit",
             }
 
         # Get player rankings for the specified position
@@ -63,7 +66,7 @@ async def get_available_players(
             return {
                 "success": False,
                 "error": f"Failed to get player rankings: {rankings_result.get('error')}",
-                "error_type": "rankings_failed"
+                "error_type": "rankings_failed",
             }
 
         all_position_players = rankings_result["players"]
@@ -90,7 +93,9 @@ async def get_available_players(
         # Apply limit
         limited_players = available_players[:limit]
 
-        logger.info(f"get_available_players completed in {time.time() - start_time:.2f} seconds")
+        logger.info(
+            f"get_available_players completed in {time.time() - start_time:.2f} seconds"
+        )
         return {
             "success": True,
             "position": position.upper(),
@@ -100,8 +105,8 @@ async def get_available_players(
             "players": limited_players,
             "draft_context": {
                 "total_picks_made": len(draft_state.picks),
-                "total_teams": len(draft_state.teams)
-            }
+                "total_teams": len(draft_state.teams),
+            },
         }
 
     except Exception as e:
@@ -119,12 +124,12 @@ async def get_available_players(
                     "1. Verify draft_state contains valid picks data",
                     "2. Ensure position parameter is valid",
                     "3. Check that player rankings tool is working",
-                    "4. Verify limit parameter is positive"
-                ]
+                    "4. Verify limit parameter is positive",
+                ],
             },
             "inputs": {
                 "position": position,
                 "limit": limit,
-                "draft_picks_count": len(draft_state.picks) if draft_state else 0
-            }
+                "draft_picks_count": len(draft_state.picks) if draft_state else 0,
+            },
         }

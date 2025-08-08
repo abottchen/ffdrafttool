@@ -14,7 +14,7 @@ class TestDraftPick:
             position="QB",
             bye_week=12,
             ranking=1,
-            projected_points=325.5
+            projected_points=325.5,
         )
 
         pick = DraftPick(player=player, owner="Buffy")
@@ -30,7 +30,7 @@ class TestDraftPick:
             position="QB",
             bye_week=12,
             ranking=1,
-            projected_points=325.5
+            projected_points=325.5,
         )
 
         pick1 = DraftPick(player=player, owner="Buffy")
@@ -49,7 +49,7 @@ class TestDraftPick:
             position="QB",
             bye_week=12,
             ranking=1,
-            projected_points=325.5
+            projected_points=325.5,
         )
 
         pick = DraftPick(player=player, owner="Buffy")
@@ -66,7 +66,7 @@ class TestDraftPick:
             injury_status=InjuryStatus.HEALTHY,
             ranking=1,
             projected_points=325.5,
-            notes="Elite QB"
+            notes="Elite QB",
         )
 
         pick = DraftPick(player=player, owner="Buffy")
@@ -81,8 +81,8 @@ class TestDraftPick:
                 "injury_status": "HEALTHY",
                 "ranking": 1,
                 "projected_points": 325.5,
-                "notes": "Elite QB"
-            }
+                "notes": "Elite QB",
+            },
         }
 
         assert pick.to_dict() == expected
@@ -99,8 +99,8 @@ class TestDraftPick:
                 "injury_status": "HEALTHY",
                 "ranking": 1,
                 "projected_points": 325.5,
-                "notes": "Elite QB"
-            }
+                "notes": "Elite QB",
+            },
         }
 
         pick = DraftPick.from_dict(data)

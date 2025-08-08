@@ -53,7 +53,7 @@ class SheetsAdapter:
         for team in teams:
             simple_team = {
                 "owner": team.get("owner", "Unknown"),
-                "team_name": team.get("team_name", "Unknown Team")
+                "team_name": team.get("team_name", "Unknown Team"),
             }
             simple_teams.append(simple_team)
 
@@ -87,13 +87,11 @@ class SheetsAdapter:
             ranking=ranking,
             projected_points=projected_points,
             injury_status=injury_status,
-            notes=notes
+            notes=notes,
         )
 
     def _get_owner_for_pick(
-        self,
-        pick_data: Dict[str, Any],
-        team_to_owner: Dict[str, str]
+        self, pick_data: Dict[str, Any], team_to_owner: Dict[str, str]
     ) -> str:
         """Get the owner for a pick based on column_team mapping.
 

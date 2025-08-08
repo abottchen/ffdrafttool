@@ -32,7 +32,7 @@ class PlayerRankings:
         last_name: str = None,
         first_name: str = None,
         team: str = None,
-        position: str = None
+        position: str = None,
     ) -> List[Player]:
         """Search for players across all cached positions.
 
@@ -48,7 +48,9 @@ class PlayerRankings:
         results: Set[Player] = set()
 
         # If position specified, only search that position's cache
-        positions_to_search = [position.upper()] if position else self.position_data.keys()
+        positions_to_search = (
+            [position.upper()] if position else self.position_data.keys()
+        )
 
         for pos in positions_to_search:
             if pos not in self.position_data:
@@ -73,7 +75,9 @@ class PlayerRankings:
 
                 if first_name:
                     # Check if first name matches any part of player name
-                    if not any(first_name.lower() in part for part in player_name_parts):
+                    if not any(
+                        first_name.lower() in part for part in player_name_parts
+                    ):
                         continue
 
                 results.add(player)

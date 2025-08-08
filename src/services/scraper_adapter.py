@@ -20,7 +20,7 @@ class ScraperAdapter:
             OldPosition.WR: "WR",
             OldPosition.TE: "TE",
             OldPosition.K: "K",
-            OldPosition.DST: "DST"
+            OldPosition.DST: "DST",
         }
 
     def convert_player(self, old_player: OldPlayer) -> SimplePlayer:
@@ -46,18 +46,17 @@ class ScraperAdapter:
 
         # Convert injury status (old model uses same enum, just different import)
         injury_status = SimpleInjuryStatus.HEALTHY
-        if hasattr(old_player, 'injury_status') and old_player.injury_status:
+        if hasattr(old_player, "injury_status") and old_player.injury_status:
             # Map old injury status to new one
             injury_mapping = {
                 "HEALTHY": SimpleInjuryStatus.HEALTHY,
                 "PROBABLE": SimpleInjuryStatus.HEALTHY,  # Treat probable as healthy
                 "QUESTIONABLE": SimpleInjuryStatus.QUESTIONABLE,
                 "DOUBTFUL": SimpleInjuryStatus.DOUBTFUL,
-                "OUT": SimpleInjuryStatus.OUT
+                "OUT": SimpleInjuryStatus.OUT,
             }
             injury_status = injury_mapping.get(
-                old_player.injury_status.value,
-                SimpleInjuryStatus.HEALTHY
+                old_player.injury_status.value, SimpleInjuryStatus.HEALTHY
             )
 
         # Get commentary/notes
@@ -71,7 +70,7 @@ class ScraperAdapter:
             ranking=ranking,
             projected_points=projected_points,
             injury_status=injury_status,
-            notes=notes
+            notes=notes,
         )
 
     def convert_players(self, old_players: List[OldPlayer]) -> List[SimplePlayer]:
