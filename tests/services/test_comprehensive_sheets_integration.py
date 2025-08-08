@@ -93,21 +93,117 @@ class TestComprehensiveSheetsIntegration:
         adapter = SheetsAdapter()
         draft_state = adapter.convert_to_draft_state(processed_data)
 
-        # Test specific players from the fixture
-        # Round 1, Pick 1 should be Buffy picking Isiah Pacheco
-        [
-            p
-            for p in draft_state.picks
-            if any(
-                "Isiah Pacheco" in pick.get("player", "")
-                for pick in processed_data["picks"]
-                if pick.get("pick") == 1
+        # CRITICAL TEST: Verify specific players from CSV fixture make it to final draft state
+        # This test would have caught the field name mismatch bug
+
+        # Find Buffy's first pick (Round 1, Pick 1 from CSV fixture)
+        round_1_picks = [
+            p for p in draft_state.picks if hasattr(p, "round") and p.round == 1
+        ]
+        if not round_1_picks:  # If picks don't have round info, get by owner order
+            buffy_picks = [p for p in draft_state.picks if p.owner == "Buffy"]
+            assert len(buffy_picks) > 0, "Should have picks for Buffy"
+            first_buffy_pick = buffy_picks[0]
+        else:
+            # Find pick 1 (should be Buffy's)
+            first_pick = min(
+                round_1_picks, key=lambda p: getattr(p, "pick_number", 0) or 0
             )
+            first_buffy_pick = first_pick
+
+        # VERIFY: Isiah Pacheco made it from CSV to final draft state
+        assert (
+            "Isiah Pacheco" in first_buffy_pick.player.name
+        ), f"Expected 'Isiah Pacheco' in first pick, got '{first_buffy_pick.player.name}'"
+        assert (
+            first_buffy_pick.player.position == "RB"
+        ), f"Expected RB position, got '{first_buffy_pick.player.position}'"
+        assert (
+            first_buffy_pick.owner == "Buffy"
+        ), f"Expected Buffy as owner, got '{first_buffy_pick.owner}'"
+
+        # Find Willow's first pick (Round 1, Pick 2 from CSV fixture)
+        willow_picks = [p for p in draft_state.picks if p.owner == "Willow"]
+        assert len(willow_picks) > 0, "Should have picks for Willow"
+        first_willow_pick = willow_picks[0]
+
+        # VERIFY: Derrick Henry made it from CSV to final draft state
+        assert (
+            "Derrick Henry" in first_willow_pick.player.name
+        ), f"Expected 'Derrick Henry' in Willow's first pick, got '{first_willow_pick.player.name}'"
+        assert (
+            first_willow_pick.player.position == "RB"
+        ), f"Expected RB position, got '{first_willow_pick.player.position}'"
+
+        # VERIFY: More picks to ensure the pattern holds
+        xander_picks = [p for p in draft_state.picks if p.owner == "Xander"]
+        if xander_picks:
+            first_xander_pick = xander_picks[0]
+            assert (
+                "Patrick Mahomes" in first_xander_pick.player.name
+            ), f"Expected 'Patrick Mahomes' in Xander's first pick, got '{first_xander_pick.player.name}'"
+            assert (
+                first_xander_pick.player.position == "QB"
+            ), f"Expected QB position, got '{first_xander_pick.player.position}'"
+
+    @pytest.mark.asyncio
+    async def test_end_to_end_csv_to_final_players(self, csv_provider):
+        """CRITICAL TEST: Verify specific players flow from CSV fixture to final draft state.
+
+        This test ensures adapter field mapping is correct and would catch bugs like
+        player_name vs player field mismatches that cause 'Unknown Player' defaults.
+        """
+        sheets_service = SheetsService(csv_provider)
+        processed_data = await sheets_service.read_draft_data(
+            "fixture_sheet_id", "Draft!A1:V24", force_refresh=True
+        )
+        processed_data["success"] = True
+
+        adapter = SheetsAdapter()
+        draft_state = adapter.convert_to_draft_state(processed_data)
+
+        # Test data from CSV fixture:
+        # Round 1: Buffy picks Isiah Pacheco KC (RB), Willow picks Derrick Henry BAL (RB), etc.
+
+        expected_first_round = [
+            ("Buffy", "Isiah Pacheco", "RB"),  # Pick 1
+            ("Willow", "Derrick Henry", "RB"),  # Pick 2
+            ("Xander", "Patrick Mahomes", "QB"),  # Pick 3
+            ("Giles", "Amon-Ra St. Brown", "WR"),  # Pick 4
+            ("Anya", "Tyreek Hill", "WR"),  # Pick 5
         ]
 
-        # Find Buffy's first pick (should be Isiah Pacheco from fixture)
-        buffy_picks = [p for p in draft_state.picks if p.owner == "Buffy"]
-        assert len(buffy_picks) > 0
+        # Get all picks sorted by the order they appear in the draft_state
+        all_picks = list(draft_state.picks)
+
+        for i, (
+            expected_owner,
+            expected_player_partial,
+            expected_position,
+        ) in enumerate(expected_first_round):
+            assert i < len(all_picks), f"Missing pick {i+1} in draft state"
+
+            actual_pick = all_picks[i]
+
+            # CRITICAL ASSERTIONS that would catch field mapping bugs:
+            assert (
+                expected_player_partial in actual_pick.player.name
+            ), f"Pick {i+1}: Expected '{expected_player_partial}' in player name, got '{actual_pick.player.name}'"
+            assert (
+                actual_pick.player.position == expected_position
+            ), f"Pick {i+1}: Expected position '{expected_position}', got '{actual_pick.player.position}'"
+            assert (
+                actual_pick.owner == expected_owner
+            ), f"Pick {i+1}: Expected owner '{expected_owner}', got '{actual_pick.owner}'"
+
+            # Ensure we're not getting default values that indicate field mapping failure
+            assert (
+                actual_pick.player.name != "Unknown Player"
+            ), f"Pick {i+1}: Got default 'Unknown Player' - indicates field mapping bug"
+            assert (
+                actual_pick.player.team != "UNK"
+                or "Unknown" not in actual_pick.player.name
+            ), f"Pick {i+1}: Multiple default values suggest field mapping problems"
 
         # Check that players have reasonable data
         expected_owners = {
@@ -168,13 +264,19 @@ class TestComprehensiveSheetsIntegration:
         picks = processed_data["picks"]
         assert len(picks) > 0
 
-        # Each pick should have proper structure
-        for pick in picks[:10]:  # Check first 10 picks
-            assert "pick" in pick or "pick_number" in pick
-            assert "round" in pick
-            assert "player" in pick or "player_name" in pick
-            assert "position" in pick
-            assert "column_team" in pick
+        # Each pick should have proper structure with correct field names
+        for i, pick in enumerate(picks[:5]):  # Check first 5 picks
+            assert "pick_number" in pick, f"Pick {i+1} missing pick_number field"
+            assert "round" in pick, f"Pick {i+1} missing round field"
+            assert "player_name" in pick, f"Pick {i+1} missing player_name field"
+            assert "position" in pick, f"Pick {i+1} missing position field"
+            assert "column_team" in pick, f"Pick {i+1} missing column_team field"
+
+            # Verify the field contains actual data, not defaults
+            assert (
+                pick["player_name"] != "Unknown Player"
+            ), f"Pick {i+1} has default player name"
+            assert pick["player_name"].strip(), f"Pick {i+1} has empty player name"
 
     @pytest.mark.asyncio
     async def test_error_handling_with_malformed_csv(self):

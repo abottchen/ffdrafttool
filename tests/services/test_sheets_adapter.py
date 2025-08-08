@@ -21,16 +21,16 @@ class TestSheetsAdapter:
             ],
             "picks": [
                 {
-                    "pick": 1,
+                    "pick_number": 1,
                     "round": 1,
-                    "player": "Christian McCaffrey",
+                    "player_name": "Christian McCaffrey",
                     "position": "RB",
                     "column_team": "Team Scooby",
                 },
                 {
-                    "pick": 2,
+                    "pick_number": 2,
                     "round": 1,
-                    "player": "Tyreek Hill",
+                    "player_name": "Tyreek Hill",
                     "position": "WR",
                     "column_team": "Team Mystery",
                 },
@@ -93,16 +93,16 @@ class TestSheetsAdapter:
             ],
             "picks": [
                 {
-                    "pick": 1,
+                    "pick_number": 1,
                     "round": 1,
-                    "player": "Josh Allen",
+                    "player_name": "Josh Allen",
                     "position": "QB",
                     "column_team": "Sunnydale Slayers",
                 },
                 {
-                    "pick": 2,
+                    "pick_number": 2,
                     "round": 1,
-                    "player": "Lamar Jackson",
+                    "player_name": "Lamar Jackson",
                     "position": "QB",
                     "column_team": "Willow's Warriors",
                 },
@@ -123,9 +123,9 @@ class TestSheetsAdapter:
             "teams": [{"team_name": "Test Team", "owner": "Buffy", "team_number": 1}],
             "picks": [
                 {
-                    "pick": 1,
+                    "pick_number": 1,
                     "round": 1,
-                    "player": "Unknown Player",
+                    "player_name": "Unknown Player",
                     "position": "RB",
                     "column_team": "Test Team",
                 }
@@ -151,9 +151,9 @@ class TestSheetsAdapter:
             "teams": [{"team_name": "Test Team", "owner": "Buffy", "team_number": 1}],
             "picks": [
                 {
-                    "pick": 1,
+                    "pick_number": 1,
                     "round": 1,
-                    "player": "Josh Allen",
+                    "player_name": "Josh Allen",
                     "position": "QB",
                     # Missing column_team
                 }
@@ -182,9 +182,9 @@ class TestSheetsAdapter:
             ],
             "picks": [
                 {
-                    "pick": 1,
+                    "pick_number": 1,
                     "round": 1,
-                    "player": "Josh Allen",
+                    "player_name": "Josh Allen",
                     "position": "QB",
                     "column_team": "Team Alpha",
                 }

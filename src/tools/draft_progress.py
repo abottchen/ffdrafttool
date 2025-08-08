@@ -115,7 +115,6 @@ async def read_draft_progress(
                 }
                 for pick in draft_state.picks
             ],
-            "draft_state": draft_state,
         }
 
         # Pass through additional fields if they exist

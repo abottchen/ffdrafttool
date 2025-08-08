@@ -68,7 +68,7 @@ class SheetsAdapter:
         Returns:
             Player: Simplified player object with defaults for missing data
         """
-        name = pick_data.get("player", "Unknown Player")
+        name = pick_data.get("player_name", "Unknown Player")
         position = pick_data.get("position", "UNK")
 
         # Default values for data not available in sheets
