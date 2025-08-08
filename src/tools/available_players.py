@@ -19,6 +19,7 @@ def _normalize_player_name(name: str) -> str:
         .replace(" sr", "")
         .replace(" iii", "")
         .replace(" ii", "")
+        .replace(" iv", "")
     )
     return " ".join(normalized.split()).strip()
 

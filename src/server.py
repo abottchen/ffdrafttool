@@ -115,6 +115,7 @@ async def get_available_players_tool(
         JSON string with list of available players
     """
     logger.info(f"get_available_players called with position={position}, limit={limit}")
+    logger.debug(f"Draft state structure: teams={len(draft_state.get('teams', []))}, picks={len(draft_state.get('picks', []))}")
 
     try:
         # Convert dict to DraftState object
@@ -125,6 +126,8 @@ async def get_available_players_tool(
 
         teams = draft_state.get("teams", [])
         picks_data = draft_state.get("picks", [])
+        
+        logger.debug(f"Processing {len(picks_data)} picks from draft state")
 
         picks = []
         for pick_data in picks_data:

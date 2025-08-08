@@ -341,3 +341,101 @@ class TestAvailablePlayers:
             context = result["draft_context"]
             assert context["total_picks_made"] == 2  # Buffy and Willow made picks
             assert context["total_teams"] == 2
+
+    @pytest.mark.asyncio
+    async def test_get_available_players_with_clean_names(self):
+        """Test available players filtering works correctly with clean player names."""
+        
+        # Create draft state with clean names (no team abbreviations)
+        from src.models.draft_pick import DraftPick
+        from src.models.draft_state_simple import DraftState
+        from src.models.injury_status import InjuryStatus
+        from src.models.player_simple import Player
+        
+        picks = [
+            DraftPick(
+                player=Player(
+                    name="Josh Allen", # Clean name (no team suffix)
+                    team="BUF",
+                    position="QB", 
+                    bye_week=7,
+                    ranking=1,
+                    projected_points=99.0,
+                    injury_status=InjuryStatus.HEALTHY,
+                    notes=""
+                ),
+                owner="Buffy"
+            ),
+            DraftPick(
+                player=Player(
+                    name="Lamar Jackson", # Clean name (no team suffix)
+                    team="BAL", 
+                    position="QB",
+                    bye_week=7,
+                    ranking=2,
+                    projected_points=98.0,
+                    injury_status=InjuryStatus.HEALTHY,
+                    notes=""
+                ),
+                owner="Willow"
+            ),
+        ]
+        
+        teams = [
+            {"team_name": "Sunnydale Slayers", "owner": "Buffy"},
+            {"team_name": "Willow's Witches", "owner": "Willow"},
+        ]
+        
+        draft_state = DraftState(teams=teams, picks=picks)
+        
+        # Mock rankings response with clean names
+        rankings_response = {
+            "success": True,
+            "players": [
+                {
+                    "name": "Josh Allen", # Clean name in rankings
+                    "team": "BUF",
+                    "position": "QB",
+                    "bye_week": 7,
+                    "ranking": 1,
+                    "projected_points": 99.0,
+                    "injury_status": "HEALTHY",
+                    "notes": "Elite QB"
+                },
+                {
+                    "name": "Lamar Jackson", # Clean name in rankings  
+                    "team": "BAL",
+                    "position": "QB",
+                    "bye_week": 7,
+                    "ranking": 2,
+                    "projected_points": 98.0,
+                    "injury_status": "HEALTHY",
+                    "notes": "Dual threat QB"
+                },
+                {
+                    "name": "Jayden Daniels", # Available player
+                    "team": "WAS",
+                    "position": "QB",
+                    "bye_week": 12,
+                    "ranking": 3,
+                    "projected_points": 97.0,
+                    "injury_status": "HEALTHY",
+                    "notes": "Rookie QB"
+                }
+            ]
+        }
+        
+        with patch("src.tools.available_players.get_player_rankings") as mock_rankings:
+            mock_rankings.return_value = rankings_response
+            
+            result = await get_available_players(draft_state, "QB", 5)
+            
+            assert result["success"] is True
+            assert result["total_available"] == 1  # Only Jayden Daniels available
+            assert result["returned_count"] == 1
+            
+            # Verify Josh Allen and Lamar Jackson are NOT in available players
+            available_names = {p["name"] for p in result["players"]}
+            assert "Josh Allen" not in available_names, "Josh Allen should be filtered out (already drafted)"
+            assert "Lamar Jackson" not in available_names, "Lamar Jackson should be filtered out (already drafted)"
+            assert "Jayden Daniels" in available_names, "Jayden Daniels should be available"

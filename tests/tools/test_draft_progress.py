@@ -393,3 +393,67 @@ class TestDraftProgress:
                     assert result["total_picks"] == 0
                     assert len(result["teams"]) == 0
                     assert len(result["picks"]) == 0
+
+    @pytest.mark.asyncio
+    async def test_read_draft_progress_with_composite_names(self):
+        """Test that composite player names with team abbreviations are properly handled."""
+        
+        # Mock data with composite names (like what comes from Google Sheets)
+        composite_processed_data = {
+            "teams": [
+                {"team_name": "Sunnydale Slayers", "owner": "Buffy", "team_number": 1},
+                {"team_name": "Willow's Witches", "owner": "Willow", "team_number": 2},
+            ],
+            "picks": [
+                {
+                    "pick_number": 1,
+                    "round": 1,
+                    "player_name": "Josh Allen   BUF",  # Composite name with team
+                    "position": "QB",
+                    "column_team": "Sunnydale Slayers",
+                },
+                {
+                    "pick_number": 2,
+                    "round": 1,
+                    "player_name": "Lamar Jackson   BAL",  # Another composite name
+                    "position": "QB",
+                    "column_team": "Willow's Witches",
+                },
+            ],
+        }
+
+        with patch(
+            "src.tools.draft_progress.GoogleSheetsProvider"
+        ) as mock_provider_class:
+            mock_provider = MagicMock()
+            mock_provider_class.return_value = mock_provider
+
+            with patch("src.tools.draft_progress.SheetsService") as mock_service_class:
+                mock_service = AsyncMock()
+                mock_service.read_draft_data.return_value = composite_processed_data
+                mock_service_class.return_value = mock_service
+
+                # Use real adapter (not mocked) to test actual team extraction
+                result = await read_draft_progress("test_sheet_id")
+
+                # Should return success
+                assert result["success"] is True
+                assert result["total_picks"] == 2
+
+                # Check that player names were cleaned and teams were extracted
+                picks = result["picks"]
+                assert len(picks) == 2
+
+                # Verify first pick - name cleaned, team extracted
+                pick1 = picks[0]
+                assert pick1["owner"] == "Buffy"
+                assert pick1["player"]["name"] == "Josh Allen"  # Team suffix removed
+                assert pick1["player"]["team"] == "BUF"  # Team extracted from name
+                assert pick1["player"]["position"] == "QB"
+
+                # Verify second pick - name cleaned, team extracted
+                pick2 = picks[1]
+                assert pick2["owner"] == "Willow"
+                assert pick2["player"]["name"] == "Lamar Jackson"  # Team suffix removed
+                assert pick2["player"]["team"] == "BAL"  # Team extracted from name
+                assert pick2["player"]["position"] == "QB"

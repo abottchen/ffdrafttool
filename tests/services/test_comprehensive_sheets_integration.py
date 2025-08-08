@@ -119,6 +119,9 @@ class TestComprehensiveSheetsIntegration:
             first_buffy_pick.player.position == "RB"
         ), f"Expected RB position, got '{first_buffy_pick.player.position}'"
         assert (
+            first_buffy_pick.player.team == "KC"
+        ), f"Expected KC team, got '{first_buffy_pick.player.team}'"
+        assert (
             first_buffy_pick.owner == "Buffy"
         ), f"Expected Buffy as owner, got '{first_buffy_pick.owner}'"
 
@@ -134,6 +137,9 @@ class TestComprehensiveSheetsIntegration:
         assert (
             first_willow_pick.player.position == "RB"
         ), f"Expected RB position, got '{first_willow_pick.player.position}'"
+        assert (
+            first_willow_pick.player.team == "BAL"
+        ), f"Expected BAL team, got '{first_willow_pick.player.team}'"
 
         # VERIFY: More picks to ensure the pattern holds
         xander_picks = [p for p in draft_state.picks if p.owner == "Xander"]
@@ -145,6 +151,9 @@ class TestComprehensiveSheetsIntegration:
             assert (
                 first_xander_pick.player.position == "QB"
             ), f"Expected QB position, got '{first_xander_pick.player.position}'"
+            assert (
+                first_xander_pick.player.team == "KC"
+            ), f"Expected KC team, got '{first_xander_pick.player.team}'"
 
     @pytest.mark.asyncio
     async def test_end_to_end_csv_to_final_players(self, csv_provider):
@@ -166,11 +175,11 @@ class TestComprehensiveSheetsIntegration:
         # Round 1: Buffy picks Isiah Pacheco KC (RB), Willow picks Derrick Henry BAL (RB), etc.
 
         expected_first_round = [
-            ("Buffy", "Isiah Pacheco", "RB"),  # Pick 1
-            ("Willow", "Derrick Henry", "RB"),  # Pick 2
-            ("Xander", "Patrick Mahomes", "QB"),  # Pick 3
-            ("Giles", "Amon-Ra St. Brown", "WR"),  # Pick 4
-            ("Anya", "Tyreek Hill", "WR"),  # Pick 5
+            ("Buffy", "Isiah Pacheco", "RB", "KC"),  # Pick 1
+            ("Willow", "Derrick Henry", "RB", "BAL"),  # Pick 2
+            ("Xander", "Patrick Mahomes", "QB", "KC"),  # Pick 3
+            ("Giles", "Amon-Ra St. Brown", "WR", "DET"),  # Pick 4
+            ("Anya", "Tyreek Hill", "WR", "MIA"),  # Pick 5
         ]
 
         # Get all picks sorted by the order they appear in the draft_state
@@ -180,6 +189,7 @@ class TestComprehensiveSheetsIntegration:
             expected_owner,
             expected_player_partial,
             expected_position,
+            expected_team,
         ) in enumerate(expected_first_round):
             assert i < len(all_picks), f"Missing pick {i+1} in draft state"
 
@@ -192,6 +202,9 @@ class TestComprehensiveSheetsIntegration:
             assert (
                 actual_pick.player.position == expected_position
             ), f"Pick {i+1}: Expected position '{expected_position}', got '{actual_pick.player.position}'"
+            assert (
+                actual_pick.player.team == expected_team
+            ), f"Pick {i+1}: Expected team '{expected_team}', got '{actual_pick.player.team}'"
             assert (
                 actual_pick.owner == expected_owner
             ), f"Pick {i+1}: Expected owner '{expected_owner}', got '{actual_pick.owner}'"
