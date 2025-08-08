@@ -48,67 +48,44 @@ class Player:
     def average_rank(self) -> Optional[float]:
         if not self.rankings:
             return None
-        ranks = [data["rank"] for data in self.rankings.values()]
-        return sum(ranks) / len(ranks)
+
+        total_rank = sum(ranking["rank"] for ranking in self.rankings.values())
+        return total_rank / len(self.rankings)
 
     @property
     def average_score(self) -> Optional[float]:
         if not self.rankings:
             return None
-        scores = [data["score"] for data in self.rankings.values()]
-        return sum(scores) / len(scores)
 
-    @property
-    def is_injured(self) -> bool:
-        return self.injury_status in [
-            InjuryStatus.QUESTIONABLE,
-            InjuryStatus.DOUBTFUL,
-            InjuryStatus.OUT,
-        ]
+        total_score = sum(ranking["score"] for ranking in self.rankings.values())
+        return total_score / len(self.rankings)
 
-    def update_injury_status(self, status: InjuryStatus) -> None:
-        self.injury_status = status
+    def get_best_ranking(self) -> Optional[Dict[str, Any]]:
+        """Get the ranking with the lowest rank number (best ranking)."""
+        if not self.rankings:
+            return None
 
-    def __str__(self) -> str:
-        return f"{self.name} ({self.position.value} - {self.team})"
-
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, Player):
-            return NotImplemented
-        return (
-            self.name == other.name
-            and self.position == other.position
-            and self.team == other.team
-        )
-
-    def __hash__(self) -> int:
-        return hash((self.name, self.position, self.team))
-
-    def to_dict(self) -> Dict[str, Any]:
+        best_source = min(self.rankings, key=lambda x: self.rankings[x]["rank"])
         return {
-            "name": self.name,
-            "position": self.position.value,
-            "team": self.team,
-            "bye_week": self.bye_week,
-            "injury_status": self.injury_status.value,
-            "commentary": self.commentary,
-            "rankings": {source.value: data for source, data in self.rankings.items()},
+            "source": best_source,
+            "rank": self.rankings[best_source]["rank"],
+            "score": self.rankings[best_source]["score"]
         }
 
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Player":
-        player = cls(
-            name=data["name"],
-            position=Position(data["position"]),
-            team=data["team"],
-            bye_week=data["bye_week"],
-            injury_status=InjuryStatus(data.get("injury_status", "HEALTHY")),
-            commentary=data.get("commentary"),
-        )
+    def get_ranking_by_source(self, source: RankingSource) -> Optional[Dict[str, float]]:
+        """Get ranking data from a specific source."""
+        return self.rankings.get(source)
 
-        if "rankings" in data:
-            for source_str, ranking_data in data["rankings"].items():
-                source = RankingSource(source_str)
-                player.rankings[source] = ranking_data
+    def has_injury_concern(self) -> bool:
+        """Check if player has any injury concerns."""
+        return self.injury_status in [
+            InjuryStatus.PROBABLE,
+            InjuryStatus.QUESTIONABLE,
+            InjuryStatus.DOUBTFUL,
+            InjuryStatus.OUT
+        ]
 
-        return player
+    def __str__(self) -> str:
+        injury_note = f" ({self.injury_status.value})" if self.injury_status != InjuryStatus.HEALTHY else ""
+        avg_rank = f"Avg Rank: {self.average_rank:.1f}" if self.average_rank else "No rankings"
+        return f"{self.name} ({self.position.value}, {self.team}){injury_note} - {avg_rank}"

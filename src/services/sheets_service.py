@@ -1,8 +1,6 @@
 import asyncio
 import logging
 import os
-
-# Import draft rules and cache
 import sys
 from abc import ABC, abstractmethod
 from concurrent.futures import ThreadPoolExecutor
@@ -10,8 +8,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 sys.path.append(str(Path(__file__).parent.parent))
-from models.draft_rules import DraftAnalyzer, DraftRules, DraftType
-from services.draft_cache import DraftCache
 
 try:
     from google.auth.transport.requests import Request
@@ -34,43 +30,7 @@ class SheetsProvider(ABC):
         """Read data from a sheet range"""
         pass
 
-    @abstractmethod
-    async def write_range(
-        self, sheet_id: str, range_name: str, values: List[List[Any]]
-    ) -> bool:
-        """Write data to a sheet range"""
-        pass
 
-
-class MockSheetsProvider(SheetsProvider):
-    """Mock sheets provider for testing"""
-
-    def __init__(self):
-        self.mock_data = {
-            "test_sheet_123": {
-                "Draft!A1:V24": [
-                    ["Pick", "Team", "Player", "Position"],
-                    ["1", "Team Alpha", "Christian McCaffrey", "RB"],
-                    ["2", "Team Beta", "Tyreek Hill", "WR"],
-                    ["3", "Team Gamma", "Justin Jefferson", "WR"],
-                ]
-            }
-        }
-
-    async def read_range(self, sheet_id: str, range_name: str) -> List[List[Any]]:
-        """Return mock sheet data"""
-        if sheet_id in self.mock_data and range_name in self.mock_data[sheet_id]:
-            return self.mock_data[sheet_id][range_name]
-        return []
-
-    async def write_range(
-        self, sheet_id: str, range_name: str, values: List[List[Any]]
-    ) -> bool:
-        """Mock write operation"""
-        if sheet_id not in self.mock_data:
-            self.mock_data[sheet_id] = {}
-        self.mock_data[sheet_id][range_name] = values
-        return True
 
 
 class GoogleSheetsProvider(SheetsProvider):
@@ -168,37 +128,6 @@ class GoogleSheetsProvider(SheetsProvider):
             logger.error(f"Error reading from Google Sheets: {str(e)}")
             raise
 
-    async def write_range(
-        self, sheet_id: str, range_name: str, values: List[List[Any]]
-    ) -> bool:
-        """Write data to Google Sheets (requires write permissions)"""
-        try:
-            service = await self._get_service()
-
-            def _write():
-                body = {"values": values}
-                result = (
-                    service.spreadsheets()
-                    .values()
-                    .update(
-                        spreadsheetId=sheet_id,
-                        range=range_name,
-                        valueInputOption="RAW",
-                        body=body,
-                    )
-                    .execute()
-                )
-                return result.get("updatedCells", 0) > 0
-
-            # Execute API call in thread pool
-            success = await asyncio.get_event_loop().run_in_executor(
-                self.executor, _write
-            )
-            return success
-
-        except Exception as e:
-            logger.error(f"Error writing to Google Sheets: {str(e)}")
-            return False
 
 
 class SheetsService:
@@ -207,13 +136,11 @@ class SheetsService:
     def __init__(
         self,
         provider: SheetsProvider,
-        draft_rules: DraftRules = None,
         use_cache: bool = True,
     ):
         self.provider = provider
-        self.draft_rules = draft_rules or DraftRules()
-        self.draft_analyzer = DraftAnalyzer(self.draft_rules)
-        self.cache = DraftCache() if use_cache else None
+        # Cache simplified - draft_cache was removed in refactoring
+        self.cache = None
 
     def _find_team_by_pick_position(
         self,
@@ -233,27 +160,17 @@ class SheetsService:
         if round_num is None:
             round_num = ((pick_number - 1) // total_teams) + 1
 
-        # For auction rounds (1-3), we can't predict order - return None
-        if self.draft_analyzer.is_auction_round(round_num):
-            return None
+        # Simplified: For now, just use basic snake logic for all rounds
+        # Complex draft rules (auction/keeper) belong in MCP client analysis
+        pick_in_round = ((pick_number - 1) % total_teams) + 1
 
-        # For keeper round (4), only some teams participate - can't predict easily
-        if self.draft_analyzer.is_keeper_round(round_num):
-            return None
+        if round_num % 2 == 1:  # Odd round: 1→total_teams
+            team_idx = pick_in_round - 1
+        else:  # Even round: total_teams→1
+            team_idx = total_teams - pick_in_round
 
-        # For snake rounds (5+), use traditional snake logic
-        if self.draft_analyzer.is_snake_round(round_num):
-            # Calculate position within the snake rounds only
-            snake_round = round_num - self.draft_rules.snake_start_round + 1
-            pick_in_round = ((pick_number - 1) % total_teams) + 1
-
-            if snake_round % 2 == 1:  # Odd snake round: 1→total_teams
-                team_idx = pick_in_round - 1
-            else:  # Even snake round: total_teams→1
-                team_idx = total_teams - pick_in_round
-
-            if 0 <= team_idx < len(teams):
-                return teams[team_idx]
+        if 0 <= team_idx < len(teams):
+            return teams[team_idx]
 
         return None
 
@@ -462,9 +379,6 @@ class SheetsService:
                 # Calculate pick in round
                 pick_in_round = ((pick_number - 1) % len(teams)) + 1
 
-                # Get draft type and strategy info for this round
-                round_type = self.draft_analyzer.rules.get_round_type(round_num)
-
                 picks.append(
                     {
                         "pick_number": pick_number,
@@ -477,10 +391,6 @@ class SheetsService:
                         "column_team": sheet_pick["team_found"][
                             "team_name"
                         ],  # Track which column it came from for debugging
-                        "draft_type": round_type.value,  # 'auction', 'keeper', or 'snake'
-                        "is_auction": round_type == DraftType.AUCTION,
-                        "is_keeper": round_type == DraftType.KEEPER,
-                        "is_snake": round_type == DraftType.SNAKE,
                     }
                 )
 
@@ -504,29 +414,11 @@ class SheetsService:
                 if 0 <= team_idx < len(teams):
                     current_team = teams[team_idx]
 
-            # Analyze rounds and provide strategy guidance
+            # Basic round information (data only, no analysis)
             completed_rounds = max(pick["round"] for pick in picks) if picks else 0
             current_round = (
                 current_round if "current_round" in locals() else (completed_rounds + 1)
             )
-
-            # Get round analysis
-            round_analysis = {}
-            for round_num in range(1, completed_rounds + 2):  # Include current round
-                round_picks = [p for p in picks if p["round"] == round_num]
-                if round_picks or round_num == current_round:
-                    round_analysis[round_num] = {
-                        "round_type": self.draft_analyzer.rules.get_round_type(
-                            round_num
-                        ).value,
-                        "is_auction": self.draft_analyzer.is_auction_round(round_num),
-                        "is_keeper": self.draft_analyzer.is_keeper_round(round_num),
-                        "is_snake": self.draft_analyzer.is_snake_round(round_num),
-                        "picks_made": len(round_picks),
-                        "strategy": self.draft_analyzer.get_draft_strategy_for_round(
-                            round_num
-                        ),
-                    }
 
             result = {
                 "picks": picks,
@@ -538,16 +430,8 @@ class SheetsService:
                     "total_teams": len(teams),
                     "completed_rounds": completed_rounds,
                     "current_round": current_round,
-                    "draft_rules": {
-                        "auction_rounds": self.draft_rules.auction_rounds,
-                        "keeper_round": self.draft_rules.keeper_round,
-                        "snake_start_round": self.draft_rules.snake_start_round,
-                    },
                 },
-                "round_analysis": round_analysis,
-                "current_round_strategy": self.draft_analyzer.get_draft_strategy_for_round(
-                    current_round
-                ),
+                # Analysis removed - belongs in MCP client
                 "available_players": [],  # Would be populated from another source
             }
 

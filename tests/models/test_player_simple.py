@@ -1,8 +1,7 @@
 """Tests for the simplified Player model."""
 
-import pytest
-from src.models.player_simple import Player
 from src.models.injury_status import InjuryStatus
+from src.models.player_simple import Player
 
 
 class TestPlayer:
@@ -18,7 +17,7 @@ class TestPlayer:
             projected_points=325.5,
             notes="Elite dual-threat QB with rushing upside"
         )
-        
+
         assert player.name == "Josh Allen"
         assert player.team == "BUF"
         assert player.position == "QB"
@@ -38,7 +37,7 @@ class TestPlayer:
             ranking=1,
             projected_points=285.2
         )
-        
+
         assert player.name == "Christian McCaffrey"
         assert player.team == "SF"
         assert player.position == "RB"
@@ -58,7 +57,7 @@ class TestPlayer:
             ranking=1,
             projected_points=325.5
         )
-        
+
         player2 = Player(
             name="Josh Allen",
             team="BUF",
@@ -67,7 +66,7 @@ class TestPlayer:
             ranking=2,  # Different ranking
             projected_points=300.0  # Different projection
         )
-        
+
         player3 = Player(
             name="Lamar Jackson",
             team="BAL",
@@ -76,7 +75,7 @@ class TestPlayer:
             ranking=2,
             projected_points=315.0
         )
-        
+
         assert player1 == player2  # Same name/team/position
         assert player1 != player3  # Different name
         assert hash(player1) == hash(player2)  # Same hash for equal players
@@ -91,7 +90,7 @@ class TestPlayer:
             ranking=1,
             projected_points=325.5
         )
-        
+
         assert str(player) == "Josh Allen (QB - BUF)"
 
     def test_player_to_dict(self):
@@ -106,7 +105,7 @@ class TestPlayer:
             projected_points=325.5,
             notes="Elite dual-threat QB"
         )
-        
+
         expected = {
             "name": "Josh Allen",
             "team": "BUF",
@@ -117,7 +116,7 @@ class TestPlayer:
             "projected_points": 325.5,
             "notes": "Elite dual-threat QB"
         }
-        
+
         assert player.to_dict() == expected
 
     def test_player_from_dict(self):
@@ -132,9 +131,9 @@ class TestPlayer:
             "projected_points": 325.5,
             "notes": "Elite dual-threat QB"
         }
-        
+
         player = Player.from_dict(data)
-        
+
         assert player.name == "Josh Allen"
         assert player.team == "BUF"
         assert player.position == "QB"
@@ -154,9 +153,9 @@ class TestPlayer:
             "ranking": 1,
             "projected_points": 285.2
         }
-        
+
         player = Player.from_dict(data)
-        
+
         assert player.name == "Christian McCaffrey"
         assert player.injury_status == InjuryStatus.HEALTHY  # Default
         assert player.notes == ""  # Default

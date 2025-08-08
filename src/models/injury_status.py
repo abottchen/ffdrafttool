@@ -5,7 +5,7 @@ from enum import Enum
 
 class InjuryStatus(Enum):
     """Player injury status based on standard NFL designations."""
-    
+
     HEALTHY = "HEALTHY"
     QUESTIONABLE = "Q"
     DOUBTFUL = "D"

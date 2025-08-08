@@ -9,7 +9,7 @@ from .player_simple import Player
 @dataclass
 class DraftPick:
     """Represents a single draft pick - player and owner."""
-    
+
     player: Player
     owner: str  # Fantasy owner who drafted the player
 

@@ -1,6 +1,7 @@
 """Tests for the InjuryStatus enum."""
 
 import pytest
+
 from src.models.injury_status import InjuryStatus
 
 

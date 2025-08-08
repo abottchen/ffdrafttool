@@ -9,7 +9,7 @@ from .injury_status import InjuryStatus
 @dataclass
 class Player:
     """Core player information with ranking data."""
-    
+
     name: str
     team: str  # NFL team abbreviation
     position: str  # QB, RB, WR, TE, K, DST

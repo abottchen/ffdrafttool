@@ -1,9 +1,8 @@
 """Tests for the DraftPick model."""
 
-import pytest
 from src.models.draft_pick import DraftPick
-from src.models.player_simple import Player
 from src.models.injury_status import InjuryStatus
+from src.models.player_simple import Player
 
 
 class TestDraftPick:
@@ -11,15 +10,15 @@ class TestDraftPick:
         """Test creating a draft pick with player and owner."""
         player = Player(
             name="Josh Allen",
-            team="BUF", 
+            team="BUF",
             position="QB",
             bye_week=12,
             ranking=1,
             projected_points=325.5
         )
-        
+
         pick = DraftPick(player=player, owner="Buffy")
-        
+
         assert pick.player == player
         assert pick.owner == "Buffy"
 
@@ -28,16 +27,16 @@ class TestDraftPick:
         player = Player(
             name="Josh Allen",
             team="BUF",
-            position="QB", 
+            position="QB",
             bye_week=12,
             ranking=1,
             projected_points=325.5
         )
-        
+
         pick1 = DraftPick(player=player, owner="Buffy")
         pick2 = DraftPick(player=player, owner="Buffy")
         pick3 = DraftPick(player=player, owner="Willow")
-        
+
         assert pick1 == pick2
         assert pick1 != pick3
         assert hash(pick1) == hash(pick2)
@@ -48,13 +47,13 @@ class TestDraftPick:
             name="Josh Allen",
             team="BUF",
             position="QB",
-            bye_week=12, 
+            bye_week=12,
             ranking=1,
             projected_points=325.5
         )
-        
+
         pick = DraftPick(player=player, owner="Buffy")
-        
+
         assert str(pick) == "Buffy: Josh Allen (QB - BUF)"
 
     def test_draft_pick_to_dict(self):
@@ -69,9 +68,9 @@ class TestDraftPick:
             projected_points=325.5,
             notes="Elite QB"
         )
-        
+
         pick = DraftPick(player=player, owner="Buffy")
-        
+
         expected = {
             "owner": "Buffy",
             "player": {
@@ -85,7 +84,7 @@ class TestDraftPick:
                 "notes": "Elite QB"
             }
         }
-        
+
         assert pick.to_dict() == expected
 
     def test_draft_pick_from_dict(self):
@@ -103,9 +102,9 @@ class TestDraftPick:
                 "notes": "Elite QB"
             }
         }
-        
+
         pick = DraftPick.from_dict(data)
-        
+
         assert pick.owner == "Buffy"
         assert pick.player.name == "Josh Allen"
         assert pick.player.team == "BUF"

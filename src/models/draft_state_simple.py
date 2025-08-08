@@ -10,7 +10,7 @@ from .player_simple import Player
 @dataclass
 class DraftState:
     """Represents the current state of the draft."""
-    
+
     picks: List[DraftPick]  # All picks made so far
     teams: List[Dict[str, str]]  # Team/owner pairs: [{"owner": str, "team_name": str}]
 

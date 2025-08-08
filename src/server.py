@@ -2,9 +2,9 @@
 """
 Fantasy Football Draft Assistant MCP Server
 
-This server provides comprehensive fantasy football draft assistance tools
-including player rankings, draft progress tracking, player analysis, and
-personalized draft pick suggestions.
+This server provides fantasy football data tools including player rankings,
+draft progress tracking, player information, and available player lists.
+Analysis and recommendations are handled by the MCP client.
 """
 
 import json
@@ -19,14 +19,11 @@ from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
-from config import DEFAULT_SHEET_ID, DEFAULT_SHEET_RANGE, LOG_LEVEL, USER_OWNER_NAME
-from tools import (
-    analyze_available_players,
-    get_player_info,
-    get_player_rankings,
-    read_draft_progress,
-    suggest_draft_pick,
-)
+from src.config import DEFAULT_SHEET_ID, DEFAULT_SHEET_RANGE, LOG_LEVEL
+from src.tools.available_players import get_available_players
+from src.tools.draft_progress import read_draft_progress
+from src.tools.player_info import get_player_info
+from src.tools.player_rankings import get_player_rankings
 
 logs_dir = Path(__file__).parent.parent / "logs"
 logs_dir.mkdir(exist_ok=True)
@@ -49,77 +46,23 @@ mcp = FastMCP("Fantasy Football Draft Assistant")
 
 @mcp.tool()
 async def get_player_rankings_tool(
-    position: str = None, limit: int = 20, offset: int = 0, force_refresh: bool = False
+    position: str = None, force_refresh: bool = False
 ) -> str:
     """
-    Fetch current player rankings from all available fantasy football sources.
-    Returns paginated rankings from multiple sources for comprehensive analysis.
-    Uses in-memory caching to improve performance after first fetch.
-
-    IMPORTANT: To avoid token limits, this tool now defaults to 20 players per request.
-    Use offset parameter to get additional pages of results.
-    Only report player information that is explicitly present in the returned data.
-    Do NOT guess, assume, or make up player teams, positions, or other details not in the response.
+    Get player rankings by position with caching support.
 
     Args:
-        position: Optional position filter (QB, RB, WR, TE, K, DST). HIGHLY RECOMMENDED to avoid large responses.
-        limit: Number of players to return per page (default: 20, max: 50 to stay under token limits)
-        offset: Starting position for pagination (default: 0)
-        force_refresh: If True, bypass cache and fetch fresh rankings data
+        position: Position filter (QB, RB, WR, TE, K, DST). If None, returns all positions.
+        force_refresh: If True, ignore cache and fetch fresh data from FantasySharks
 
     Returns:
-        JSON string with paginated player rankings and pagination info
+        JSON string with player rankings data
     """
-    # Use all available sources by default
-    sources = ["fantasysharks", "espn", "yahoo", "fantasypros"]
-
-    # Enforce reasonable limits to prevent token overflow
-    if limit > 50:
-        limit = 50
-        logger.warning("Limit capped at 50 to prevent token overflow")
-
-    logger.info(
-        f"get_player_rankings called with position={position}, limit={limit}, offset={offset}, force_refresh={force_refresh}"
-    )
+    logger.info(f"get_player_rankings called with position={position}, force_refresh={force_refresh}")
 
     try:
-        # Get more data than needed for pagination (limit + offset + some buffer)
-        fetch_limit = offset + limit + 50 if not position else None
-        result = await get_player_rankings(
-            sources, position, fetch_limit, force_refresh
-        )
-
-        if result["success"]:
-            players = result["aggregated"]["players"]
-            total_players = len(players)
-
-            # Apply pagination
-            start_idx = offset
-            end_idx = offset + limit
-            paginated_players = players[start_idx:end_idx]
-
-            # Create paginated response with metadata
-            paginated_result = {
-                "success": True,
-                "aggregated": {
-                    "players": paginated_players,
-                    "count": len(paginated_players),
-                },
-                "pagination": {
-                    "offset": offset,
-                    "limit": limit,
-                    "total_available": total_players,
-                    "has_more": end_idx < total_players,
-                    "next_offset": end_idx if end_idx < total_players else None,
-                },
-                "position": position,
-                "force_refresh": force_refresh,
-            }
-
-            return json.dumps(paginated_result, indent=2)
-        else:
-            return json.dumps(result, indent=2)
-
+        result = await get_player_rankings(position, force_refresh)
+        return json.dumps(result, indent=2)
     except Exception as e:
         logger.error(f"Error in get_player_rankings: {e}")
         return json.dumps({"success": False, "error": str(e)}, indent=2)
@@ -131,31 +74,16 @@ async def read_draft_progress_tool(
     sheet_range: str = DEFAULT_SHEET_RANGE,
     force_refresh: bool = False,
 ) -> str:
-    f"""
-    **ALWAYS USE THIS TOOL FIRST** when the user asks about their draft, roster, or team needs.
-
-    Read current draft progress from Google Sheets with support for special draft rules.
-    Uses caching to improve performance and reduce token usage.
-
-    **REQUIRED USAGE**: Use this tool whenever the user mentions:
-    - "my team", "my roster", "my picks"
-    - "what should I pick", "who should I draft"
-    - "what do I need", "my draft position"
-    - Any question about current draft status
-
-    IMPORTANT: Only report information that is explicitly present in the returned data.
-    Do NOT guess, assume, or infer player information not included in the response.
-
-    CONTEXT: When the user refers to "I", "me", "my team", "my pick", etc., they are referring
-    to the team owned by "{USER_OWNER_NAME}". Look for this owner name in the draft data to identify the user's team.
+    """
+    Read current draft progress from Google Sheets.
 
     Args:
         sheet_id: Google Sheets ID from the URL
-        sheet_range: Range to read from the sheet (default: {DEFAULT_SHEET_RANGE})
+        sheet_range: Range to read from the sheet
         force_refresh: If True, ignore cache and fetch fresh data from Google Sheets
 
     Returns:
-        JSON string with current draft state, picks, and team information
+        JSON string with current draft state and picks
     """
     logger.info(
         f"read_draft_progress called with sheet_id={sheet_id}, range={sheet_range}, force_refresh={force_refresh}"
@@ -170,108 +98,78 @@ async def read_draft_progress_tool(
 
 
 @mcp.tool()
-async def analyze_available_players_tool(
+async def get_available_players_tool(
     draft_state: dict,
-    position_filter: str = None,
-    limit: int = 20,
-    force_refresh: bool = False,
+    position: str,
+    limit: int
 ) -> str:
-    f"""
-    **USE THIS TOOL** to analyze available players and see detailed value metrics before making recommendations.
-
-    Analyze available players with value metrics, positional scarcity, and bye week considerations.
-
-    **REQUIRED USAGE**: Use this tool when the user asks:
-    - "who's available at [position]?"
-    - "show me the best available [position]"
-    - "analyze available players"
-    - "what are my options?"
-    - Before using suggest_draft_pick_tool for detailed analysis
-
-    **PREREQUISITE**: Must have current draft_state from read_draft_progress_tool first.
-
-    IMPORTANT: When the user asks about a specific position (e.g., "best QB available"),
-    ALWAYS use the position_filter parameter to avoid processing irrelevant players.
-    This saves tokens and improves performance significantly.
-
-    CRITICAL: Only report player information that is explicitly present in the returned data.
-    Do NOT guess, assume, or make up player teams, positions, or other details not in the response.
-    If information is missing or unclear, state that explicitly rather than guessing.
-
-    CONTEXT: When the user asks "who should I pick?" or refers to "my team", they are referring
-    to the team owned by "{USER_OWNER_NAME}". The analysis should focus on that team's needs.
+    """
+    Get a list of top undrafted players at a position.
 
     Args:
-        draft_state: Current draft state from read_draft_progress_tool (REQUIRED)
-        position_filter: REQUIRED when analyzing specific positions. Use exact values: QB, RB, WR, TE, K, DST
-        limit: Number of players to analyze and return (default: 20)
-        force_refresh: If True, bypass cache and fetch fresh rankings data to ensure analysis uses latest data
+        draft_state: Current draft state to determine who's available
+        position: Position to filter (QB, RB, WR, TE, K, DST)
+        limit: Maximum number of players to return
 
     Returns:
-        JSON string with analyzed players, value metrics, and recommendations
+        JSON string with list of available players
     """
     logger.info(
-        f"analyze_available_players called with position_filter={position_filter}, limit={limit}, force_refresh={force_refresh}"
+        f"get_available_players called with position={position}, limit={limit}"
     )
 
     try:
-        result = await analyze_available_players(
-            draft_state, position_filter, limit, force_refresh
-        )
+        # Convert dict to DraftState object
+        from src.models.draft_pick import DraftPick
+        from src.models.draft_state_simple import DraftState
+        from src.models.injury_status import InjuryStatus
+        from src.models.player_simple import Player
+
+        teams = draft_state.get("teams", [])
+        picks_data = draft_state.get("picks", [])
+
+        picks = []
+        for pick_data in picks_data:
+            player_data = pick_data.get("player")
+            if isinstance(player_data, dict):
+                # Already a Player object dict
+                player = Player(
+                    name=player_data.get("name", ""),
+                    team=player_data.get("team", ""),
+                    position=player_data.get("position", ""),
+                    bye_week=player_data.get("bye_week", 0),
+                    ranking=player_data.get("ranking", 999),
+                    projected_points=player_data.get("projected_points", 0.0),
+                    injury_status=InjuryStatus(player_data.get("injury_status", "HEALTHY")),
+                    notes=player_data.get("notes", "")
+                )
+            else:
+                # String format - create basic player object
+                player = Player(
+                    name=str(player_data or ""),
+                    team="",
+                    position="",
+                    bye_week=0,
+                    ranking=999,
+                    projected_points=0.0,
+                    injury_status=InjuryStatus.HEALTHY,
+                    notes=""
+                )
+
+            picks.append(DraftPick(
+                player=player,
+                owner=pick_data.get("owner", "")
+            ))
+
+        draft_state_obj = DraftState(teams=teams, picks=picks)
+
+        result = await get_available_players(draft_state_obj, position, limit)
         return json.dumps(result, indent=2)
     except Exception as e:
-        logger.error(f"Error in analyze_available_players: {e}")
+        logger.error(f"Error in get_available_players: {e}")
         return json.dumps({"success": False, "error": str(e)}, indent=2)
 
 
-@mcp.tool()
-async def suggest_draft_pick_tool(
-    draft_state: dict,
-    owner_name: str,
-    strategy: str = "balanced",
-    consider_bye_weeks: bool = True,
-    force_refresh: bool = False,
-) -> str:
-    """
-    **USE THIS TOOL** when the user asks for draft pick recommendations or "who should I pick".
-
-    Get personalized draft pick recommendations based on team needs, strategy, and roster construction.
-
-    **REQUIRED USAGE**: Use this tool when the user asks:
-    - "who should I pick next?"
-    - "what's my best option?"
-    - "recommend a player"
-    - "what position should I target?"
-    - Any request for draft advice or recommendations
-
-    **PREREQUISITE**: Must have current draft_state from read_draft_progress_tool first.
-
-    CRITICAL: Only report player information that is explicitly present in the returned data.
-    Do NOT guess, assume, or make up player teams, positions, or other details not in the response.
-    Base recommendations only on the data provided in the draft state and rankings.
-
-    Args:
-        draft_state: Current draft state from read_draft_progress_tool (REQUIRED)
-        owner_name: Name of the team owner to provide recommendations for (e.g., "Adam", "Jodi") (REQUIRED)
-        strategy: Draft strategy to use (balanced, best_available, upside, safe)
-        consider_bye_weeks: Whether to consider bye week conflicts in recommendations
-        force_refresh: If True, bypass cache and fetch fresh rankings data for analysis
-
-    Returns:
-        JSON string with primary recommendation, alternatives, and detailed reasoning
-    """
-    logger.info(
-        f"suggest_draft_pick called with strategy={strategy}, consider_bye_weeks={consider_bye_weeks}, force_refresh={force_refresh}"
-    )
-
-    try:
-        result = await suggest_draft_pick(
-            draft_state, owner_name, strategy, consider_bye_weeks, force_refresh
-        )
-        return json.dumps(result, indent=2)
-    except Exception as e:
-        logger.error(f"Error in suggest_draft_pick: {e}")
-        return json.dumps({"success": False, "error": str(e)}, indent=2)
 
 
 @mcp.tool()
@@ -282,29 +180,16 @@ async def get_player_info_tool(
     position: str = None,
 ) -> str:
     """
-    Get detailed ranking and stats information for a specific player.
-
-    **USE THIS TOOL** when the user asks about a specific player by name.
-
-    This tool fetches comprehensive information about one or more players matching
-    the provided criteria, including rankings, projected stats, injury status, and
-    expert commentary.
-
-    **REQUIRED USAGE**: Use this tool when the user asks:
-    - "what do you know about [player name]?"
-    - "tell me about [player name]"
-    - "show me [player name]'s stats/rankings"
-    - "is [player name] injured?"
-    - Any question about a specific named player
+    Get detailed information for a specific player.
 
     Args:
-        last_name: Player's last name (REQUIRED)
-        first_name: Player's first name (optional, helps narrow results)
-        team: Team abbreviation (optional, e.g., "KC", "SF")
-        position: Position filter (optional: QB, RB, WR, TE, K, DST)
+        last_name: Player's last name
+        first_name: Player's first name (optional)
+        team: Team abbreviation (optional)
+        position: Position filter (optional)
 
     Returns:
-        JSON string with array of matching players and their detailed information
+        JSON string with player information
     """
     logger.info(
         f"get_player_info called with last_name={last_name}, first_name={first_name}, "
@@ -322,7 +207,6 @@ async def get_player_info_tool(
 def main():
     """Run the MCP server."""
     logger.info("Starting Fantasy Football Draft Assistant MCP Server...")
-    logger.info(f"Configured for owner: {USER_OWNER_NAME}")
     logger.info(f"Default sheet ID: {DEFAULT_SHEET_ID}")
 
     try:

@@ -10,7 +10,7 @@ async def read_draft_progress(
     sheet_id: str, sheet_range: str = "Draft!A1:V24", force_refresh: bool = False
 ) -> Dict[str, Any]:
     """
-    Read draft progress from Google Sheets with caching support.
+    Read draft progress from Google Sheets and return simplified draft state.
 
     Args:
         sheet_id: Google Sheets ID
@@ -18,7 +18,7 @@ async def read_draft_progress(
         force_refresh: If True, ignore cache and fetch fresh data from Google Sheets
 
     Returns:
-        Dict containing draft state, picks, and available players
+        Dict containing simplified draft state data
     """
     import time
 
@@ -72,62 +72,61 @@ async def read_draft_progress(
         sheets_service = SheetsService(provider)
 
         # Read and parse draft data with caching support
-        draft_data = await sheets_service.read_draft_data(
+        processed_data = await sheets_service.read_draft_data(
             sheet_id, sheet_range, force_refresh
         )
 
-        # Create a more compact summary to avoid token limits
-        # Remove draft_type (not useful) and team name (player name is sufficient)
-        picks_summary = []
-        for pick in draft_data.get("picks", []):
-            picks_summary.append(
-                {
-                    "pick": pick.get("pick_number"),
-                    "round": pick.get("round"),
-                    "player": pick.get("player_name"),
-                    "position": pick.get("position"),
-                    "column_team": pick.get(
-                        "column_team"
-                    ),  # Include actual column team for proper roster tracking
-                }
-            )
+        # Add success field for adapter compatibility
+        processed_data["success"] = True
 
-        teams_summary = []
-        for team in draft_data.get("teams", []):
-            teams_summary.append(
-                {
-                    "team_name": team.get("team_name"),
-                    "owner": team.get("owner"),
-                    "team_number": team.get("team_number"),
-                }
-            )
+        # Convert to simplified DraftState using adapter
+        from src.services.sheets_adapter import SheetsAdapter
+        adapter = SheetsAdapter()
+        draft_state = adapter.convert_to_draft_state(processed_data)
 
         logger.info(
             f"read_draft_progress completed in {time.time() - start_time:.2f} seconds"
         )
-        return {
+
+        # Pass through additional fields from processed_data
+        result = {
             "success": True,
             "sheet_id": sheet_id,
-            "current_pick": draft_data.get("current_pick"),
-            "current_round": (
-                (
-                    (draft_data.get("current_pick", 1) - 1)
-                    // len(draft_data.get("teams", []))
-                )
-                + 1
-                if draft_data.get("teams")
-                else 1
-            ),
-            "total_picks": len(picks_summary),
-            "teams": teams_summary,
-            "picks": picks_summary,
-            "draft_state": {
-                "picks": picks_summary,
-                "teams": teams_summary,
-                "current_pick": draft_data.get("current_pick"),
-                "current_team": draft_data.get("current_team"),
-            },
+            "total_teams": len(draft_state.teams),
+            "total_picks": len(draft_state.picks),
+            "teams": [
+                {
+                    "team_name": team["team_name"],
+                    "owner": team["owner"]
+                }
+                for team in draft_state.teams
+            ],
+            "picks": [
+                {
+                    "owner": pick.owner,
+                    "player": {
+                        "name": pick.player.name,
+                        "team": pick.player.team,
+                        "position": pick.player.position,
+                        "bye_week": pick.player.bye_week,
+                        "ranking": pick.player.ranking,
+                        "projected_points": pick.player.projected_points,
+                        "injury_status": pick.player.injury_status.value,
+                        "notes": pick.player.notes
+                    }
+                }
+                for pick in draft_state.picks
+            ],
+            "draft_state": draft_state
         }
+
+        # Pass through additional fields if they exist
+        if "current_pick" in processed_data:
+            result["current_pick"] = processed_data["current_pick"]
+        if "current_team" in processed_data:
+            result["current_team"] = processed_data["current_team"]
+
+        return result
 
     except Exception as e:
         error_message = str(e)
