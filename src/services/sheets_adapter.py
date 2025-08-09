@@ -1,5 +1,6 @@
 """Adapter to convert sheets data to simplified models."""
 
+import logging
 from typing import Any, Dict
 
 from src.models.draft_pick import DraftPick
@@ -11,19 +12,26 @@ from src.models.player_simple import Player
 class SheetsAdapter:
     """Converts sheets service data to simplified DraftState models."""
     
+    def __init__(self):
+        self.logger = logging.getLogger("fantasy-football-mcp.sheets_adapter")
+    
     def _extract_player_info(self, raw_name: str) -> tuple[str, str]:
         """Extract player name and team from raw name with team abbreviation.
         
         Args:
-            raw_name: Raw player name from sheets (may include team like "Josh Allen   BUF")
+            raw_name: Raw player name from sheets (may include team like "Josh Allen   BUF" or "Kendrick Bourne - NE")
             
         Returns:
             tuple[str, str]: (clean_player_name, team_abbreviation)
         """
         import re
         
-        # Match team abbreviation at the end (2-4 letter codes after multiple spaces)
-        match = re.search(r'\s{2,}([A-Z]{2,4})\s*$', raw_name)
+        # Match team abbreviation at the end with flexible separators
+        # Handles patterns like:
+        # - "Josh Allen   BUF" (multiple spaces)
+        # - "Kendrick Bourne - NE" (space-hyphen-space)
+        # - "Player Name  -  TEAM" (various spacing around hyphen)
+        match = re.search(r'[\s\-]+([A-Z]{2,3})\s*$', raw_name)
         
         if match:
             team = match.group(1)  # Extract team abbreviation
@@ -31,6 +39,11 @@ class SheetsAdapter:
         else:
             team = "UNK"  # No team found
             clean_name = raw_name.strip()
+            # Log error when team cannot be determined from draft data
+            self.logger.error(
+                f"Unable to extract NFL team from player name in draft data: '{raw_name}'. "
+                f"Player will be marked with team 'UNK'. This may affect player matching and analysis."
+            )
             
         return clean_name, team
 

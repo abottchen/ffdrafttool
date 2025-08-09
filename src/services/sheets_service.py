@@ -231,7 +231,6 @@ class SheetsService:
             if not data or len(data) < 5:
                 return {
                     "picks": [],
-                    "current_pick": 1,
                     "teams": [],
                     "draft_state": {},
                     "available_players": [],
@@ -394,39 +393,16 @@ class SheetsService:
             # Sort by pick number
             picks.sort(key=lambda x: x["pick_number"])
 
-            # Determine current pick
-            current_pick = len(picks) + 1
-
-            # Determine whose turn it is
-            current_team = None
-            if teams and current_pick <= len(teams) * 20:  # Assuming max 20 rounds
-                current_round = ((current_pick - 1) // len(teams)) + 1
-                pick_in_round = ((current_pick - 1) % len(teams)) + 1
-
-                if current_round % 2 == 1:  # Odd round
-                    team_idx = pick_in_round - 1
-                else:  # Even round
-                    team_idx = len(teams) - pick_in_round
-
-                if 0 <= team_idx < len(teams):
-                    current_team = teams[team_idx]
-
             # Basic round information (data only, no analysis)
             completed_rounds = max(pick["round"] for pick in picks) if picks else 0
-            current_round = (
-                current_round if "current_round" in locals() else (completed_rounds + 1)
-            )
 
             result = {
                 "picks": picks,
-                "current_pick": current_pick,
                 "teams": teams,
-                "current_team": current_team,
                 "draft_state": {
                     "total_picks": len(picks),
                     "total_teams": len(teams),
                     "completed_rounds": completed_rounds,
-                    "current_round": current_round,
                 },
                 # Analysis removed - belongs in MCP client
                 "available_players": [],  # Would be populated from another source

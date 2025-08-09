@@ -101,8 +101,6 @@ class TestSheetsIntegration:
         real_format_data = {
             "success": True,
             "sheet_id": "1BvF-4Q_example_sheet_id",
-            "current_pick": 4,
-            "current_round": 1,
             "total_picks": 3,
             "teams": [
                 {"team_name": "The Chosen Ones", "owner": "Buffy", "team_number": 1},
@@ -134,8 +132,6 @@ class TestSheetsIntegration:
             "draft_state": {
                 "picks": [],  # This gets populated but we don't need it
                 "teams": [],
-                "current_pick": 4,
-                "current_team": "Wiccan Warriors",
             },
         }
 

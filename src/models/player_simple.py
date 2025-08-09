@@ -1,13 +1,12 @@
 """Simplified Player model for fantasy football draft assistance."""
 
-from dataclasses import dataclass
+from pydantic import BaseModel, Field
 from typing import Any, Dict
 
 from .injury_status import InjuryStatus
 
 
-@dataclass
-class Player:
+class Player(BaseModel):
     """Core player information with ranking data."""
 
     name: str
@@ -16,8 +15,8 @@ class Player:
     bye_week: int
     ranking: int  # FantasySharks ranking
     projected_points: float
-    injury_status: InjuryStatus = InjuryStatus.HEALTHY
-    notes: str = ""
+    injury_status: InjuryStatus = Field(default=InjuryStatus.HEALTHY)
+    notes: str = Field(default="")
 
     def __str__(self) -> str:
         """String representation showing key identifying information."""
@@ -38,28 +37,19 @@ class Player:
         return hash((self.name, self.team, self.position))
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convert player to dictionary for JSON serialization."""
-        return {
-            "name": self.name,
-            "team": self.team,
-            "position": self.position,
-            "bye_week": self.bye_week,
-            "injury_status": self.injury_status.value,
-            "ranking": self.ranking,
-            "projected_points": self.projected_points,
-            "notes": self.notes,
-        }
+        """Convert player to dictionary for JSON serialization.
+        
+        Note: This method is deprecated. Use model_dump() instead for Pydantic v2.
+        """
+        result = self.model_dump()
+        # Ensure injury_status is serialized as string for backward compatibility
+        result["injury_status"] = self.injury_status.value
+        return result
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Player":
-        """Create player from dictionary, handling missing optional fields."""
-        return cls(
-            name=data["name"],
-            team=data["team"],
-            position=data["position"],
-            bye_week=data["bye_week"],
-            ranking=data["ranking"],
-            projected_points=data["projected_points"],
-            injury_status=InjuryStatus(data.get("injury_status", "HEALTHY")),
-            notes=data.get("notes", ""),
-        )
+        """Create player from dictionary, handling missing optional fields.
+        
+        Note: This method is deprecated. Use Player(**data) or Player.model_validate(data) instead.
+        """
+        return cls.model_validate(data)

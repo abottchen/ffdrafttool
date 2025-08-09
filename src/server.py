@@ -93,7 +93,12 @@ async def read_draft_progress_tool(
 
     try:
         result = await read_draft_progress(sheet_id, sheet_range, force_refresh)
-        return json.dumps(result, indent=2)
+        # Check if result is a Pydantic model or a dict (for error responses)
+        if hasattr(result, 'model_dump_json'):
+            return result.model_dump_json(indent=2)
+        else:
+            # Fallback for error responses or other dict formats
+            return json.dumps(result, indent=2)
     except Exception as e:
         logger.error(f"Error in read_draft_progress: {e}")
         return json.dumps({"success": False, "error": str(e)}, indent=2)

@@ -89,41 +89,8 @@ async def read_draft_progress(
             f"read_draft_progress completed in {time.time() - start_time:.2f} seconds"
         )
 
-        # Pass through additional fields from processed_data
-        result = {
-            "success": True,
-            "sheet_id": sheet_id,
-            "total_teams": len(draft_state.teams),
-            "total_picks": len(draft_state.picks),
-            "teams": [
-                {"team_name": team["team_name"], "owner": team["owner"]}
-                for team in draft_state.teams
-            ],
-            "picks": [
-                {
-                    "owner": pick.owner,
-                    "player": {
-                        "name": pick.player.name,
-                        "team": pick.player.team,
-                        "position": pick.player.position,
-                        "bye_week": pick.player.bye_week,
-                        "ranking": pick.player.ranking,
-                        "projected_points": pick.player.projected_points,
-                        "injury_status": pick.player.injury_status.value,
-                        "notes": pick.player.notes,
-                    },
-                }
-                for pick in draft_state.picks
-            ],
-        }
-
-        # Pass through additional fields if they exist
-        if "current_pick" in processed_data:
-            result["current_pick"] = processed_data["current_pick"]
-        if "current_team" in processed_data:
-            result["current_team"] = processed_data["current_team"]
-
-        return result
+        # Return the DraftState object directly (as per DESIGN.md)
+        return draft_state
 
     except Exception as e:
         error_message = str(e)

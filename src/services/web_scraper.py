@@ -344,6 +344,12 @@ class FantasySharksScraper(WebScraper):
                 team = team_text.strip()
                 if not team or len(team) > 4:  # Team should be 2-4 characters
                     team = "UNK"
+                    # Log error when team cannot be determined from rankings data
+                    logger.error(
+                        f"Unable to extract NFL team for player '{name}' from FantasySharks rankings. "
+                        f"Team data was: '{team_text}'. Player will be marked with team 'UNK'. "
+                        f"This may affect player matching and analysis."
+                    )
 
                 # Extract bye week
                 bye_week = 1

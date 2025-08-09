@@ -229,6 +229,28 @@ class TestSheetsAdapter:
         assert name == "Christian McCaffrey"
         assert team == "UNK"
         
+        # Test hyphen separators (new format)
+        name, team = adapter._extract_player_info("Kendrick Bourne - NE")
+        assert name == "Kendrick Bourne"
+        assert team == "NE"
+        
+        name, team = adapter._extract_player_info("Ka'imi Fairbairn - HOU")
+        assert name == "Ka'imi Fairbairn"
+        assert team == "HOU"
+        
+        name, team = adapter._extract_player_info("Romeo Doubs - GB")
+        assert name == "Romeo Doubs"
+        assert team == "GB"
+        
+        # Test variations of hyphen format
+        name, team = adapter._extract_player_info("Player Name  -  LAR")
+        assert name == "Player Name"
+        assert team == "LAR"
+        
+        name, team = adapter._extract_player_info("Player Name-SF")
+        assert name == "Player Name"
+        assert team == "SF"
+        
         # Test edge cases
         name, team = adapter._extract_player_info("  Player   Name   SF  ")
         assert name == "Player   Name"
@@ -237,6 +259,27 @@ class TestSheetsAdapter:
         name, team = adapter._extract_player_info("Name")
         assert name == "Name"
         assert team == "UNK"
+        
+    def test_extract_player_info_logging(self, caplog):
+        """Test that team extraction failures are logged as errors."""
+        import logging
+        
+        adapter = SheetsAdapter()
+        
+        # Set log level to capture error logs
+        with caplog.at_level(logging.ERROR):
+            name, team = adapter._extract_player_info("Player Name Without Team")
+            
+            # Should return UNK team
+            assert name == "Player Name Without Team"
+            assert team == "UNK"
+            
+            # Should log an error
+            assert len(caplog.records) == 1
+            assert caplog.records[0].levelname == "ERROR"
+            assert "Unable to extract NFL team" in caplog.records[0].message
+            assert "Player Name Without Team" in caplog.records[0].message
+            assert "UNK" in caplog.records[0].message
         
     def test_convert_with_composite_player_names(self):
         """Test that composite player names are cleaned during conversion."""

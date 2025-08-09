@@ -105,36 +105,35 @@ class TestDraftProgress:
 
                     result = await read_draft_progress("test_sheet_id")
 
-                    # Should return success
-                    assert result["success"] is True
-                    assert result["sheet_id"] == "test_sheet_id"
-                    assert result["total_teams"] == 2
-                    assert result["total_picks"] == 2
+                    # Should return DraftState object
+                    assert isinstance(result, DraftState)
+                    assert len(result.teams) == 2
+                    assert len(result.picks) == 2
 
                     # Check teams data
-                    teams = result["teams"]
+                    teams = result.teams
                     assert len(teams) == 2
                     assert teams[0]["team_name"] == "Sunnydale Slayers"
                     assert teams[0]["owner"] == "Buffy"
                     assert teams[1]["owner"] == "Willow"
 
                     # Check picks data
-                    picks = result["picks"]
+                    picks = result.picks
                     assert len(picks) == 2
 
                     # Verify first pick
                     pick1 = picks[0]
-                    assert pick1["owner"] == "Buffy"
-                    assert pick1["player"]["name"] == "Josh Allen"
-                    assert pick1["player"]["position"] == "QB"
-                    assert pick1["player"]["team"] == "BUF"
-                    assert pick1["player"]["injury_status"] == "HEALTHY"
+                    assert pick1.owner == "Buffy"
+                    assert pick1.player.name == "Josh Allen"
+                    assert pick1.player.position == "QB"
+                    assert pick1.player.team == "BUF"
+                    assert pick1.player.injury_status == InjuryStatus.HEALTHY
 
                     # Verify second pick
                     pick2 = picks[1]
-                    assert pick2["owner"] == "Willow"
-                    assert pick2["player"]["name"] == "Christian McCaffrey"
-                    assert pick2["player"]["position"] == "RB"
+                    assert pick2.owner == "Willow"
+                    assert pick2.player.name == "Christian McCaffrey"
+                    assert pick2.player.position == "RB"
 
     @pytest.mark.asyncio
     async def test_read_draft_progress_missing_dependencies(self):
@@ -287,8 +286,8 @@ class TestDraftProgress:
                         "test_sheet_id", sheet_range="CustomRange!A1:Z30"
                     )
 
-                    assert result["success"] is True
-                    assert result["sheet_id"] == "test_sheet_id"
+                    # Should return DraftState object for success
+                    assert isinstance(result, DraftState)
 
                     # Verify the custom range was passed to the service
                     mock_service.read_draft_data.assert_called_once_with(
@@ -323,7 +322,8 @@ class TestDraftProgress:
                         "test_sheet_id", force_refresh=True
                     )
 
-                    assert result["success"] is True
+                    # Should return DraftState object for success
+                    assert isinstance(result, DraftState)
 
                     # Verify force_refresh was passed to the service
                     mock_service.read_draft_data.assert_called_once_with(
@@ -388,11 +388,10 @@ class TestDraftProgress:
 
                     result = await read_draft_progress("test_sheet_id")
 
-                    assert result["success"] is True
-                    assert result["total_teams"] == 0
-                    assert result["total_picks"] == 0
-                    assert len(result["teams"]) == 0
-                    assert len(result["picks"]) == 0
+                    # Should return DraftState object for success
+                    assert isinstance(result, DraftState)
+                    assert len(result.teams) == 0
+                    assert len(result.picks) == 0
 
     @pytest.mark.asyncio
     async def test_read_draft_progress_with_composite_names(self):
@@ -436,24 +435,24 @@ class TestDraftProgress:
                 # Use real adapter (not mocked) to test actual team extraction
                 result = await read_draft_progress("test_sheet_id")
 
-                # Should return success
-                assert result["success"] is True
-                assert result["total_picks"] == 2
+                # Should return DraftState object for success
+                assert isinstance(result, DraftState)
+                assert len(result.picks) == 2
 
                 # Check that player names were cleaned and teams were extracted
-                picks = result["picks"]
+                picks = result.picks
                 assert len(picks) == 2
 
                 # Verify first pick - name cleaned, team extracted
                 pick1 = picks[0]
-                assert pick1["owner"] == "Buffy"
-                assert pick1["player"]["name"] == "Josh Allen"  # Team suffix removed
-                assert pick1["player"]["team"] == "BUF"  # Team extracted from name
-                assert pick1["player"]["position"] == "QB"
+                assert pick1.owner == "Buffy"
+                assert pick1.player.name == "Josh Allen"  # Team suffix removed
+                assert pick1.player.team == "BUF"  # Team extracted from name
+                assert pick1.player.position == "QB"
 
                 # Verify second pick - name cleaned, team extracted
                 pick2 = picks[1]
-                assert pick2["owner"] == "Willow"
-                assert pick2["player"]["name"] == "Lamar Jackson"  # Team suffix removed
-                assert pick2["player"]["team"] == "BAL"  # Team extracted from name
-                assert pick2["player"]["position"] == "QB"
+                assert pick2.owner == "Willow"
+                assert pick2.player.name == "Lamar Jackson"  # Team suffix removed
+                assert pick2.player.team == "BAL"  # Team extracted from name
+                assert pick2.player.position == "QB"

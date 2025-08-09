@@ -1,18 +1,19 @@
 """Simplified DraftState model for fantasy football draft tracking."""
 
-from dataclasses import dataclass
+from pydantic import BaseModel
 from typing import Any, Dict, List, Set
 
 from .draft_pick import DraftPick
 from .player_simple import Player
 
 
-@dataclass
-class DraftState:
+class DraftState(BaseModel):
     """Represents the current state of the draft."""
+    
+    model_config = {"extra": "allow"}  # Allow additional attributes for metadata
 
     picks: List[DraftPick]  # All picks made so far
-    teams: List[Dict[str, str]]  # Team/owner pairs: [{"owner": str, "team_name": str}]
+    teams: List[Dict[str, Any]]  # Team/owner pairs: [{"owner": str, "team_name": str}]
 
     def get_picks_by_owner(self, owner: str) -> List[DraftPick]:
         """Get all picks for a specific owner."""
@@ -27,7 +28,10 @@ class DraftState:
         return player in self.get_drafted_players()
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convert draft state to dictionary for JSON serialization."""
+        """Convert draft state to dictionary for JSON serialization.
+        
+        Note: This method is deprecated. Use model_dump() instead for Pydantic v2.
+        """
         return {
             "teams": self.teams,
             "picks": [pick.to_dict() for pick in self.picks],
@@ -35,9 +39,8 @@ class DraftState:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "DraftState":
-        """Create draft state from dictionary."""
-        picks = [DraftPick.from_dict(pick_data) for pick_data in data["picks"]]
-        return cls(
-            picks=picks,
-            teams=data["teams"],
-        )
+        """Create draft state from dictionary.
+        
+        Note: This method is deprecated. Use DraftState(**data) or DraftState.model_validate(data) instead.
+        """
+        return cls.model_validate(data)
