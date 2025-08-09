@@ -1,6 +1,5 @@
 import pytest
 
-from src.models.player import Position, RankingSource
 from src.services.web_scraper import (
     ESPNScraper,
     FantasyProsScraper,
@@ -18,7 +17,11 @@ class TestWebScrapers:
         players = await scraper.scrape_rankings()
 
         assert len(players) > 0
-        assert all(RankingSource.ESPN in p.rankings for p in players)
+        # Check that players have appropriate data structure
+        assert all(
+            hasattr(p, "ranking") and hasattr(p, "projected_points") for p in players
+        )
+        assert all("ESPN mock data" in p.notes for p in players)
 
     @pytest.mark.asyncio
     async def test_yahoo_scraper_mock_data(self):
@@ -27,15 +30,19 @@ class TestWebScrapers:
         players = await scraper.scrape_rankings()
 
         assert len(players) > 0
-        assert all(RankingSource.YAHOO in p.rankings for p in players)
+        # Check that players have appropriate data structure
+        assert all(
+            hasattr(p, "ranking") and hasattr(p, "projected_points") for p in players
+        )
+        assert all("Yahoo mock data" in p.notes for p in players)
 
     @pytest.mark.asyncio
     async def test_scraper_position_filter(self):
         """Test position filtering works"""
         scraper = ESPNScraper()
-        rb_players = await scraper.scrape_rankings(position=Position.RB)
+        rb_players = await scraper.scrape_rankings(position="RB")
 
-        assert all(p.position == Position.RB for p in rb_players)
+        assert all(p.position == "RB" for p in rb_players)
 
     @pytest.mark.asyncio
     async def test_scraper_config(self):
@@ -57,7 +64,11 @@ class TestWebScrapers:
         players = await scraper.scrape_rankings()
 
         assert len(players) > 0
-        assert all(RankingSource.FANTASYPROS in p.rankings for p in players)
+        # Check that players have appropriate data structure
+        assert all(
+            hasattr(p, "ranking") and hasattr(p, "projected_points") for p in players
+        )
+        assert all("FantasyPros mock data" in p.notes for p in players)
 
     @pytest.mark.asyncio
     async def test_fantasy_sharks_scraper_structure(self):
@@ -65,12 +76,12 @@ class TestWebScrapers:
         scraper = FantasySharksScraper()
 
         # Test position parameter mapping
-        assert scraper.POSITION_PARAMS[Position.QB] == "QB"
-        assert scraper.POSITION_PARAMS[Position.RB] == "RB"
-        assert scraper.POSITION_PARAMS[Position.WR] == "WR"
-        assert scraper.POSITION_PARAMS[Position.TE] == "TE"
-        assert scraper.POSITION_PARAMS[Position.K] == "PK"  # FantasySharks uses PK
-        assert scraper.POSITION_PARAMS[Position.DST] == "D"  # FantasySharks uses D
+        assert scraper.POSITION_PARAMS["QB"] == "QB"
+        assert scraper.POSITION_PARAMS["RB"] == "RB"
+        assert scraper.POSITION_PARAMS["WR"] == "WR"
+        assert scraper.POSITION_PARAMS["TE"] == "TE"
+        assert scraper.POSITION_PARAMS["K"] == "PK"  # FantasySharks uses PK
+        assert scraper.POSITION_PARAMS["DST"] == "D"  # FantasySharks uses D
 
     @pytest.mark.asyncio
     async def test_fantasy_sharks_scraper_position_validation(self):
@@ -78,14 +89,7 @@ class TestWebScrapers:
         scraper = FantasySharksScraper()
 
         # Test valid positions
-        for position in [
-            Position.QB,
-            Position.RB,
-            Position.WR,
-            Position.TE,
-            Position.K,
-            Position.DST,
-        ]:
+        for position in ["QB", "RB", "WR", "TE", "K", "DST"]:
             # Should not raise an exception
             try:
                 # We're not actually making network calls, just testing validation
@@ -96,9 +100,7 @@ class TestWebScrapers:
 
         # Test invalid position
         with pytest.raises(ValueError):
-            await scraper.scrape_rankings(
-                Position.FLEX
-            )  # FLEX not supported by FantasySharks
+            await scraper.scrape_rankings("FLEX")  # FLEX not supported by FantasySharks
 
     @pytest.mark.asyncio
     async def test_fantasy_sharks_name_parsing(self):
@@ -125,7 +127,7 @@ class TestWebScrapers:
         soup = BeautifulSoup(html, "html.parser")
         row = soup.find("tr")
 
-        player = scraper._parse_player_row(row, Position.QB, 1)
+        player = scraper._parse_player_row(row, "QB", 1)
 
         assert player is not None
         assert (
@@ -133,7 +135,61 @@ class TestWebScrapers:
         )  # Should convert "Allen, Josh" to "Josh Allen"
         assert player.team == "BUF"
         assert player.bye_week == 7
-        assert player.position == Position.QB
+        assert player.position == "QB"
+
+    @pytest.mark.asyncio
+    async def test_fantasy_sharks_player_with_commentary_integration(self):
+        """Test that FantasySharks correctly adds commentary to players"""
+        scraper = FantasySharksScraper()
+
+        # Create mock HTML with player row followed by commentary row
+        from bs4 import BeautifulSoup
+
+        html = """
+        <table id="toolData">
+            <tr><th>Headers</th></tr>
+            <tr><th>More Headers</th></tr>
+            <tr>
+                <td>1</td><td>4</td><td>Allen, Josh</td><td>BUF</td><td>7</td>
+                <td>0</td><td>0</td><td>0</td><td>0</td><td>0</td>
+                <td>0</td><td>0</td><td>0</td><td>0</td><td>0</td>
+                <td>0</td><td>0</td><td>0</td><td>0</td><td>0</td>
+                <td>0</td><td>0</td><td>0</td><td>450</td>
+            </tr>
+            <tr>
+                <td></td>
+                <td>Elite dual-threat QB with championship upside and strong supporting cast.</td>
+            </tr>
+        </table>
+        """
+
+        soup = BeautifulSoup(html, "html.parser")
+        table = soup.find("table")
+        rows = table.find_all("tr")[2:]  # Skip headers
+
+        # Process rows like the real scraper does
+        i = 0
+        players = []
+        while i < len(rows):
+            player = scraper._parse_player_row(rows[i], "QB", len(players) + 1)
+            if player:
+                # This is where the bug was - trying to set player.commentary
+                if i + 1 < len(rows):
+                    commentary = scraper._extract_player_commentary(rows[i + 1])
+                    if commentary:
+                        # Should use notes, not commentary
+                        if player.notes:
+                            player.notes = f"{player.notes} | {commentary}"
+                        else:
+                            player.notes = commentary
+                players.append(player)
+            i += 1
+
+        # Verify the player was created with commentary in notes
+        assert len(players) == 1
+        assert players[0].name == "Josh Allen"
+        assert players[0].notes is not None
+        assert "Elite dual-threat QB" in players[0].notes
 
     @pytest.mark.asyncio
     async def test_fantasy_sharks_commentary_extraction(self):
@@ -171,6 +227,47 @@ class TestWebScrapers:
         tier_commentary = scraper._extract_player_commentary(tier_row)
         assert tier_commentary is None  # Should ignore tier markers
 
+    def test_fantasy_sharks_header_detection(self):
+        """Test that FantasySharks scraper properly detects and skips header rows."""
+        scraper = FantasySharksScraper()
+
+        # Test cases for header/stats row detection
+        test_cases = [
+            # (name, team, bye, should_be_skipped)
+            ("TDs", "TD1-9", "1", True),  # Statistical data row
+            ("Name (Team)", "", "Bye", True),  # Header row with parentheses
+            ("Name", "Team", "Bye", True),  # Column headers
+            ("Pass", "ATT", "1", True),  # Passing stats header
+            ("Rec", "TD10-15", "2", True),  # Receiving stats with numbers
+            ("Josh Allen", "BUF", "7", False),  # Valid player
+            ("Patrick Mahomes", "KC", "10", False),  # Valid player
+            ("Christian McCaffrey", "SF", "9", False),  # Valid player
+        ]
+
+        for name, team, bye, should_skip in test_cases:
+            result = scraper._is_header_or_stats_row(name, team, bye)
+            assert (
+                result == should_skip
+            ), f"Expected {should_skip} for '{name}'/'{team}'/'{bye}', but got {result}"
+
+    def test_fantasy_sharks_edge_cases(self):
+        """Test edge cases for header detection."""
+        scraper = FantasySharksScraper()
+
+        # Edge cases that should NOT be skipped
+        edge_cases = [
+            ("John Player", "LAR", "8", False),  # Name ending with "Player"
+            ("D.K. Metcalf", "SEA", "5", False),  # Name with periods
+            ("Geno Smith", "", "", False),  # Empty team/bye (handled elsewhere)
+            ("Mike Williams", "NYJ", "-", False),  # Dash as bye week indicator
+        ]
+
+        for name, team, bye, should_skip in edge_cases:
+            result = scraper._is_header_or_stats_row(name, team, bye)
+            assert (
+                result == should_skip
+            ), f"Expected {should_skip} for '{name}'/'{team}'/'{bye}', but got {result}"
+
 
 class TestRankingsIntegration:
     @pytest.mark.asyncio
@@ -191,9 +288,13 @@ class TestRankingsIntegration:
         assert espn_mccaffrey.team == yahoo_mccaffrey.team
 
         # ESPN and Yahoo might have different rankings
-        espn_rank = espn_mccaffrey.rankings[RankingSource.ESPN]["rank"]
-        yahoo_rank = yahoo_mccaffrey.rankings[RankingSource.YAHOO]["rank"]
+        espn_rank = espn_mccaffrey.ranking
+        yahoo_rank = yahoo_mccaffrey.ranking
 
         # Rankings exist but might differ
         assert espn_rank > 0
         assert yahoo_rank > 0
+
+        # Check that both have expected projected points from mock data
+        assert espn_mccaffrey.projected_points == 99.5
+        assert yahoo_mccaffrey.projected_points == 98.5

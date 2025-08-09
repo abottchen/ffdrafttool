@@ -1,17 +1,20 @@
 import asyncio
 import logging
 import os
-
-# Import draft rules and cache
+import re
 import sys
 from abc import ABC, abstractmethod
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 sys.path.append(str(Path(__file__).parent.parent))
-from models.draft_rules import DraftAnalyzer, DraftRules, DraftType
-from services.draft_cache import DraftCache
+
+from src.models.draft_pick import DraftPick
+from src.models.draft_state_simple import DraftState
+from src.models.injury_status import InjuryStatus
+from src.models.player_simple import Player
+from src.services.team_mapping import normalize_team_abbreviation
 
 try:
     from google.auth.transport.requests import Request
@@ -33,44 +36,6 @@ class SheetsProvider(ABC):
     async def read_range(self, sheet_id: str, range_name: str) -> List[List[Any]]:
         """Read data from a sheet range"""
         pass
-
-    @abstractmethod
-    async def write_range(
-        self, sheet_id: str, range_name: str, values: List[List[Any]]
-    ) -> bool:
-        """Write data to a sheet range"""
-        pass
-
-
-class MockSheetsProvider(SheetsProvider):
-    """Mock sheets provider for testing"""
-
-    def __init__(self):
-        self.mock_data = {
-            "test_sheet_123": {
-                "Draft!A1:V24": [
-                    ["Pick", "Team", "Player", "Position"],
-                    ["1", "Team Alpha", "Christian McCaffrey", "RB"],
-                    ["2", "Team Beta", "Tyreek Hill", "WR"],
-                    ["3", "Team Gamma", "Justin Jefferson", "WR"],
-                ]
-            }
-        }
-
-    async def read_range(self, sheet_id: str, range_name: str) -> List[List[Any]]:
-        """Return mock sheet data"""
-        if sheet_id in self.mock_data and range_name in self.mock_data[sheet_id]:
-            return self.mock_data[sheet_id][range_name]
-        return []
-
-    async def write_range(
-        self, sheet_id: str, range_name: str, values: List[List[Any]]
-    ) -> bool:
-        """Mock write operation"""
-        if sheet_id not in self.mock_data:
-            self.mock_data[sheet_id] = {}
-        self.mock_data[sheet_id][range_name] = values
-        return True
 
 
 class GoogleSheetsProvider(SheetsProvider):
@@ -168,38 +133,6 @@ class GoogleSheetsProvider(SheetsProvider):
             logger.error(f"Error reading from Google Sheets: {str(e)}")
             raise
 
-    async def write_range(
-        self, sheet_id: str, range_name: str, values: List[List[Any]]
-    ) -> bool:
-        """Write data to Google Sheets (requires write permissions)"""
-        try:
-            service = await self._get_service()
-
-            def _write():
-                body = {"values": values}
-                result = (
-                    service.spreadsheets()
-                    .values()
-                    .update(
-                        spreadsheetId=sheet_id,
-                        range=range_name,
-                        valueInputOption="RAW",
-                        body=body,
-                    )
-                    .execute()
-                )
-                return result.get("updatedCells", 0) > 0
-
-            # Execute API call in thread pool
-            success = await asyncio.get_event_loop().run_in_executor(
-                self.executor, _write
-            )
-            return success
-
-        except Exception as e:
-            logger.error(f"Error writing to Google Sheets: {str(e)}")
-            return False
-
 
 class SheetsService:
     """Service for interacting with Google Sheets"""
@@ -207,13 +140,96 @@ class SheetsService:
     def __init__(
         self,
         provider: SheetsProvider,
-        draft_rules: DraftRules = None,
         use_cache: bool = True,
     ):
         self.provider = provider
-        self.draft_rules = draft_rules or DraftRules()
-        self.draft_analyzer = DraftAnalyzer(self.draft_rules)
-        self.cache = DraftCache() if use_cache else None
+        # Cache simplified - draft_cache was removed in refactoring
+        self.cache = None
+
+    def _extract_player_info(self, raw_name: str) -> Tuple[str, str]:
+        """Extract player name and team from raw name with team abbreviation.
+
+        Args:
+            raw_name: Raw player name from sheets (may include team like "Josh Allen   BUF" or "Kendrick Bourne - NE")
+
+        Returns:
+            tuple[str, str]: (clean_player_name, team_abbreviation)
+        """
+        # Match team abbreviation at the end with flexible separators
+        # Handles patterns like:
+        # - "Josh Allen   BUF" (multiple spaces)
+        # - "Kendrick Bourne - NE" (space-hyphen-space)
+        # - "Player Name  -  TEAM" (various spacing around hyphen)
+        match = re.search(r"[\s\-]+([A-Z]{2,3})\s*$", raw_name)
+
+        if match:
+            team = match.group(1)  # Extract team abbreviation
+            clean_name = raw_name[: match.start()].strip()  # Remove team from name
+        else:
+            team = "UNK"  # No team found
+            clean_name = raw_name.strip()
+            # Log error when team cannot be determined from draft data
+            logger.error(
+                f"Unable to extract NFL team from player name in draft data: '{raw_name}'. "
+                f"Player will be marked with team 'UNK'. This may affect player matching and analysis."
+            )
+
+        return clean_name, team
+
+    def _create_player_from_pick(self, pick_data: Dict[str, Any]) -> Player:
+        """Create a Player object from pick data.
+
+        Args:
+            pick_data: Pick data from sheets
+
+        Returns:
+            Player: Simplified player object with defaults for missing data
+        """
+        raw_name = pick_data.get("player_name", "Unknown Player")
+        name, raw_team = self._extract_player_info(raw_name)
+        position = pick_data.get("position", "UNK")
+
+        # Normalize team abbreviation (sheets use "normal" format, so pass through)
+        team = normalize_team_abbreviation(raw_team, source="sheets")
+
+        # Default values for data not available in sheets (team is extracted from name)
+        bye_week = 1  # Default bye week
+        ranking = 999  # Default ranking for unknown players
+        projected_points = 0.0  # Default projection
+        injury_status = InjuryStatus.HEALTHY  # Default to healthy
+        notes = ""  # No notes from sheets
+
+        return Player(
+            name=name,
+            team=team,
+            position=position,
+            bye_week=bye_week,
+            ranking=ranking,
+            projected_points=projected_points,
+            injury_status=injury_status,
+            notes=notes,
+        )
+
+    def _get_owner_for_pick(
+        self, pick_data: Dict[str, Any], team_to_owner: Dict[str, str]
+    ) -> str:
+        """Get the owner for a pick based on column_team mapping.
+
+        Args:
+            pick_data: Pick data from sheets
+            team_to_owner: Mapping from team name to owner
+
+        Returns:
+            str: Owner name or "Unknown" if not found
+        """
+        column_team = pick_data.get("column_team", "")
+
+        # Try to find owner by team name
+        if column_team and column_team in team_to_owner:
+            return team_to_owner[column_team]
+
+        # Fallback to "Unknown" if no mapping found
+        return "Unknown"
 
     def _find_team_by_pick_position(
         self,
@@ -233,33 +249,23 @@ class SheetsService:
         if round_num is None:
             round_num = ((pick_number - 1) // total_teams) + 1
 
-        # For auction rounds (1-3), we can't predict order - return None
-        if self.draft_analyzer.is_auction_round(round_num):
-            return None
+        # Simplified: For now, just use basic snake logic for all rounds
+        # Complex draft rules (auction/keeper) belong in MCP client analysis
+        pick_in_round = ((pick_number - 1) % total_teams) + 1
 
-        # For keeper round (4), only some teams participate - can't predict easily
-        if self.draft_analyzer.is_keeper_round(round_num):
-            return None
+        if round_num % 2 == 1:  # Odd round: 1→total_teams
+            team_idx = pick_in_round - 1
+        else:  # Even round: total_teams→1
+            team_idx = total_teams - pick_in_round
 
-        # For snake rounds (5+), use traditional snake logic
-        if self.draft_analyzer.is_snake_round(round_num):
-            # Calculate position within the snake rounds only
-            snake_round = round_num - self.draft_rules.snake_start_round + 1
-            pick_in_round = ((pick_number - 1) % total_teams) + 1
-
-            if snake_round % 2 == 1:  # Odd snake round: 1→total_teams
-                team_idx = pick_in_round - 1
-            else:  # Even snake round: total_teams→1
-                team_idx = total_teams - pick_in_round
-
-            if 0 <= team_idx < len(teams):
-                return teams[team_idx]
+        if 0 <= team_idx < len(teams):
+            return teams[team_idx]
 
         return None
 
     async def read_draft_data(
         self, sheet_id: str, range_name: str, force_refresh: bool = False
-    ) -> Dict[str, Any]:
+    ) -> DraftState:
         """Read and parse draft data from sheets using team-column structure with intelligent caching"""
         try:
             # Determine if we can use incremental reading
@@ -315,13 +321,8 @@ class SheetsService:
             data = await self.provider.read_range(sheet_id, range_name)
 
             if not data or len(data) < 5:
-                return {
-                    "picks": [],
-                    "current_pick": 1,
-                    "teams": [],
-                    "draft_state": {},
-                    "available_players": [],
-                }
+                # Return empty DraftState when no data is available
+                return DraftState(picks=[], teams=[])
 
             # Extract team structure from rows 2 and 3 (indices 1 and 2)
             owner_row = data[1] if len(data) > 1 else []
@@ -462,9 +463,6 @@ class SheetsService:
                 # Calculate pick in round
                 pick_in_round = ((pick_number - 1) % len(teams)) + 1
 
-                # Get draft type and strategy info for this round
-                round_type = self.draft_analyzer.rules.get_round_type(round_num)
-
                 picks.append(
                     {
                         "pick_number": pick_number,
@@ -477,85 +475,63 @@ class SheetsService:
                         "column_team": sheet_pick["team_found"][
                             "team_name"
                         ],  # Track which column it came from for debugging
-                        "draft_type": round_type.value,  # 'auction', 'keeper', or 'snake'
-                        "is_auction": round_type == DraftType.AUCTION,
-                        "is_keeper": round_type == DraftType.KEEPER,
-                        "is_snake": round_type == DraftType.SNAKE,
                     }
                 )
 
             # Sort by pick number
             picks.sort(key=lambda x: x["pick_number"])
 
-            # Determine current pick
-            current_pick = len(picks) + 1
+            # Create team name to owner mapping for DraftPick creation
+            team_to_owner = {}
+            for team in teams:
+                team_name = team.get("team_name", "")
+                owner = team.get("owner", "Unknown")
+                if team_name:
+                    team_to_owner[team_name] = owner
 
-            # Determine whose turn it is
-            current_team = None
-            if teams and current_pick <= len(teams) * 20:  # Assuming max 20 rounds
-                current_round = ((current_pick - 1) // len(teams)) + 1
-                pick_in_round = ((current_pick - 1) % len(teams)) + 1
+            # Convert picks to DraftPick objects with Player models
+            draft_picks = []
+            for pick_data in picks:
+                # Create Player object
+                player = self._create_player_from_pick(pick_data)
 
-                if current_round % 2 == 1:  # Odd round
-                    team_idx = pick_in_round - 1
-                else:  # Even round
-                    team_idx = len(teams) - pick_in_round
+                # Get owner for this pick
+                owner = self._get_owner_for_pick(pick_data, team_to_owner)
 
-                if 0 <= team_idx < len(teams):
-                    current_team = teams[team_idx]
+                # Create DraftPick
+                draft_pick = DraftPick(player=player, owner=owner)
+                draft_picks.append(draft_pick)
 
-            # Analyze rounds and provide strategy guidance
-            completed_rounds = max(pick["round"] for pick in picks) if picks else 0
-            current_round = (
-                current_round if "current_round" in locals() else (completed_rounds + 1)
-            )
+            # Convert teams to simple dictionaries for DraftState
+            simple_teams = []
+            for team in teams:
+                simple_team = {
+                    "owner": team.get("owner", "Unknown"),
+                    "team_name": team.get("team_name", "Unknown Team"),
+                }
+                simple_teams.append(simple_team)
 
-            # Get round analysis
-            round_analysis = {}
-            for round_num in range(1, completed_rounds + 2):  # Include current round
-                round_picks = [p for p in picks if p["round"] == round_num]
-                if round_picks or round_num == current_round:
-                    round_analysis[round_num] = {
-                        "round_type": self.draft_analyzer.rules.get_round_type(
-                            round_num
-                        ).value,
-                        "is_auction": self.draft_analyzer.is_auction_round(round_num),
-                        "is_keeper": self.draft_analyzer.is_keeper_round(round_num),
-                        "is_snake": self.draft_analyzer.is_snake_round(round_num),
-                        "picks_made": len(round_picks),
-                        "strategy": self.draft_analyzer.get_draft_strategy_for_round(
-                            round_num
-                        ),
-                    }
+            # Create and return DraftState object directly
+            draft_state = DraftState(picks=draft_picks, teams=simple_teams)
 
-            result = {
-                "picks": picks,
-                "current_pick": current_pick,
-                "teams": teams,
-                "current_team": current_team,
-                "draft_state": {
-                    "total_picks": len(picks),
-                    "total_teams": len(teams),
-                    "completed_rounds": completed_rounds,
-                    "current_round": current_round,
-                    "draft_rules": {
-                        "auction_rounds": self.draft_rules.auction_rounds,
-                        "keeper_round": self.draft_rules.keeper_round,
-                        "snake_start_round": self.draft_rules.snake_start_round,
-                    },
-                },
-                "round_analysis": round_analysis,
-                "current_round_strategy": self.draft_analyzer.get_draft_strategy_for_round(
-                    current_round
-                ),
-                "available_players": [],  # Would be populated from another source
-            }
-
-            # Cache the result if caching is enabled
+            # Cache the draft state if caching is enabled
+            # Note: We may need to update cache to handle DraftState objects
             if self.cache:
-                self.cache.update_cache(sheet_id, range_name, result)
+                # For now, cache the raw data for compatibility
+                cache_data = {
+                    "picks": picks,
+                    "teams": teams,
+                    "draft_state": {
+                        "total_picks": len(picks),
+                        "total_teams": len(teams),
+                        "completed_rounds": (
+                            max(pick["round"] for pick in picks) if picks else 0
+                        ),
+                    },
+                }
+                self.cache.update_cache(sheet_id, range_name, cache_data)
 
-            return result
+            return draft_state
 
         except Exception as e:
             logger.error(f"Error reading draft data: {str(e)}")

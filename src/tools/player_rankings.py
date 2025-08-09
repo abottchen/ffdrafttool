@@ -1,289 +1,226 @@
+"""Player Rankings tool implementation."""
+
 import logging
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
-from src.models.player import InjuryStatus, Position
-from src.services.web_scraper import (
-    ESPNScraper,
-    FantasyProsScraper,
-    FantasySharksScraper,
-    YahooScraper,
-)
+from src.config import RANKINGS_CACHE_HOURS
+from src.models.player_rankings import PlayerRankings
+from src.services.web_scraper import FantasySharksScraper
 
 logger = logging.getLogger(__name__)
 
-# Global cache for player rankings
-_rankings_cache = {
-    "data": None,
-    "timestamp": None,
-    "cache_duration": timedelta(hours=24),  # Rankings valid for entire draft session
-}
+
+# Global cache instance with TTL
+_rankings_cache = PlayerRankings()
+_cache_timestamp = None
 
 
 async def get_player_rankings(
-    sources: List[str],
-    position: Optional[str] = None,
-    limit: Optional[int] = None,
-    force_refresh: bool = False,
+    position: Optional[str] = None, force_refresh: bool = False
 ) -> Dict[str, Any]:
     """
-    Fetch current player rankings from multiple sources with caching.
+    Get player rankings with caching support.
 
     Args:
-        sources: List of ranking sources ("espn", "yahoo", "fantasypros", "fantasysharks")
-        position: Optional position filter ("QB", "RB", "WR", "TE", "K", "DST")
-        limit: Optional limit on number of players to return
-        force_refresh: If True, bypass cache and fetch fresh data
+        position: Filter by position (QB, RB, WR, TE, K, DST). If None, returns all positions.
+        force_refresh: If True, ignore cache and fetch fresh data from FantasySharks
 
     Returns:
-        Dict containing player data with rankings from each source
+        Dict containing player rankings data
     """
     import time
 
     start_time = time.time()
-    logger.info(
-        f"Starting get_player_rankings - sources: {sources}, position: {position}, limit: {limit}"
-    )
-    global _rankings_cache
+    logger.info(f"Getting player rankings for position: {position or 'all'}")
 
-    # Check if we have valid cached data
-    if not force_refresh and _rankings_cache["data"] is not None:
-        cache_age = datetime.now() - _rankings_cache["timestamp"]
-        if cache_age < _rankings_cache["cache_duration"]:
-            logger.info(
-                f"Using cached rankings (age: {cache_age.total_seconds():.0f}s)"
-            )
+    try:
+        global _cache_timestamp
 
-            # Extract from cache and apply filters
-            cached_data = _rankings_cache["data"]
+        # Check cache first (unless force refresh)
+        if not force_refresh and _cache_timestamp is not None:
+            cache_age = datetime.now() - _cache_timestamp
+            if cache_age < timedelta(hours=RANKINGS_CACHE_HOURS):
+                # Get cached data
+                if position:
+                    cached_players = _rankings_cache.get_position_data(position.upper())
+                    if cached_players:
+                        logger.info(
+                            f"get_player_rankings (cached) completed in {time.time() - start_time:.2f} seconds"
+                        )
+                        return {
+                            "success": True,
+                            "position_filter": position,
+                            "total_players": len(cached_players),
+                            "last_updated": _cache_timestamp.isoformat(),
+                            "data_source": "FantasySharks",
+                            "cache_hit": True,
+                            "players": [
+                                {
+                                    "name": p.name,
+                                    "team": p.team,
+                                    "position": p.position,
+                                    "bye_week": p.bye_week,
+                                    "ranking": p.ranking,
+                                    "projected_points": p.projected_points,
+                                    "injury_status": p.injury_status.value,
+                                    "notes": p.notes,
+                                }
+                                for p in cached_players
+                            ],
+                        }
+                else:
+                    # Get all cached players
+                    all_players = []
+                    for pos in _rankings_cache.get_all_positions():
+                        pos_players = _rankings_cache.get_position_data(pos)
+                        if pos_players:
+                            all_players.extend(pos_players)
 
-            # If position filter requested, filter the cached aggregated players
-            if position:
-                try:
-                    position_filter = Position(position.upper())
-                    filtered_players = [
-                        p
-                        for p in cached_data["aggregated"]["players"]
-                        if p["position"] == position_filter.value
-                    ]
+                    if all_players:
+                        logger.info(
+                            f"get_player_rankings (cached) completed in {time.time() - start_time:.2f} seconds"
+                        )
+                        return {
+                            "success": True,
+                            "position_filter": position,
+                            "total_players": len(all_players),
+                            "last_updated": _cache_timestamp.isoformat(),
+                            "data_source": "FantasySharks",
+                            "cache_hit": True,
+                            "players": [
+                                {
+                                    "name": p.name,
+                                    "team": p.team,
+                                    "position": p.position,
+                                    "bye_week": p.bye_week,
+                                    "ranking": p.ranking,
+                                    "projected_points": p.projected_points,
+                                    "injury_status": p.injury_status.value,
+                                    "notes": p.notes,
+                                }
+                                for p in all_players
+                            ],
+                        }
 
-                    # Create filtered response
-                    result = {
-                        "success": True,
-                        "aggregated": {
-                            "players": (
-                                filtered_players[:limit] if limit else filtered_players
-                            ),
-                            "count": len(filtered_players),
-                        },
-                        "position": position,
-                        "limit": limit,
-                        "from_cache": True,
-                    }
-                    return result
-                except ValueError:
-                    return {
-                        "success": False,
-                        "error": f"Invalid position: {position}. Valid positions: QB, RB, WR, TE, K, DST",
-                    }
+        # Fetch fresh data from FantasySharks
+        logger.info("Fetching fresh rankings from FantasySharks")
+        scraper = FantasySharksScraper()
 
-            # Apply limit if requested (no position filter)
-            if limit:
-                limited_players = cached_data["aggregated"]["players"][:limit]
-                result = {
-                    "success": True,
-                    "aggregated": {
-                        "players": limited_players,
-                        "count": len(limited_players),
-                    },
-                    "limit": limit,
-                    "from_cache": True,
-                }
-                return result
-
-            # Return full cached data
-            return {**cached_data, "from_cache": True}
-
-    logger.info(f"Fetching fresh rankings from sources: {sources}")
-
-    # Parse position filter
-    position_filter = None
-    if position:
         try:
-            position_filter = Position(position.upper())
-        except ValueError:
+            if position:
+                # Scraper now accepts string positions directly
+                raw_players = await scraper.scrape_rankings(position.upper())
+            else:
+                # Get all draftable positions
+                draftable_positions = ["QB", "RB", "WR", "TE", "K", "DST"]
+                raw_players = []
+                for pos_str in draftable_positions:
+                    pos_players = await scraper.scrape_rankings(pos_str)
+                    raw_players.extend(pos_players)
+        except Exception as e:
+            logger.error(f"Failed to fetch data from FantasySharks: {e}")
             return {
                 "success": False,
-                "error": f"Invalid position: {position}. Valid positions: QB, RB, WR, TE, K, DST",
+                "error": f"Failed to fetch rankings from FantasySharks: {str(e)}",
+                "error_type": "scraper_failed",
+                "troubleshooting": {
+                    "problem": "Unable to fetch player rankings from FantasySharks",
+                    "solution": "Check network connection and FantasySharks website availability",
+                    "next_steps": [
+                        "1. Verify internet connection",
+                        "2. Check if FantasySharks.com is accessible",
+                        "3. Try again with force_refresh=True",
+                        "4. Check logs for detailed error information",
+                    ],
+                },
+                "position_filter": position,
             }
 
-    # Map source names to scrapers
-    scrapers = {
-        "espn": ESPNScraper(),
-        "yahoo": YahooScraper(),
-        "fantasypros": FantasyProsScraper(),
-        "fantasysharks": FantasySharksScraper(),
-    }
+        if not raw_players:
+            logger.warning("No players returned from FantasySharks")
+            return {
+                "success": False,
+                "error": "No player data available from FantasySharks",
+                "error_type": "no_data",
+                "position_filter": position,
+            }
 
-    results = {}
-    all_players = {}  # player_name -> Player object (for aggregation)
+        # Players are already in the correct Pydantic format from scrapers
+        simplified_players = raw_players
 
-    for source in sources:
-        source_lower = source.lower()
-        if source_lower not in scrapers:
-            logger.warning(
-                f"Unknown source: {source}. Available: {list(scrapers.keys())}"
-            )
-            results[source] = {"success": False, "error": f"Unknown source: {source}"}
-            continue
+        # Cache the new data by position
+        _rankings_cache.clear_cache()
+        positions_cached = set()
 
-        try:
-            scraper = scrapers[source_lower]
-            players = await scraper.scrape_rankings(position_filter)
+        for player in simplified_players:
+            pos = player.position.upper()
+            if pos not in positions_cached:
+                pos_players = [
+                    p for p in simplified_players if p.position.upper() == pos
+                ]
+                _rankings_cache.set_position_data(pos, pos_players)
+                positions_cached.add(pos)
 
-            # Convert to serializable format
-            player_data = []
-            for player in players:
-                player_dict = {
-                    "name": player.name,
-                    "position": player.position.value,
-                    "team": player.team,
-                    "bye_week": player.bye_week,
-                    "rankings": {},
-                    "average_rank": player.average_rank,
-                    "average_score": player.average_score,
-                    "commentary": player.commentary,  # Include expert analysis if available
+        _cache_timestamp = datetime.now()
+
+        # Filter by position if requested
+        players_to_return = simplified_players
+        if position:
+            players_to_return = [
+                p for p in simplified_players if p.position.upper() == position.upper()
+            ]
+
+        logger.info(
+            f"get_player_rankings completed in {time.time() - start_time:.2f} seconds"
+        )
+        return {
+            "success": True,
+            "position_filter": position,
+            "total_players": len(players_to_return),
+            "last_updated": _cache_timestamp.isoformat(),
+            "data_source": "FantasySharks",
+            "cache_hit": False,
+            "players": [
+                {
+                    "name": p.name,
+                    "team": p.team,
+                    "position": p.position,
+                    "bye_week": p.bye_week,
+                    "ranking": p.ranking,
+                    "projected_points": p.projected_points,
+                    "injury_status": p.injury_status.value,
+                    "notes": p.notes,
                 }
-
-                # Add rankings from all sources for this player
-                for ranking_source, ranking in player.rankings.items():
-                    player_dict["rankings"][ranking_source.value] = {
-                        "rank": ranking["rank"],
-                        "score": ranking["score"],
-                    }
-
-                player_data.append(player_dict)
-
-                # Store for aggregation
-                if player.name not in all_players:
-                    all_players[player.name] = player
-                else:
-                    # Merge rankings from multiple sources
-                    for ranking_source, ranking in player.rankings.items():
-                        all_players[player.name].add_ranking(
-                            ranking_source, ranking["rank"], ranking["score"]
-                        )
-
-            results[source] = {
-                "success": True,
-                "players": player_data,
-                "count": len(player_data),
-            }
-
-            logger.info(
-                f"Successfully fetched {len(player_data)} players from {source}"
-            )
-
-        except Exception as e:
-            logger.error(f"Error fetching from {source}: {str(e)}")
-            results[source] = {"success": False, "error": str(e)}
-
-    # Create aggregated rankings
-    aggregated_players = []
-    for player in all_players.values():
-        if position_filter and player.position != position_filter:
-            continue
-
-        player_dict = {
-            "name": player.name,
-            "position": player.position.value,
-            "team": player.team,
-            "bye_week": player.bye_week,
-            "average_rank": player.average_rank,
-            "average_score": player.average_score,
-            "injury_status": (
-                player.injury_status.value
-                if player.injury_status != InjuryStatus.HEALTHY
-                else None
-            ),
+                for p in players_to_return
+            ],
         }
 
-        # Add injury warning for long-term injuries
-        if (
-            hasattr(player, "commentary")
-            and player.commentary
-            and "injury:" in player.commentary.lower()
-        ):
-            injury_commentary = player.commentary
-            # Check for long-term injury indicators in commentary
-            if any(
-                indicator in injury_commentary.lower()
-                for indicator in [
-                    "season",
-                    "year",
-                    "months",
-                    "week 8",
-                    "week 9",
-                    "week 10",
-                    "week 11",
-                    "week 12",
-                    "week 13",
-                    "week 14",
-                    "week 15",
-                    "week 16",
-                    "week 17",
-                    "week 18",
-                    "playoffs",
-                ]
-            ):
-                player_dict["injury_warning"] = (
-                    f"⚠️ LONG-TERM INJURY: {injury_commentary}"
-                )
-            elif player.injury_status in [InjuryStatus.OUT, InjuryStatus.DOUBTFUL]:
-                player_dict["injury_warning"] = f"⚠️ INJURY: {injury_commentary}"
+    except Exception as e:
+        error_message = str(e)
+        logger.error(f"Unexpected error in get_player_rankings: {error_message}")
 
-        # Only include primary ranking source to save tokens
-        if player.rankings:
-            primary_source = next(iter(player.rankings.keys()))
-            primary_ranking = player.rankings[primary_source]
-            player_dict["rank"] = primary_ranking["rank"]
-            player_dict["score"] = primary_ranking["score"]
-
-        aggregated_players.append(player_dict)
-
-    # Sort by average rank (lower is better) or average score (higher is better)
-    aggregated_players.sort(key=lambda p: p.get("average_rank") or 999)
-
-    # Apply limit if specified
-    if limit and limit > 0:
-        aggregated_players = aggregated_players[:limit]
-        for source_data in results.values():
-            if source_data.get("success") and "players" in source_data:
-                source_data["players"] = source_data["players"][:limit]
-
-    # Build the result
-    result = {
-        "success": True,
-        "aggregated": {"players": aggregated_players, "count": len(aggregated_players)},
-        "position": position,
-        "limit": limit,
-    }
-
-    # Cache the full unfiltered data if this was a fresh fetch without filters
-    if not position and not limit:
-        _rankings_cache["data"] = result
-        _rankings_cache["timestamp"] = datetime.now()
-        logger.info(f"Cached {len(aggregated_players)} players for future requests")
-
-    logger.info(
-        f"get_player_rankings completed in {time.time() - start_time:.2f} seconds"
-    )
-    return result
+        return {
+            "success": False,
+            "error": f"Unexpected error: {error_message}",
+            "error_type": "unexpected_error",
+            "troubleshooting": {
+                "problem": f"An unexpected error occurred: {error_message}",
+                "solution": "Check logs for detailed error information",
+                "next_steps": [
+                    "1. Check the application logs for stack traces",
+                    "2. Verify all dependencies are installed",
+                    "3. Try force_refresh=True to bypass any caching issues",
+                    "4. Contact support if error persists",
+                ],
+            },
+            "position_filter": position,
+        }
 
 
 def clear_rankings_cache():
     """Clear the player rankings cache."""
-    global _rankings_cache
-    _rankings_cache["data"] = None
-    _rankings_cache["timestamp"] = None
+    global _cache_timestamp
+    _rankings_cache.clear_cache()
+    _cache_timestamp = None
     logger.info("Player rankings cache cleared")

@@ -8,7 +8,9 @@ from typing import Dict, List, Optional
 import aiohttp
 from bs4 import BeautifulSoup
 
-from src.models.player import InjuryStatus, Player, Position, RankingSource
+from src.models.injury_status import InjuryStatus
+from src.models.player_simple import Player
+from src.services.team_mapping import normalize_team_abbreviation
 
 logger = logging.getLogger(__name__)
 
@@ -51,9 +53,7 @@ class WebScraper(ABC):
                     raise
 
     @abstractmethod
-    async def scrape_rankings(
-        self, position: Optional[Position] = None
-    ) -> List[Player]:
+    async def scrape_rankings(self, position: Optional[str] = None) -> List[Player]:
         """Scrape rankings from the website"""
         pass
 
@@ -63,9 +63,7 @@ class ESPNScraper(WebScraper):
 
     BASE_URL = "https://www.espn.com/fantasy/football/ffl/rankings"
 
-    async def scrape_rankings(
-        self, position: Optional[Position] = None
-    ) -> List[Player]:
+    async def scrape_rankings(self, position: Optional[str] = None) -> List[Player]:
         """Scrape ESPN rankings"""
         # TODO: Implement actual ESPN scraping logic
         # This would parse the ESPN rankings page
@@ -74,14 +72,14 @@ class ESPNScraper(WebScraper):
         # For now, return mock data
         return await self._get_mock_data(position)
 
-    async def _get_mock_data(self, position: Optional[Position] = None) -> List[Player]:
+    async def _get_mock_data(self, position: Optional[str] = None) -> List[Player]:
         """Return mock data for testing"""
         mock_players = [
-            ("Christian McCaffrey", Position.RB, "SF", 9, 1, 99.5),
-            ("Tyreek Hill", Position.WR, "MIA", 10, 2, 98.0),
-            ("Justin Jefferson", Position.WR, "MIN", 13, 3, 97.5),
-            ("Josh Allen", Position.QB, "BUF", 13, 4, 96.0),
-            ("Austin Ekeler", Position.RB, "LAC", 5, 5, 95.5),
+            ("Christian McCaffrey", "RB", "SF", 9, 1, 99.5),
+            ("Tyreek Hill", "WR", "MIA", 10, 2, 98.0),
+            ("Justin Jefferson", "WR", "MIN", 13, 3, 97.5),
+            ("Josh Allen", "QB", "BUF", 13, 4, 96.0),
+            ("Austin Ekeler", "RB", "LAC", 5, 5, 95.5),
         ]
 
         players = []
@@ -89,8 +87,15 @@ class ESPNScraper(WebScraper):
             if position and pos != position:
                 continue
 
-            player = Player(name=name, position=pos, team=team, bye_week=bye)
-            player.add_ranking(RankingSource.ESPN, rank, score)
+            player = Player(
+                name=name,
+                team=team,
+                position=pos,
+                bye_week=bye,
+                ranking=rank,
+                projected_points=score,
+                notes="ESPN mock data",
+            )
             players.append(player)
 
         return players
@@ -101,9 +106,7 @@ class YahooScraper(WebScraper):
 
     BASE_URL = "https://football.fantasysports.yahoo.com/f1/draftanalysis"
 
-    async def scrape_rankings(
-        self, position: Optional[Position] = None
-    ) -> List[Player]:
+    async def scrape_rankings(self, position: Optional[str] = None) -> List[Player]:
         """Scrape Yahoo rankings"""
         # TODO: Implement actual Yahoo scraping logic
         logger.info("Scraping Yahoo rankings...")
@@ -111,14 +114,14 @@ class YahooScraper(WebScraper):
         # For now, return mock data
         return await self._get_mock_data(position)
 
-    async def _get_mock_data(self, position: Optional[Position] = None) -> List[Player]:
+    async def _get_mock_data(self, position: Optional[str] = None) -> List[Player]:
         """Return mock data for testing"""
         mock_players = [
-            ("Christian McCaffrey", Position.RB, "SF", 9, 2, 98.5),
-            ("Justin Jefferson", Position.WR, "MIN", 13, 1, 99.0),
-            ("Tyreek Hill", Position.WR, "MIA", 10, 3, 97.0),
-            ("Josh Allen", Position.QB, "BUF", 13, 5, 95.0),
-            ("Austin Ekeler", Position.RB, "LAC", 5, 4, 96.0),
+            ("Christian McCaffrey", "RB", "SF", 9, 2, 98.5),
+            ("Justin Jefferson", "WR", "MIN", 13, 1, 99.0),
+            ("Tyreek Hill", "WR", "MIA", 10, 3, 97.0),
+            ("Josh Allen", "QB", "BUF", 13, 5, 95.0),
+            ("Austin Ekeler", "RB", "LAC", 5, 4, 96.0),
         ]
 
         players = []
@@ -126,8 +129,15 @@ class YahooScraper(WebScraper):
             if position and pos != position:
                 continue
 
-            player = Player(name=name, position=pos, team=team, bye_week=bye)
-            player.add_ranking(RankingSource.YAHOO, rank, score)
+            player = Player(
+                name=name,
+                team=team,
+                position=pos,
+                bye_week=bye,
+                ranking=rank,
+                projected_points=score,
+                notes="Yahoo mock data",
+            )
             players.append(player)
 
         return players
@@ -138,9 +148,7 @@ class FantasyProsScraper(WebScraper):
 
     BASE_URL = "https://www.fantasypros.com/nfl/rankings/consensus-cheatsheets.php"
 
-    async def scrape_rankings(
-        self, position: Optional[Position] = None
-    ) -> List[Player]:
+    async def scrape_rankings(self, position: Optional[str] = None) -> List[Player]:
         """Scrape FantasyPros consensus rankings"""
         # TODO: Implement actual FantasyPros scraping logic
         logger.info("Scraping FantasyPros rankings...")
@@ -148,14 +156,14 @@ class FantasyProsScraper(WebScraper):
         # For now, return mock data
         return await self._get_mock_data(position)
 
-    async def _get_mock_data(self, position: Optional[Position] = None) -> List[Player]:
+    async def _get_mock_data(self, position: Optional[str] = None) -> List[Player]:
         """Return mock data for testing"""
         mock_players = [
-            ("Christian McCaffrey", Position.RB, "SF", 9, 1, 99.0),
-            ("Justin Jefferson", Position.WR, "MIN", 13, 2, 98.5),
-            ("Tyreek Hill", Position.WR, "MIA", 10, 3, 97.5),
-            ("Josh Allen", Position.QB, "BUF", 13, 4, 96.5),
-            ("Austin Ekeler", Position.RB, "LAC", 5, 5, 95.0),
+            ("Christian McCaffrey", "RB", "SF", 9, 1, 99.0),
+            ("Justin Jefferson", "WR", "MIN", 13, 2, 98.5),
+            ("Tyreek Hill", "WR", "MIA", 10, 3, 97.5),
+            ("Josh Allen", "QB", "BUF", 13, 4, 96.5),
+            ("Austin Ekeler", "RB", "LAC", 5, 5, 95.0),
         ]
 
         players = []
@@ -163,8 +171,15 @@ class FantasyProsScraper(WebScraper):
             if position and pos != position:
                 continue
 
-            player = Player(name=name, position=pos, team=team, bye_week=bye)
-            player.add_ranking(RankingSource.FANTASYPROS, rank, score)
+            player = Player(
+                name=name,
+                team=team,
+                position=pos,
+                bye_week=bye,
+                ranking=rank,
+                projected_points=score,
+                notes="FantasyPros mock data",
+            )
             players.append(player)
 
         return players
@@ -176,17 +191,15 @@ class FantasySharksScraper(WebScraper):
     BASE_URL = "https://www.fantasysharks.com/apps/Projections/SeasonProjections.php"
 
     POSITION_PARAMS = {
-        Position.QB: "QB",
-        Position.RB: "RB",
-        Position.WR: "WR",
-        Position.TE: "TE",
-        Position.K: "PK",  # FantasySharks uses "PK" for kickers
-        Position.DST: "D",  # FantasySharks uses "D" for defenses
+        "QB": "QB",
+        "RB": "RB",
+        "WR": "WR",
+        "TE": "TE",
+        "K": "PK",  # FantasySharks uses "PK" for kickers
+        "DST": "D",  # FantasySharks uses "D" for defenses
     }
 
-    async def scrape_rankings(
-        self, position: Optional[Position] = None
-    ) -> List[Player]:
+    async def scrape_rankings(self, position: Optional[str] = None) -> List[Player]:
         """Scrape FantasySharks rankings for specified position"""
         if position and position not in self.POSITION_PARAMS:
             raise ValueError(
@@ -194,7 +207,7 @@ class FantasySharksScraper(WebScraper):
             )
 
         logger.info(
-            f"Scraping FantasySharks rankings for {position.value if position else 'all positions'}..."
+            f"Scraping FantasySharks rankings for {position if position else 'all positions'}..."
         )
 
         players = []
@@ -207,13 +220,11 @@ class FantasySharksScraper(WebScraper):
                 pos_players = await self._scrape_position(pos)
                 players.extend(pos_players)
             except Exception as e:
-                logger.error(
-                    f"Failed to scrape {pos.value} from FantasySharks: {str(e)}"
-                )
+                logger.error(f"Failed to scrape {pos} from FantasySharks: {str(e)}")
 
         return players
 
-    async def _scrape_position(self, position: Position) -> List[Player]:
+    async def _scrape_position(self, position: str) -> List[Player]:
         """Scrape rankings for a specific position"""
         url = f"{self.BASE_URL}?l=2&pos={self.POSITION_PARAMS[position]}&RosterSize=&SalaryCap=&Rookie=false&Comments=true"
 
@@ -232,13 +243,13 @@ class FantasySharksScraper(WebScraper):
                     table = soup.find("table")
 
             if not table:
-                logger.warning(f"Could not find rankings table for {position.value}")
+                logger.warning(f"Could not find rankings table for {position}")
                 # Debug: Show what we found
                 all_tables = soup.find_all("table")
                 logger.debug(f"Found {len(all_tables)} tables total")
                 return []
 
-            logger.debug(f"Found table for {position.value} scraping")
+            logger.debug(f"Found table for {position} scraping")
 
             players = []
             rows = table.find_all("tr")[
@@ -263,7 +274,11 @@ class FantasySharksScraper(WebScraper):
                             next_row = rows[i + 1]
                             commentary = self._extract_player_commentary(next_row)
                             if commentary:
-                                player.commentary = commentary
+                                # Update notes with additional commentary
+                                if player.notes:
+                                    player.notes = f"{player.notes} | {commentary}"
+                                else:
+                                    player.notes = commentary
                                 logger.debug(
                                     f"Added commentary for {player.name}: {commentary[:50]}..."
                                 )
@@ -275,21 +290,21 @@ class FantasySharksScraper(WebScraper):
 
                 except Exception as e:
                     logger.warning(
-                        f"Failed to parse row {i+1} for {position.value}: {str(e)}"
+                        f"Failed to parse row {i+1} for {position}: {str(e)}"
                     )
 
                 i += 1
 
             logger.info(
-                f"Successfully scraped {len(players)} {position.value} players from FantasySharks"
+                f"Successfully scraped {len(players)} {position} players from FantasySharks"
             )
             return players
 
         except Exception as e:
-            logger.error(f"Error scraping FantasySharks {position.value}: {str(e)}")
+            logger.error(f"Error scraping FantasySharks {position}: {str(e)}")
             return []
 
-    def _parse_player_row(self, row, position: Position, rank: int) -> Optional[Player]:
+    def _parse_player_row(self, row, position: str, rank: int) -> Optional[Player]:
         """Parse a single player row from the table"""
         cells = row.find_all(["td", "th"])
         logger.debug(f"Row {rank}: Found {len(cells)} cells")
@@ -329,6 +344,11 @@ class FantasySharksScraper(WebScraper):
                     logger.debug(f"Row {rank}: Missing name or team data")
                     return None
 
+                # Check if this is a header row or statistical summary row
+                if self._is_header_or_stats_row(name_text, team_text, bye_text):
+                    logger.debug(f"Row {rank}: Detected header/stats row, skipping")
+                    return None
+
                 # Clean up name (handle "Last, First" format)
                 if "," in name_text:
                     # Convert "Allen, Josh" to "Josh Allen"
@@ -340,10 +360,19 @@ class FantasySharksScraper(WebScraper):
                 else:
                     name = name_text.strip()
 
-                # Extract team
-                team = team_text.strip()
-                if not team or len(team) > 4:  # Team should be 2-4 characters
+                # Extract and normalize team abbreviation
+                raw_team = team_text.strip()
+                if not raw_team or len(raw_team) > 3:  # Team should be 2-3 characters
                     team = "UNK"
+                    # Log error when team cannot be determined from rankings data
+                    logger.error(
+                        f"Unable to extract NFL team for player '{name}' from FantasySharks rankings. "
+                        f"Team data was: '{team_text}'. Player will be marked with team 'UNK'. "
+                        f"This may affect player matching and analysis."
+                    )
+                else:
+                    # Normalize team abbreviation from rankings format to sheets format
+                    team = normalize_team_abbreviation(raw_team, source="rankings")
 
                 # Extract bye week
                 bye_week = 1
@@ -363,34 +392,122 @@ class FantasySharksScraper(WebScraper):
                 logger.debug(f"Row {rank}: Error accessing cell data: {str(e)}")
                 return None
 
-            # Create player with injury status
+            # Extract projected fantasy points from FantasySharks table
+            # Projected points are always in the last cell, regardless of position
+            # (QBs have 24 cells, WRs have 23 cells, etc.)
+            projected_points = 0.0
+            try:
+                if (
+                    len(cells) >= 6
+                ):  # Make sure we have at least basic cells (rank, adp, name, team, bye, stats...)
+                    points_text = cells[-1].get_text(
+                        strip=True
+                    )  # Last cell is always FantasyPoints
+                    if (
+                        points_text
+                        and points_text.replace(".", "").replace("-", "").isdigit()
+                    ):
+                        projected_points = float(points_text)
+                        logger.debug(
+                            f"Row {rank}: Extracted projected points: {projected_points} from last cell (index {len(cells)-1})"
+                        )
+                    else:
+                        logger.debug(
+                            f"Row {rank}: Could not parse projected points from last cell '{points_text}'"
+                        )
+                else:
+                    logger.debug(
+                        f"Row {rank}: Not enough cells for projected points parsing ({len(cells)} cells)"
+                    )
+            except (IndexError, ValueError, AttributeError) as e:
+                logger.debug(f"Row {rank}: Error parsing projected points: {str(e)}")
+                projected_points = 0.0
+
+            # Create player with injury status and notes
             injury_status = (
                 injury_info.get("status", InjuryStatus.HEALTHY)
                 if injury_info
                 else InjuryStatus.HEALTHY
             )
+
+            # Prepare notes with injury details if available
+            notes = ""
+            if injury_info and injury_info.get("details"):
+                notes = f"Injury: {injury_info['details']}"
+
+            # Create new Pydantic Player object
             player = Player(
                 name=name,
-                position=position,
                 team=team,
+                position=position,
                 bye_week=bye_week,
+                ranking=rank,
+                projected_points=projected_points,
                 injury_status=injury_status,
+                notes=notes,
             )
-
-            # Add injury details to commentary if available
-            if injury_info and injury_info.get("details"):
-                player.commentary = f"Injury: {injury_info['details']}"
-
-            # Add FantasySharks ranking
-            # Calculate a score based on rank (higher rank = lower score)
-            score = max(0, 100 - rank)
-            player.add_ranking(RankingSource.OTHER, rank, score)
 
             return player
 
         except Exception as e:
             logger.warning(f"Failed to parse player row: {str(e)}")
             return None
+
+    def _is_header_or_stats_row(
+        self, name_text: str, team_text: str, bye_text: str
+    ) -> bool:
+        """
+        Detect if a row is a header or statistical summary row that should be skipped.
+
+        Args:
+            name_text: Text from the name column
+            team_text: Text from the team column
+            bye_text: Text from the bye week column
+
+        Returns:
+            True if the row should be skipped (header/stats row)
+        """
+        # Common header indicators that are exact matches or at start/end
+        exact_header_names = [
+            "Name",
+            "TDs",
+            "TD",
+            "Pass",
+            "Rush",
+            "Rec",
+            "Pts",
+            "Proj",
+            "Rank",
+            "ADP",
+            "Position",
+        ]
+
+        # Check for exact header matches
+        if name_text in exact_header_names:
+            return True
+
+        # Check for "Player" only if it's the whole word or at the start
+        if name_text == "Player" or name_text.startswith("Player "):
+            return True
+
+        # Check if name contains parentheses indicating a header like "Name (Team)"
+        if "(" in name_text and ")" in name_text:
+            return True
+
+        # Check for statistical data patterns in team column
+        # Like "TD1-9" which indicates touchdown statistics
+        if team_text and ("TD" in team_text or "-" in team_text):
+            # But make sure it's not a legitimate hyphenated team name
+            if len(team_text) > 4 or any(char.isdigit() for char in team_text):
+                return True
+
+        # Check for non-numeric bye weeks (headers often have text here)
+        if bye_text and not bye_text.isdigit():
+            # But allow empty bye weeks for some positions
+            if bye_text not in ["", "-", "N/A"]:
+                return True
+
+        return False
 
     def _extract_player_commentary(self, row) -> Optional[str]:
         """Extract player commentary from a commentary row"""
