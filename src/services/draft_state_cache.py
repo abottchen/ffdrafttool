@@ -10,7 +10,7 @@ from cachetools import TTLCache
 from src.config import (
     DEFAULT_SHEET_ID,
     DEFAULT_SHEET_RANGE,
-    DRAFT_STATE_CACHE_TTL_SECONDS,
+    DRAFT_CACHE_MINUTES,
 )
 from src.tools.draft_progress import read_draft_progress
 
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 # TTL-based cache for draft state
 _draft_state_cache: TTLCache = TTLCache(
-    maxsize=1, ttl=DRAFT_STATE_CACHE_TTL_SECONDS  # Only cache the latest draft state
+    maxsize=1, ttl=DRAFT_CACHE_MINUTES * 60  # Convert minutes to seconds
 )
 
 

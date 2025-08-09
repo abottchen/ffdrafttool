@@ -4,6 +4,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import Any, Dict, Optional
 
+from src.config import RANKINGS_CACHE_HOURS
 from src.models.player_rankings import PlayerRankings
 from src.services.web_scraper import FantasySharksScraper
 
@@ -13,7 +14,6 @@ logger = logging.getLogger(__name__)
 # Global cache instance with TTL
 _rankings_cache = PlayerRankings()
 _cache_timestamp = None
-_cache_ttl_hours = 6
 
 
 async def get_player_rankings(
@@ -40,7 +40,7 @@ async def get_player_rankings(
         # Check cache first (unless force refresh)
         if not force_refresh and _cache_timestamp is not None:
             cache_age = datetime.now() - _cache_timestamp
-            if cache_age < timedelta(hours=_cache_ttl_hours):
+            if cache_age < timedelta(hours=RANKINGS_CACHE_HOURS):
                 # Get cached data
                 if position:
                     cached_players = _rankings_cache.get_position_data(position.upper())
