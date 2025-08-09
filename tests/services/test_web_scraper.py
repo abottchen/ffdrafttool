@@ -170,6 +170,47 @@ class TestWebScrapers:
 
         tier_commentary = scraper._extract_player_commentary(tier_row)
         assert tier_commentary is None  # Should ignore tier markers
+    
+    def test_fantasy_sharks_header_detection(self):
+        """Test that FantasySharks scraper properly detects and skips header rows."""
+        scraper = FantasySharksScraper()
+        
+        # Test cases for header/stats row detection
+        test_cases = [
+            # (name, team, bye, should_be_skipped)
+            ("TDs", "TD1-9", "1", True),  # Statistical data row
+            ("Name (Team)", "", "Bye", True),  # Header row with parentheses
+            ("Name", "Team", "Bye", True),  # Column headers
+            ("Pass", "ATT", "1", True),  # Passing stats header
+            ("Rec", "TD10-15", "2", True),  # Receiving stats with numbers
+            ("Josh Allen", "BUF", "7", False),  # Valid player
+            ("Patrick Mahomes", "KC", "10", False),  # Valid player
+            ("Christian McCaffrey", "SF", "9", False),  # Valid player
+        ]
+        
+        for name, team, bye, should_skip in test_cases:
+            result = scraper._is_header_or_stats_row(name, team, bye)
+            assert result == should_skip, (
+                f"Expected {should_skip} for '{name}'/'{team}'/'{bye}', but got {result}"
+            )
+    
+    def test_fantasy_sharks_edge_cases(self):
+        """Test edge cases for header detection."""
+        scraper = FantasySharksScraper()
+        
+        # Edge cases that should NOT be skipped
+        edge_cases = [
+            ("John Player", "LAR", "8", False),  # Name ending with "Player" 
+            ("D.K. Metcalf", "SEA", "5", False),  # Name with periods
+            ("Geno Smith", "", "", False),  # Empty team/bye (handled elsewhere)
+            ("Mike Williams", "NYJ", "-", False),  # Dash as bye week indicator
+        ]
+        
+        for name, team, bye, should_skip in edge_cases:
+            result = scraper._is_header_or_stats_row(name, team, bye)
+            assert result == should_skip, (
+                f"Expected {should_skip} for '{name}'/'{team}'/'{bye}', but got {result}"
+            )
 
 
 class TestRankingsIntegration:

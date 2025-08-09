@@ -7,6 +7,7 @@ from src.models.player import Player as OldPlayer
 from src.models.player import Position as OldPosition
 from src.models.player import RankingSource
 from src.models.player_simple import Player as SimplePlayer
+from src.services.team_mapping import normalize_team_abbreviation
 
 
 class ScraperAdapter:
@@ -64,7 +65,7 @@ class ScraperAdapter:
 
         return SimplePlayer(
             name=old_player.name,
-            team=old_player.team,
+            team=normalize_team_abbreviation(old_player.team, source="rankings"),
             position=position_str,
             bye_week=old_player.bye_week,
             ranking=ranking,
