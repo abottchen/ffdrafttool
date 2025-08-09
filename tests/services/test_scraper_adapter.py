@@ -165,23 +165,23 @@ class TestScraperAdapter:
         # FLEX should raise an error or return a default
         with pytest.raises(ValueError):
             adapter._convert_position(OldPosition.FLEX)
-    
+
     def test_team_mapping_integration(self):
         """Test that team abbreviations are properly mapped from rankings format."""
         adapter = ScraperAdapter()
-        
+
         # Test players with team abbreviations that need mapping
         test_cases = [
-            ("SFO", "SF"),   # San Francisco 49ers
-            ("GBP", "GB"),   # Green Bay Packers  
-            ("KCC", "KC"),   # Kansas City Chiefs
-            ("NEP", "NE"),   # New England Patriots
-            ("NOS", "NO"),   # New Orleans Saints
-            ("TBB", "TB"),   # Tampa Bay Buccaneers
-            ("LVR", "LV"),   # Las Vegas Raiders
+            ("SFO", "SF"),  # San Francisco 49ers
+            ("GBP", "GB"),  # Green Bay Packers
+            ("KCC", "KC"),  # Kansas City Chiefs
+            ("NEP", "NE"),  # New England Patriots
+            ("NOS", "NO"),  # New Orleans Saints
+            ("TBB", "TB"),  # Tampa Bay Buccaneers
+            ("LVR", "LV"),  # Las Vegas Raiders
             ("BUF", "BUF"),  # Buffalo Bills (no mapping needed)
         ]
-        
+
         for rankings_team, expected_sheet_team in test_cases:
             old_player = OldPlayer(
                 name=f"Test Player {rankings_team}",
@@ -189,21 +189,21 @@ class TestScraperAdapter:
                 team=rankings_team,  # Team in rankings format
                 bye_week=12,
             )
-            
+
             simple_player = adapter.convert_player(old_player)
-            
+
             assert simple_player.team == expected_sheet_team, (
                 f"Expected team {expected_sheet_team} for rankings team {rankings_team}, "
                 f"but got {simple_player.team}"
             )
-    
+
     def test_invalid_teams_filtered(self):
         """Test that invalid team abbreviations are filtered to UNK."""
         adapter = ScraperAdapter()
-        
+
         # Test with FA (free agent) which might appear in data
         invalid_teams = ["FA"]
-        
+
         for invalid_team in invalid_teams:
             old_player = OldPlayer(
                 name=f"Test Player {invalid_team}",
@@ -211,9 +211,9 @@ class TestScraperAdapter:
                 team=invalid_team,
                 bye_week=12,
             )
-            
+
             simple_player = adapter.convert_player(old_player)
-            
+
             assert simple_player.team == "UNK", (
                 f"Expected UNK for invalid team {invalid_team}, "
                 f"but got {simple_player.team}"

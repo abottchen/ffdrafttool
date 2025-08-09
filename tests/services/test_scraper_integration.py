@@ -145,11 +145,11 @@ class TestScraperIntegration:
         # Using actual team abbreviations that FantasySharks uses
         test_cases = [
             ("Travis Kelce", OldPosition.TE, "KCC", 10, 1, 195.5),  # KCC -> KC
-            ("Cooper Kupp", OldPosition.WR, "LAR", 7, 2, 245.0),    # LAR -> LAR  
-            ("Justin Tucker", OldPosition.K, "BAL", 14, 1, 125.0),   # BAL -> BAL
-            ("Buffalo Bills", OldPosition.DST, "BUF", 12, 3, 115.5), # BUF -> BUF
+            ("Cooper Kupp", OldPosition.WR, "LAR", 7, 2, 245.0),  # LAR -> LAR
+            ("Justin Tucker", OldPosition.K, "BAL", 14, 1, 125.0),  # BAL -> BAL
+            ("Buffalo Bills", OldPosition.DST, "BUF", 12, 3, 115.5),  # BUF -> BUF
         ]
-        
+
         # Expected results after team mapping
         expected_teams = ["KC", "LAR", "BAL", "BUF"]
 

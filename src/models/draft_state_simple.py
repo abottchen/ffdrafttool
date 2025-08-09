@@ -1,7 +1,8 @@
 """Simplified DraftState model for fantasy football draft tracking."""
 
-from pydantic import BaseModel
 from typing import Any, Dict, List, Set
+
+from pydantic import BaseModel
 
 from .draft_pick import DraftPick
 from .player_simple import Player
@@ -9,7 +10,7 @@ from .player_simple import Player
 
 class DraftState(BaseModel):
     """Represents the current state of the draft."""
-    
+
     model_config = {"extra": "allow"}  # Allow additional attributes for metadata
 
     picks: List[DraftPick]  # All picks made so far
@@ -29,7 +30,7 @@ class DraftState(BaseModel):
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert draft state to dictionary for JSON serialization.
-        
+
         Note: This method is deprecated. Use model_dump() instead for Pydantic v2.
         """
         return {
@@ -40,7 +41,7 @@ class DraftState(BaseModel):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "DraftState":
         """Create draft state from dictionary.
-        
+
         Note: This method is deprecated. Use DraftState(**data) or DraftState.model_validate(data) instead.
         """
         return cls.model_validate(data)

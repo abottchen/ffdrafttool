@@ -1,7 +1,8 @@
 """DraftPick model for fantasy football draft tracking."""
 
-from pydantic import BaseModel
 from typing import Any, Dict
+
+from pydantic import BaseModel
 
 from .player_simple import Player
 
@@ -28,7 +29,7 @@ class DraftPick(BaseModel):
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert draft pick to dictionary for JSON serialization.
-        
+
         Note: This method is deprecated. Use model_dump() instead for Pydantic v2.
         """
         return {
@@ -39,7 +40,7 @@ class DraftPick(BaseModel):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "DraftPick":
         """Create draft pick from dictionary.
-        
+
         Note: This method is deprecated. Use DraftPick(**data) or DraftPick.model_validate(data) instead.
         """
         return cls.model_validate(data)

@@ -202,85 +202,85 @@ class TestSheetsAdapter:
     def test_extract_player_info(self):
         """Test player name and team extraction from composite names."""
         adapter = SheetsAdapter()
-        
+
         # Test team abbreviation extraction
         name, team = adapter._extract_player_info("Josh Allen   BUF")
         assert name == "Josh Allen"
         assert team == "BUF"
-        
+
         name, team = adapter._extract_player_info("Lamar Jackson   BAL")
         assert name == "Lamar Jackson"
         assert team == "BAL"
-        
+
         name, team = adapter._extract_player_info("Patrick Mahomes II   KC")
         assert name == "Patrick Mahomes II"
         assert team == "KC"
-        
+
         name, team = adapter._extract_player_info("Amon-Ra St. Brown   DET")
         assert name == "Amon-Ra St. Brown"
         assert team == "DET"
-        
+
         # Test names without team abbreviations
         name, team = adapter._extract_player_info("Josh Allen")
         assert name == "Josh Allen"
         assert team == "UNK"
-        
+
         name, team = adapter._extract_player_info("Christian McCaffrey")
         assert name == "Christian McCaffrey"
         assert team == "UNK"
-        
+
         # Test hyphen separators (new format)
         name, team = adapter._extract_player_info("Kendrick Bourne - NE")
         assert name == "Kendrick Bourne"
         assert team == "NE"
-        
+
         name, team = adapter._extract_player_info("Ka'imi Fairbairn - HOU")
         assert name == "Ka'imi Fairbairn"
         assert team == "HOU"
-        
+
         name, team = adapter._extract_player_info("Romeo Doubs - GB")
         assert name == "Romeo Doubs"
         assert team == "GB"
-        
+
         # Test variations of hyphen format
         name, team = adapter._extract_player_info("Player Name  -  LAR")
         assert name == "Player Name"
         assert team == "LAR"
-        
+
         name, team = adapter._extract_player_info("Player Name-SF")
         assert name == "Player Name"
         assert team == "SF"
-        
+
         # Test edge cases
         name, team = adapter._extract_player_info("  Player   Name   SF  ")
         assert name == "Player   Name"
         assert team == "SF"
-        
+
         name, team = adapter._extract_player_info("Name")
         assert name == "Name"
         assert team == "UNK"
-        
+
     def test_extract_player_info_logging(self, caplog):
         """Test that team extraction failures are logged as errors."""
         import logging
-        
+
         adapter = SheetsAdapter()
-        
+
         # Set log level to capture error logs
         with caplog.at_level(logging.ERROR):
             name, team = adapter._extract_player_info("Player Name Without Team")
-            
+
             # Should return UNK team
             assert name == "Player Name Without Team"
             assert team == "UNK"
-            
+
             # Should log an error
             assert len(caplog.records) == 1
             assert caplog.records[0].levelname == "ERROR"
             assert "Unable to extract NFL team" in caplog.records[0].message
             assert "Player Name Without Team" in caplog.records[0].message
             assert "UNK" in caplog.records[0].message
-        
+
     def test_convert_with_composite_player_names(self):
         """Test that composite player names are cleaned during conversion."""
         sheets_data = {
@@ -301,7 +301,7 @@ class TestSheetsAdapter:
                     "pick_number": 2,
                     "round": 1,
                     "player_name": "Lamar Jackson   BAL",  # Another composite name
-                    "position": "QB", 
+                    "position": "QB",
                     "column_team": "Willow's Witches",
                 },
             ],
@@ -313,9 +313,9 @@ class TestSheetsAdapter:
         # Verify player names were cleaned and teams were extracted
         assert draft_state.picks[0].player.name == "Josh Allen"  # Name cleaned
         assert draft_state.picks[0].player.team == "BUF"  # Team extracted
-        assert draft_state.picks[1].player.name == "Lamar Jackson"  # Name cleaned  
+        assert draft_state.picks[1].player.name == "Lamar Jackson"  # Name cleaned
         assert draft_state.picks[1].player.team == "BAL"  # Team extracted
-        
+
         # Verify other data is preserved
         assert draft_state.picks[0].player.position == "QB"
         assert draft_state.picks[0].owner == "Buffy"

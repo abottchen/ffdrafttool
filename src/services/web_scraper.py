@@ -328,7 +328,7 @@ class FantasySharksScraper(WebScraper):
                 if not name_text or not team_text:
                     logger.debug(f"Row {rank}: Missing name or team data")
                     return None
-                
+
                 # Check if this is a header row or statistical summary row
                 if self._is_header_or_stats_row(name_text, team_text, bye_text):
                     logger.debug(f"Row {rank}: Detected header/stats row, skipping")
@@ -397,15 +397,28 @@ class FantasySharksScraper(WebScraper):
             # (QBs have 24 cells, WRs have 23 cells, etc.)
             projected_points = 0.0
             try:
-                if len(cells) >= 6:  # Make sure we have at least basic cells (rank, adp, name, team, bye, stats...)
-                    points_text = cells[-1].get_text(strip=True)  # Last cell is always FantasyPoints
-                    if points_text and points_text.replace('.', '').replace('-', '').isdigit():
+                if (
+                    len(cells) >= 6
+                ):  # Make sure we have at least basic cells (rank, adp, name, team, bye, stats...)
+                    points_text = cells[-1].get_text(
+                        strip=True
+                    )  # Last cell is always FantasyPoints
+                    if (
+                        points_text
+                        and points_text.replace(".", "").replace("-", "").isdigit()
+                    ):
                         projected_points = float(points_text)
-                        logger.debug(f"Row {rank}: Extracted projected points: {projected_points} from last cell (index {len(cells)-1})")
+                        logger.debug(
+                            f"Row {rank}: Extracted projected points: {projected_points} from last cell (index {len(cells)-1})"
+                        )
                     else:
-                        logger.debug(f"Row {rank}: Could not parse projected points from last cell '{points_text}'")
+                        logger.debug(
+                            f"Row {rank}: Could not parse projected points from last cell '{points_text}'"
+                        )
                 else:
-                    logger.debug(f"Row {rank}: Not enough cells for projected points parsing ({len(cells)} cells)")
+                    logger.debug(
+                        f"Row {rank}: Not enough cells for projected points parsing ({len(cells)} cells)"
+                    )
             except (IndexError, ValueError, AttributeError) as e:
                 logger.debug(f"Row {rank}: Error parsing projected points: {str(e)}")
                 projected_points = 0.0
@@ -419,46 +432,60 @@ class FantasySharksScraper(WebScraper):
             logger.warning(f"Failed to parse player row: {str(e)}")
             return None
 
-    def _is_header_or_stats_row(self, name_text: str, team_text: str, bye_text: str) -> bool:
+    def _is_header_or_stats_row(
+        self, name_text: str, team_text: str, bye_text: str
+    ) -> bool:
         """
         Detect if a row is a header or statistical summary row that should be skipped.
-        
+
         Args:
             name_text: Text from the name column
-            team_text: Text from the team column  
+            team_text: Text from the team column
             bye_text: Text from the bye week column
-            
+
         Returns:
             True if the row should be skipped (header/stats row)
         """
         # Common header indicators that are exact matches or at start/end
-        exact_header_names = ["Name", "TDs", "TD", "Pass", "Rush", "Rec", "Pts", "Proj", "Rank", "ADP", "Position"]
-        
+        exact_header_names = [
+            "Name",
+            "TDs",
+            "TD",
+            "Pass",
+            "Rush",
+            "Rec",
+            "Pts",
+            "Proj",
+            "Rank",
+            "ADP",
+            "Position",
+        ]
+
         # Check for exact header matches
         if name_text in exact_header_names:
             return True
-            
+
         # Check for "Player" only if it's the whole word or at the start
         if name_text == "Player" or name_text.startswith("Player "):
             return True
-            
+
         # Check if name contains parentheses indicating a header like "Name (Team)"
         if "(" in name_text and ")" in name_text:
             return True
-            
+
         # Check for statistical data patterns in team column
         # Like "TD1-9" which indicates touchdown statistics
         if team_text and ("TD" in team_text or "-" in team_text):
             # But make sure it's not a legitimate hyphenated team name
             if len(team_text) > 4 or any(char.isdigit() for char in team_text):
                 return True
-        
+
         # Check for non-numeric bye weeks (headers often have text here)
         if bye_text and not bye_text.isdigit():
             # But allow empty bye weeks for some positions
             if bye_text not in ["", "-", "N/A"]:
                 return True
-                
+
         return False
 
     def _extract_player_commentary(self, row) -> Optional[str]:

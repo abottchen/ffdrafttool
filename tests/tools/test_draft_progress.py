@@ -396,7 +396,7 @@ class TestDraftProgress:
     @pytest.mark.asyncio
     async def test_read_draft_progress_with_composite_names(self):
         """Test that composite player names with team abbreviations are properly handled."""
-        
+
         # Mock data with composite names (like what comes from Google Sheets)
         composite_processed_data = {
             "teams": [

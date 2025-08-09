@@ -1,7 +1,8 @@
 """Simplified Player model for fantasy football draft assistance."""
 
-from pydantic import BaseModel, Field
 from typing import Any, Dict
+
+from pydantic import BaseModel, Field
 
 from .injury_status import InjuryStatus
 
@@ -38,7 +39,7 @@ class Player(BaseModel):
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert player to dictionary for JSON serialization.
-        
+
         Note: This method is deprecated. Use model_dump() instead for Pydantic v2.
         """
         result = self.model_dump()
@@ -49,7 +50,7 @@ class Player(BaseModel):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Player":
         """Create player from dictionary, handling missing optional fields.
-        
+
         Note: This method is deprecated. Use Player(**data) or Player.model_validate(data) instead.
         """
         return cls.model_validate(data)

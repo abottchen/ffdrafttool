@@ -11,31 +11,31 @@ from src.models.player_simple import Player
 
 class SheetsAdapter:
     """Converts sheets service data to simplified DraftState models."""
-    
+
     def __init__(self):
         self.logger = logging.getLogger("fantasy-football-mcp.sheets_adapter")
-    
+
     def _extract_player_info(self, raw_name: str) -> tuple[str, str]:
         """Extract player name and team from raw name with team abbreviation.
-        
+
         Args:
             raw_name: Raw player name from sheets (may include team like "Josh Allen   BUF" or "Kendrick Bourne - NE")
-            
+
         Returns:
             tuple[str, str]: (clean_player_name, team_abbreviation)
         """
         import re
-        
+
         # Match team abbreviation at the end with flexible separators
         # Handles patterns like:
         # - "Josh Allen   BUF" (multiple spaces)
         # - "Kendrick Bourne - NE" (space-hyphen-space)
         # - "Player Name  -  TEAM" (various spacing around hyphen)
-        match = re.search(r'[\s\-]+([A-Z]{2,3})\s*$', raw_name)
-        
+        match = re.search(r"[\s\-]+([A-Z]{2,3})\s*$", raw_name)
+
         if match:
             team = match.group(1)  # Extract team abbreviation
-            clean_name = raw_name[:match.start()].strip()  # Remove team from name
+            clean_name = raw_name[: match.start()].strip()  # Remove team from name
         else:
             team = "UNK"  # No team found
             clean_name = raw_name.strip()
@@ -44,7 +44,7 @@ class SheetsAdapter:
                 f"Unable to extract NFL team from player name in draft data: '{raw_name}'. "
                 f"Player will be marked with team 'UNK'. This may affect player matching and analysis."
             )
-            
+
         return clean_name, team
 
     def convert_to_draft_state(self, sheets_data: Dict[str, Any]) -> DraftState:
@@ -104,7 +104,7 @@ class SheetsAdapter:
         Returns:
             Player: Simplified player object with defaults for missing data
         """
-        raw_name = pick_data.get("player_name", "Unknown Player") 
+        raw_name = pick_data.get("player_name", "Unknown Player")
         name, team = self._extract_player_info(raw_name)
         position = pick_data.get("position", "UNK")
 
