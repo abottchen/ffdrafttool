@@ -12,7 +12,6 @@ from src.config import (
     DEFAULT_SHEET_RANGE,
     DRAFT_STATE_CACHE_TTL_SECONDS,
 )
-from src.services.sheets_adapter import SheetsAdapter
 from src.tools.draft_progress import read_draft_progress
 
 logger = logging.getLogger(__name__)
@@ -51,19 +50,13 @@ async def get_cached_draft_state(
     logger.info(f"Fetching fresh draft state for {cache_key}")
     result = await read_draft_progress(sheet_id, sheet_range)
 
-    # Only cache successful results
+    # Cache successful results (read_draft_progress now returns DraftState directly)
     if isinstance(result, dict) and result.get("success", False):
-        # Convert to DraftState using adapter
-        adapter = SheetsAdapter()
-        draft_state = adapter.convert_to_draft_state(result)
-        _draft_state_cache[cache_key] = draft_state
-        return draft_state
-    elif not isinstance(result, dict):
-        # It's already a DraftState object
-        _draft_state_cache[cache_key] = result
+        # This is an error dict, don't cache
         return result
     else:
-        # Return error without caching
+        # It's a DraftState object, cache it
+        _draft_state_cache[cache_key] = result
         return result
 
 

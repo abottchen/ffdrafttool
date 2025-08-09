@@ -1,13 +1,20 @@
 import asyncio
 import logging
 import os
+import re
 import sys
 from abc import ABC, abstractmethod
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 sys.path.append(str(Path(__file__).parent.parent))
+
+from src.models.draft_pick import DraftPick
+from src.models.draft_state_simple import DraftState
+from src.models.injury_status import InjuryStatus
+from src.models.player_simple import Player
+from src.services.team_mapping import normalize_team_abbreviation
 
 try:
     from google.auth.transport.requests import Request
@@ -139,6 +146,91 @@ class SheetsService:
         # Cache simplified - draft_cache was removed in refactoring
         self.cache = None
 
+    def _extract_player_info(self, raw_name: str) -> Tuple[str, str]:
+        """Extract player name and team from raw name with team abbreviation.
+
+        Args:
+            raw_name: Raw player name from sheets (may include team like "Josh Allen   BUF" or "Kendrick Bourne - NE")
+
+        Returns:
+            tuple[str, str]: (clean_player_name, team_abbreviation)
+        """
+        # Match team abbreviation at the end with flexible separators
+        # Handles patterns like:
+        # - "Josh Allen   BUF" (multiple spaces)
+        # - "Kendrick Bourne - NE" (space-hyphen-space)
+        # - "Player Name  -  TEAM" (various spacing around hyphen)
+        match = re.search(r"[\s\-]+([A-Z]{2,3})\s*$", raw_name)
+
+        if match:
+            team = match.group(1)  # Extract team abbreviation
+            clean_name = raw_name[: match.start()].strip()  # Remove team from name
+        else:
+            team = "UNK"  # No team found
+            clean_name = raw_name.strip()
+            # Log error when team cannot be determined from draft data
+            logger.error(
+                f"Unable to extract NFL team from player name in draft data: '{raw_name}'. "
+                f"Player will be marked with team 'UNK'. This may affect player matching and analysis."
+            )
+
+        return clean_name, team
+
+    def _create_player_from_pick(self, pick_data: Dict[str, Any]) -> Player:
+        """Create a Player object from pick data.
+
+        Args:
+            pick_data: Pick data from sheets
+
+        Returns:
+            Player: Simplified player object with defaults for missing data
+        """
+        raw_name = pick_data.get("player_name", "Unknown Player")
+        name, raw_team = self._extract_player_info(raw_name)
+        position = pick_data.get("position", "UNK")
+
+        # Normalize team abbreviation (sheets use "normal" format, so pass through)
+        team = normalize_team_abbreviation(raw_team, source="sheets")
+
+        # Default values for data not available in sheets (team is extracted from name)
+        bye_week = 1  # Default bye week
+        ranking = 999  # Default ranking for unknown players
+        projected_points = 0.0  # Default projection
+        injury_status = InjuryStatus.HEALTHY  # Default to healthy
+        notes = ""  # No notes from sheets
+
+        return Player(
+            name=name,
+            team=team,
+            position=position,
+            bye_week=bye_week,
+            ranking=ranking,
+            projected_points=projected_points,
+            injury_status=injury_status,
+            notes=notes,
+        )
+
+    def _get_owner_for_pick(
+        self, pick_data: Dict[str, Any], team_to_owner: Dict[str, str]
+    ) -> str:
+        """Get the owner for a pick based on column_team mapping.
+
+        Args:
+            pick_data: Pick data from sheets
+            team_to_owner: Mapping from team name to owner
+
+        Returns:
+            str: Owner name or "Unknown" if not found
+        """
+        column_team = pick_data.get("column_team", "")
+
+        # Try to find owner by team name
+        if column_team and column_team in team_to_owner:
+            return team_to_owner[column_team]
+
+        # Fallback to "Unknown" if no mapping found
+        return "Unknown"
+
     def _find_team_by_pick_position(
         self,
         teams: List[Dict],
@@ -173,7 +265,7 @@ class SheetsService:
 
     async def read_draft_data(
         self, sheet_id: str, range_name: str, force_refresh: bool = False
-    ) -> Dict[str, Any]:
+    ) -> DraftState:
         """Read and parse draft data from sheets using team-column structure with intelligent caching"""
         try:
             # Determine if we can use incremental reading
@@ -229,12 +321,8 @@ class SheetsService:
             data = await self.provider.read_range(sheet_id, range_name)
 
             if not data or len(data) < 5:
-                return {
-                    "picks": [],
-                    "teams": [],
-                    "draft_state": {},
-                    "available_players": [],
-                }
+                # Return empty DraftState when no data is available
+                return DraftState(picks=[], teams=[])
 
             # Extract team structure from rows 2 and 3 (indices 1 and 2)
             owner_row = data[1] if len(data) > 1 else []
@@ -393,26 +481,57 @@ class SheetsService:
             # Sort by pick number
             picks.sort(key=lambda x: x["pick_number"])
 
-            # Basic round information (data only, no analysis)
-            completed_rounds = max(pick["round"] for pick in picks) if picks else 0
+            # Create team name to owner mapping for DraftPick creation
+            team_to_owner = {}
+            for team in teams:
+                team_name = team.get("team_name", "")
+                owner = team.get("owner", "Unknown")
+                if team_name:
+                    team_to_owner[team_name] = owner
 
-            result = {
-                "picks": picks,
-                "teams": teams,
-                "draft_state": {
-                    "total_picks": len(picks),
-                    "total_teams": len(teams),
-                    "completed_rounds": completed_rounds,
-                },
-                # Analysis removed - belongs in MCP client
-                "available_players": [],  # Would be populated from another source
-            }
+            # Convert picks to DraftPick objects with Player models
+            draft_picks = []
+            for pick_data in picks:
+                # Create Player object
+                player = self._create_player_from_pick(pick_data)
 
-            # Cache the result if caching is enabled
+                # Get owner for this pick
+                owner = self._get_owner_for_pick(pick_data, team_to_owner)
+
+                # Create DraftPick
+                draft_pick = DraftPick(player=player, owner=owner)
+                draft_picks.append(draft_pick)
+
+            # Convert teams to simple dictionaries for DraftState
+            simple_teams = []
+            for team in teams:
+                simple_team = {
+                    "owner": team.get("owner", "Unknown"),
+                    "team_name": team.get("team_name", "Unknown Team"),
+                }
+                simple_teams.append(simple_team)
+
+            # Create and return DraftState object directly
+            draft_state = DraftState(picks=draft_picks, teams=simple_teams)
+
+            # Cache the draft state if caching is enabled
+            # Note: We may need to update cache to handle DraftState objects
             if self.cache:
-                self.cache.update_cache(sheet_id, range_name, result)
+                # For now, cache the raw data for compatibility
+                cache_data = {
+                    "picks": picks,
+                    "teams": teams,
+                    "draft_state": {
+                        "total_picks": len(picks),
+                        "total_teams": len(teams),
+                        "completed_rounds": (
+                            max(pick["round"] for pick in picks) if picks else 0
+                        ),
+                    },
+                }
+                self.cache.update_cache(sheet_id, range_name, cache_data)
 
-            return result
+            return draft_state
 
         except Exception as e:
             logger.error(f"Error reading draft data: {str(e)}")

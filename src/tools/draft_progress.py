@@ -72,18 +72,10 @@ async def read_draft_progress(
         sheets_service = SheetsService(provider)
 
         # Read and parse draft data with caching support
-        processed_data = await sheets_service.read_draft_data(
+        # sheets_service now returns DraftState directly (no adapter needed)
+        draft_state = await sheets_service.read_draft_data(
             sheet_id, sheet_range, force_refresh
         )
-
-        # Add success field for adapter compatibility
-        processed_data["success"] = True
-
-        # Convert to simplified DraftState using adapter
-        from src.services.sheets_adapter import SheetsAdapter
-
-        adapter = SheetsAdapter()
-        draft_state = adapter.convert_to_draft_state(processed_data)
 
         logger.info(
             f"read_draft_progress completed in {time.time() - start_time:.2f} seconds"

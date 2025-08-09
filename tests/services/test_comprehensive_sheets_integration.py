@@ -7,7 +7,6 @@ import pytest
 from src.models.draft_pick import DraftPick
 from src.models.draft_state_simple import DraftState
 from src.models.player_simple import Player
-from src.services.sheets_adapter import SheetsAdapter
 from src.services.sheets_service import SheetsService
 from tests.fixtures.csv_sheets_provider import CSVSheetsProvider
 
@@ -36,19 +35,13 @@ class TestComprehensiveSheetsIntegration:
             "fixture_sheet_id", "Draft!A1:V24", force_refresh=True
         )
 
-        # Verify the sheets service processed the data correctly
-        assert "teams" in processed_data
-        assert "picks" in processed_data
-        assert len(processed_data["teams"]) == 10  # Should detect 10 teams from fixture
-        assert len(processed_data["picks"]) > 0  # Should have draft picks
+        # SheetsService now returns DraftState object directly
+        assert isinstance(processed_data, DraftState)
+        assert len(processed_data.teams) == 10  # Should detect 10 teams from fixture
+        assert len(processed_data.picks) > 0  # Should have draft picks
 
-        # The SheetsService doesn't return a 'success' field, but if we got here it worked
-        # Add success field for adapter compatibility
-        processed_data["success"] = True
-
-        # Convert using sheets adapter
-        adapter = SheetsAdapter()
-        draft_state = adapter.convert_to_draft_state(processed_data)
+        # No adapter needed anymore - processed_data is already a DraftState
+        draft_state = processed_data
 
         # Verify complete pipeline worked
         assert isinstance(draft_state, DraftState)
@@ -83,15 +76,12 @@ class TestComprehensiveSheetsIntegration:
         """Test that picks are correctly parsed from real sheet format."""
 
         sheets_service = SheetsService(csv_provider)
-        processed_data = await sheets_service.read_draft_data(
+        draft_state = await sheets_service.read_draft_data(
             "fixture_sheet_id", "Draft!A1:V24", force_refresh=True
         )
 
-        # Add success field for adapter compatibility
-        processed_data["success"] = True
-
-        adapter = SheetsAdapter()
-        draft_state = adapter.convert_to_draft_state(processed_data)
+        # SheetsService now returns DraftState directly (no adapter needed)
+        assert isinstance(draft_state, DraftState)
 
         # CRITICAL TEST: Verify specific players from CSV fixture make it to final draft state
         # This test would have caught the field name mismatch bug
@@ -163,13 +153,12 @@ class TestComprehensiveSheetsIntegration:
         player_name vs player field mismatches that cause 'Unknown Player' defaults.
         """
         sheets_service = SheetsService(csv_provider)
-        processed_data = await sheets_service.read_draft_data(
+        draft_state = await sheets_service.read_draft_data(
             "fixture_sheet_id", "Draft!A1:V24", force_refresh=True
         )
-        processed_data["success"] = True
 
-        adapter = SheetsAdapter()
-        draft_state = adapter.convert_to_draft_state(processed_data)
+        # SheetsService now returns DraftState directly (no adapter needed)
+        assert isinstance(draft_state, DraftState)
 
         # Test data from CSV fixture:
         # Round 1: Buffy picks Isiah Pacheco KC (RB), Willow picks Derrick Henry BAL (RB), etc.
@@ -257,39 +246,40 @@ class TestComprehensiveSheetsIntegration:
             "fixture_sheet_id", "Draft!A1:V24", force_refresh=True
         )
 
-        # SheetsService doesn't return 'success', but if we got data it worked
-        assert len(processed_data.get("teams", [])) > 0  # Should have teams data
+        # SheetsService now returns DraftState object directly
+        assert isinstance(processed_data, DraftState)
+        assert len(processed_data.teams) > 0  # Should have teams data
 
         # Check teams structure
-        teams = processed_data["teams"]
+        teams = processed_data.teams
         assert len(teams) == 10
 
         # Each team should have proper structure
         for team in teams:
             assert "team_name" in team
             assert "owner" in team
-            assert "team_number" in team
             assert team["team_name"] != ""
             assert team["owner"] != ""
-            assert isinstance(team["team_number"], int)
 
         # Check picks structure
-        picks = processed_data["picks"]
+        picks = processed_data.picks
         assert len(picks) > 0
 
-        # Each pick should have proper structure with correct field names
+        # Each pick should have proper DraftPick structure
         for i, pick in enumerate(picks[:5]):  # Check first 5 picks
-            assert "pick_number" in pick, f"Pick {i+1} missing pick_number field"
-            assert "round" in pick, f"Pick {i+1} missing round field"
-            assert "player_name" in pick, f"Pick {i+1} missing player_name field"
-            assert "position" in pick, f"Pick {i+1} missing position field"
-            assert "column_team" in pick, f"Pick {i+1} missing column_team field"
+            assert isinstance(pick, DraftPick), f"Pick {i+1} should be DraftPick object"
+            assert hasattr(pick, "player"), f"Pick {i+1} missing player field"
+            assert hasattr(pick, "owner"), f"Pick {i+1} missing owner field"
+            assert isinstance(
+                pick.player, Player
+            ), f"Pick {i+1} player should be Player object"
 
-            # Verify the field contains actual data, not defaults
+            # Verify the player contains actual data, not defaults
             assert (
-                pick["player_name"] != "Unknown Player"
+                pick.player.name != "Unknown Player"
             ), f"Pick {i+1} has default player name"
-            assert pick["player_name"].strip(), f"Pick {i+1} has empty player name"
+            assert pick.player.name.strip(), f"Pick {i+1} has empty player name"
+            assert pick.owner.strip(), f"Pick {i+1} has empty owner name"
 
     @pytest.mark.asyncio
     async def test_error_handling_with_malformed_csv(self):
@@ -312,13 +302,11 @@ class TestComprehensiveSheetsIntegration:
                 "bad_sheet", "Draft!A1:V24", force_refresh=True
             )
 
-            # The service should still return a response, even if data is minimal
-            # SheetsService.read_draft_data doesn't return 'success' field, but should return standard structure
-            assert "teams" in processed_data
-            assert "picks" in processed_data
+            # The service should still return a DraftState, even if data is minimal
+            assert isinstance(processed_data, DraftState)
             # Should have minimal empty data for malformed input
-            assert isinstance(processed_data["teams"], list)
-            assert isinstance(processed_data["picks"], list)
+            assert isinstance(processed_data.teams, list)
+            assert isinstance(processed_data.picks, list)
 
         finally:
             # Clean up temp file

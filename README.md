@@ -181,7 +181,7 @@ ffdrafttool2/
 │   └── services/
 │       ├── sheets_service.py        # Google Sheets integration
 │       ├── web_scraper.py           # FantasySharks scraper
-│       └── sheets_adapter.py        # Adapts sheets data to models
+│       └── team_mapping.py          # Team abbreviation normalization
 ├── tests/                           # Comprehensive test suite (141 tests)
 ├── example-prompt.md                # Example prompt for LLM-based MCP clients
 ├── run_server.py                    # Server entry point

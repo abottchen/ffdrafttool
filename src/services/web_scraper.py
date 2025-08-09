@@ -10,6 +10,7 @@ from bs4 import BeautifulSoup
 
 from src.models.injury_status import InjuryStatus
 from src.models.player_simple import Player
+from src.services.team_mapping import normalize_team_abbreviation
 
 logger = logging.getLogger(__name__)
 
@@ -359,9 +360,9 @@ class FantasySharksScraper(WebScraper):
                 else:
                     name = name_text.strip()
 
-                # Extract team
-                team = team_text.strip()
-                if not team or len(team) > 4:  # Team should be 2-4 characters
+                # Extract and normalize team abbreviation
+                raw_team = team_text.strip()
+                if not raw_team or len(raw_team) > 3:  # Team should be 2-3 characters
                     team = "UNK"
                     # Log error when team cannot be determined from rankings data
                     logger.error(
@@ -369,6 +370,9 @@ class FantasySharksScraper(WebScraper):
                         f"Team data was: '{team_text}'. Player will be marked with team 'UNK'. "
                         f"This may affect player matching and analysis."
                     )
+                else:
+                    # Normalize team abbreviation from rankings format to sheets format
+                    team = normalize_team_abbreviation(raw_team, source="rankings")
 
                 # Extract bye week
                 bye_week = 1
