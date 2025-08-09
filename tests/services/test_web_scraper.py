@@ -295,6 +295,6 @@ class TestRankingsIntegration:
         assert espn_rank > 0
         assert yahoo_rank > 0
 
-        # Check that both have projected points
-        assert espn_mccaffrey.projected_points > 0
-        assert yahoo_mccaffrey.projected_points > 0
+        # Check that both have expected projected points from mock data
+        assert espn_mccaffrey.projected_points == 99.5
+        assert yahoo_mccaffrey.projected_points == 98.5
