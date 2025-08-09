@@ -174,11 +174,15 @@ async def get_team_roster_tool(owner_name: str) -> str:
 
     try:
         result = await get_team_roster(owner_name)
-        return json.dumps(
-            result,
-            indent=2,
-            default=lambda obj: obj.__dict__ if hasattr(obj, "__dict__") else str(obj),
-        )
+
+        # Convert Player objects to dicts using Pydantic serialization
+        if result.get("success") and "players" in result:
+            serialized_players = [
+                player.model_dump(mode="json") for player in result["players"]
+            ]
+            result["players"] = serialized_players
+
+        return json.dumps(result, indent=2)
     except Exception as e:
         logger.error(f"Error in get_team_roster: {e}")
         return json.dumps({"success": False, "error": str(e)}, indent=2)

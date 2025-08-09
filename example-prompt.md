@@ -154,10 +154,15 @@ When analyzing players, consider these factors:
 
 ### Bye Week Management
 
-**Critical Conflicts to Avoid**:
-- Same bye week for both starting RBs
-- Same bye week for both starting WRs  
-- QB and top RB/WR on same bye week
+**Real Bye Week Problems to Avoid**:
+- Multiple starters at the SAME position on the same bye week
+- Example: Both your starting RBs on Week 8 bye (can't field 2 RBs)
+- Example: Your only QB and backup QB both on Week 10 (no QB to start)
+- Not having enough depth at a position to cover bye weeks
+
+**NOT Actually Problems**:
+- Cross-position bye conflicts (RB + TE on same week = fine)
+- QB and top WR on same bye (you need different players anyway)
 
 **Bye Week Strategy**:
 - Ignore bye weeks in rounds 1-6 (talent trumps everything)

@@ -1,5 +1,6 @@
 """Tests for team roster tool."""
 
+import logging
 from unittest.mock import patch
 
 import pytest
@@ -82,28 +83,81 @@ class TestTeamRoster:
 
     @pytest.mark.asyncio
     async def test_get_team_roster_success(self, mock_draft_state):
-        """Test successful retrieval of team roster."""
+        """Test successful retrieval of team roster with enrichment."""
+
+        # Mock rankings data for enrichment
+        mock_qb_rankings = {
+            "success": True,
+            "players": [
+                {
+                    "name": "Josh Allen",
+                    "team": "BUF",
+                    "position": "QB",
+                    "bye_week": 12,
+                    "ranking": 1,
+                    "projected_points": 99.0,
+                    "notes": "Elite QB",
+                }
+            ],
+        }
+
+        mock_rb_rankings = {
+            "success": True,
+            "players": [
+                {
+                    "name": "Christian McCaffrey",
+                    "team": "SF",
+                    "position": "RB",
+                    "bye_week": 9,
+                    "ranking": 2,
+                    "projected_points": 98.0,
+                    "notes": "Workhorse RB",
+                }
+            ],
+        }
 
         with patch("src.tools.team_roster.get_cached_draft_state") as mock_draft:
-            mock_draft.return_value = mock_draft_state
+            with patch("src.tools.team_roster.get_player_rankings") as mock_rankings:
+                mock_draft.return_value = mock_draft_state
 
-            result = await get_team_roster("Buffy")
+                # Return different rankings based on position
+                def rankings_side_effect(position):
+                    if position == "QB":
+                        return mock_qb_rankings
+                    elif position == "RB":
+                        return mock_rb_rankings
+                    return {"success": True, "players": []}
 
-            assert result["success"] is True
-            assert result["owner_name"] == "Buffy"
-            assert len(result["players"]) == 2
+                mock_rankings.side_effect = rankings_side_effect
 
-            # Check that Buffy's players are returned
-            player_names = [p.name for p in result["players"]]
-            assert "Josh Allen" in player_names
-            assert "Christian McCaffrey" in player_names
+                result = await get_team_roster("Buffy")
 
-            # Verify players are Player objects
-            for player in result["players"]:
-                assert isinstance(player, Player)
+                assert result["success"] is True
+                assert result["owner_name"] == "Buffy"
+                assert len(result["players"]) == 2
 
-            # Verify draft state was fetched
-            mock_draft.assert_called_once()
+                # Check that Buffy's players are returned with enriched data
+                players_by_name = {p.name: p for p in result["players"]}
+
+                josh = players_by_name["Josh Allen"]
+                assert josh.bye_week == 12  # Should be enriched, not default 1
+                assert josh.projected_points == 99.0
+                assert josh.ranking == 1
+
+                cmc = players_by_name["Christian McCaffrey"]
+                assert cmc.bye_week == 9  # Should be enriched, not default 1
+                assert cmc.projected_points == 98.0
+                assert cmc.ranking == 2
+
+                # Verify players are Player objects
+                for player in result["players"]:
+                    assert isinstance(player, Player)
+
+                # Verify draft state and rankings were fetched
+                mock_draft.assert_called_once()
+                assert (
+                    mock_rankings.call_count == 4
+                )  # 2 positions * 2 calls each (check + fetch)
 
     @pytest.mark.asyncio
     async def test_get_team_roster_case_insensitive(self, mock_draft_state):
@@ -260,3 +314,39 @@ class TestTeamRoster:
             assert "Lamar Jackson" not in buffy_names
             assert "Josh Allen" not in willow_names
             assert "Christian McCaffrey" not in willow_names
+
+    @pytest.mark.asyncio
+    async def test_get_team_roster_player_not_found_in_rankings(
+        self, mock_draft_state, caplog
+    ):
+        """Test error logging when drafted player not found in rankings."""
+
+        # Mock rankings that don't contain the drafted players
+        mock_empty_rankings = {
+            "success": True,
+            "players": [],  # Empty - players won't be found
+        }
+
+        with patch("src.tools.team_roster.get_cached_draft_state") as mock_draft:
+            with patch("src.tools.team_roster.get_player_rankings") as mock_rankings:
+                mock_draft.return_value = mock_draft_state
+                mock_rankings.return_value = mock_empty_rankings
+
+                with caplog.at_level(logging.ERROR):
+                    result = await get_team_roster("Buffy")
+
+                assert result["success"] is True
+                assert len(result["players"]) == 2
+
+                # Check that error was logged for missing players
+                error_logs = [
+                    record for record in caplog.records if record.levelname == "ERROR"
+                ]
+                assert len(error_logs) == 2  # One for each player not found
+
+                assert "PLAYER DATA ISSUE" in error_logs[0].message
+                assert (
+                    "Josh Allen" in error_logs[0].message
+                    or "Christian McCaffrey" in error_logs[0].message
+                )
+                assert "was not found in" in error_logs[0].message

@@ -5,6 +5,7 @@ from typing import Any, Dict, List
 
 from src.models.player_simple import Player
 from src.services.draft_state_cache import get_cached_draft_state
+from src.tools.player_rankings import get_player_rankings
 
 logger = logging.getLogger(__name__)
 
@@ -61,20 +62,92 @@ async def get_team_roster(owner_name: str) -> Dict[str, Any]:
             }
 
         # Find picks by this owner
-        owner_picks: List[Player] = []
+        basic_picks: List[Player] = []
         for pick in draft_picks:
             if pick.owner.lower() == owner_name.lower():
-                owner_picks.append(pick.player)
+                basic_picks.append(pick.player)
+
+        # Enrich player data with rankings information (bye weeks, projections, etc.)
+        enriched_picks: List[Player] = []
+        positions_fetched = set()  # Track which positions we've already fetched
+
+        for player in basic_picks:
+            try:
+                # Check if we need to fetch rankings for this position
+                if player.position not in positions_fetched:
+                    logger.info(
+                        f"Fetching rankings for position {player.position} to enrich player data"
+                    )
+                    rankings_result = await get_player_rankings(
+                        position=player.position
+                    )
+                    if not rankings_result.get("success"):
+                        logger.warning(
+                            f"Failed to fetch rankings for {player.position}: {rankings_result.get('error')}"
+                        )
+                    positions_fetched.add(player.position)
+
+                # Try to find this player in rankings to get enriched data
+                rankings_result = await get_player_rankings(position=player.position)
+                if rankings_result.get("success"):
+                    # Look for matching player in rankings
+                    enriched_player = None
+                    for ranked_player_data in rankings_result["players"]:
+                        # Match by name and team
+                        if (
+                            ranked_player_data["name"].lower() == player.name.lower()
+                            and ranked_player_data["team"].upper()
+                            == player.team.upper()
+                        ):
+                            # Create enriched Player object from rankings data
+                            enriched_player = Player(
+                                name=ranked_player_data["name"],
+                                team=ranked_player_data["team"],
+                                position=ranked_player_data["position"],
+                                bye_week=ranked_player_data["bye_week"],
+                                ranking=ranked_player_data["ranking"],
+                                projected_points=ranked_player_data["projected_points"],
+                                injury_status=player.injury_status,  # Keep original injury status
+                                notes=ranked_player_data.get("notes", ""),
+                            )
+                            logger.debug(
+                                f"Enriched {player.name} with rankings data (bye week: {ranked_player_data['bye_week']})"
+                            )
+                            break
+
+                    if enriched_player:
+                        enriched_picks.append(enriched_player)
+                    else:
+                        # Player not found in rankings - this is concerning
+                        logger.error(
+                            f"PLAYER DATA ISSUE: Drafted player '{player.name}' ({player.team} {player.position}) "
+                            f"was not found in {player.position} rankings. This indicates a potential data quality "
+                            f"issue - either the player name/team doesn't match between draft sheet and rankings, "
+                            f"or the rankings data is incomplete. Using basic draft sheet data as fallback."
+                        )
+                        enriched_picks.append(player)
+                else:
+                    # Rankings fetch failed, use basic data
+                    logger.warning(
+                        f"Could not fetch rankings for {player.position}, using basic data for {player.name}"
+                    )
+                    enriched_picks.append(player)
+
+            except Exception as e:
+                logger.error(
+                    f"Error enriching data for {player.name}: {e}. Using basic data."
+                )
+                enriched_picks.append(player)
 
         logger.info(
             f"get_team_roster completed in {time.time() - start_time:.2f} seconds. "
-            f"Found {len(owner_picks)} picks for {owner_name}"
+            f"Found {len(enriched_picks)} picks for {owner_name} (enriched with rankings data)"
         )
 
         return {
             "success": True,
             "owner_name": owner_name,
-            "players": owner_picks,
+            "players": enriched_picks,
         }
 
     except Exception as e:
