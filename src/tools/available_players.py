@@ -4,6 +4,7 @@ import logging
 from typing import Any, Dict
 
 from src.models.draft_state_simple import DraftState
+from src.services.draft_state_cache import get_cached_draft_state
 from src.tools.player_rankings import get_player_rankings
 
 logger = logging.getLogger(__name__)
@@ -24,14 +25,11 @@ def _normalize_player_name(name: str) -> str:
     return " ".join(normalized.split()).strip()
 
 
-async def get_available_players(
-    draft_state: DraftState, position: str, limit: int
-) -> Dict[str, Any]:
+async def get_available_players(position: str, limit: int) -> Dict[str, Any]:
     """
     Get a list of top undrafted players at a position.
 
     Args:
-        draft_state: Current draft state to determine who's available
         position: Position to filter ("QB", "RB", "WR", "TE", "K", "DST")
         limit: Maximum number of players to return
 
@@ -58,6 +56,30 @@ async def get_available_players(
                 "success": False,
                 "error": "Limit must be greater than 0",
                 "error_type": "invalid_limit",
+            }
+
+        # Fetch current draft state (with caching)
+        draft_state_result = await get_cached_draft_state()
+
+        # Handle error cases from draft state fetch
+        if isinstance(draft_state_result, dict) and not draft_state_result.get(
+            "success", True
+        ):
+            return {
+                "success": False,
+                "error": f"Failed to fetch draft state: {draft_state_result.get('error')}",
+                "error_type": "draft_state_failed",
+            }
+
+        # If it's a DraftState object, use it directly
+        if isinstance(draft_state_result, DraftState):
+            draft_state = draft_state_result
+        else:
+            # This shouldn't happen, but handle it gracefully
+            return {
+                "success": False,
+                "error": "Unexpected draft state format",
+                "error_type": "invalid_draft_state",
             }
 
         # Get player rankings for the specified position
@@ -122,7 +144,7 @@ async def get_available_players(
                 "problem": f"An unexpected error occurred: {error_message}",
                 "solution": "Check logs for detailed error information",
                 "next_steps": [
-                    "1. Verify draft_state contains valid picks data",
+                    "1. Verify Google Sheets connection is working",
                     "2. Ensure position parameter is valid",
                     "3. Check that player rankings tool is working",
                     "4. Verify limit parameter is positive",
@@ -131,6 +153,5 @@ async def get_available_players(
             "inputs": {
                 "position": position,
                 "limit": limit,
-                "draft_picks_count": len(draft_state.picks) if draft_state else 0,
             },
         }

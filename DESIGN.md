@@ -47,11 +47,11 @@ The MCP server provides three tools for data retrieval. All analysis and draft r
 ### 4. Available Players Tool
 **Purpose**: Get a list of top undrafted players at a position
 - **Inputs**:
-  - draft_state: Required - current draft state to determine who's available
   - position: Required string ("QB", "RB", "WR", "TE", "K", "DST")
   - limit: Required integer (max number of players to return)
 - **Outputs**: List of undrafted Player objects with complete ranking data
 - **Implementation**:
+  - Internally fetches current draft state from Google Sheets (with caching)
   - Internally calls Player Rankings tool if position not cached
   - Get cached rankings for the specified position
   - Filter out players already in draft_state.picks
@@ -151,8 +151,10 @@ def fetch_with_retry(func, max_retries=1):
 ```
 
 ### Caching Implementation
+
+#### Rankings Cache
 ```python
-# Global in-memory cache
+# Global in-memory cache for rankings (persistent for server session)
 _rankings_cache = {
     "QB": None,
     "RB": None,
@@ -171,11 +173,36 @@ def get_cached_or_fetch(position):
     return data
 ```
 
+#### Draft State Cache
+```python
+# TTL-based cache for draft state (configurable expiration)
+from cachetools import TTLCache
+from datetime import timedelta
+
+# Cache with configurable TTL from config
+_draft_state_cache = TTLCache(
+    maxsize=1,  # Only cache the latest draft state
+    ttl=DRAFT_STATE_CACHE_TTL_SECONDS  # From config.py
+)
+
+async def get_cached_draft_state(sheet_id, sheet_range):
+    cache_key = f"{sheet_id}:{sheet_range}"
+    
+    if cache_key in _draft_state_cache:
+        return _draft_state_cache[cache_key]
+    
+    # Fetch fresh from Google Sheets
+    draft_state = await read_draft_progress(sheet_id, sheet_range)
+    _draft_state_cache[cache_key] = draft_state
+    return draft_state
+```
+
 ### Configuration
 All settings in config.json:
 - Google Sheets ID and range
 - Owner name mapping
 - Retry counts
+- Draft state cache TTL (seconds, default: 60)
 - Any other deployment-specific settings
 
 ## Key Design Decisions
@@ -183,25 +210,24 @@ All settings in config.json:
 1. **No persistence**: Cache lives in memory only, refreshes on restart
 2. **Single data source**: FantasySharks only for simplicity and reliability
 3. **Position-based caching**: Avoids token limits, improves performance
-4. **Minimal objects**: Only essential fields, no computed properties
-5. **Clear separation**: Server provides data, client provides intelligence
-6. **Internal tool chaining**: Available Players tool internally calls Rankings tool as needed
+4. **Draft state caching**: TTL-based cache (default 60s) to reduce Google Sheets API calls
+5. **Minimal objects**: Only essential fields, no computed properties
+6. **Clear separation**: Server provides data, client provides intelligence
+7. **Internal tool chaining**: Available Players tool internally fetches draft state and rankings as needed
 
 ## MCP Client Usage Example
 
 **User Question**: "Which 5 QBs should I be targeting at this point in the draft?"
 
 **MCP Client Actions**:
-1. Call Draft Progress Tool → Get current draft state
-2. Call Available Players Tool with:
-   - draft_state from step 1
+1. Call Available Players Tool with:
    - position: "QB"  
    - limit: 10 (get extras for analysis)
-3. Receive list of available QBs with rankings/projections
-4. Use AI to analyze based on:
-   - User's current roster (from draft_state)
+2. Receive list of available QBs with rankings/projections and draft context
+3. Use AI to analyze based on:
+   - Draft context included in response (teams, picks made)
    - Draft strategy (from client's system prompt)
    - Player data (from available players)
-5. Return recommendation of top 5 QBs with reasoning
+4. Return recommendation of top 5 QBs with reasoning
 
-**Note**: Client only needs 2 tool calls. The server handles rankings internally.
+**Note**: Client only needs 1 tool call. The server handles both draft state and rankings internally.

@@ -1,6 +1,6 @@
 # Fantasy Football Draft Assistant - MCP Client Prompt
 
-This example prompt configures an LLM-based MCP client to act as an expert fantasy football draft assistant using the Fantasy Football Draft Assistant MCP server. The MCP server provides raw data through 4 tools, and the client LLM provides all analysis and recommendations.
+This example prompt configures an LLM-based MCP client to act as an expert fantasy football draft assistant using the Fantasy Football Draft Assistant MCP server. The MCP server provides raw data through 4 tools, and the client LLM provides all analysis and recommendations. You should use tables to organize output.  Add in conversational text to make the response interesting.  Use emojis to spice things up.
 
 **Note for Claude Code users**: Save this file as `CLAUDE.md` in your project root.
 

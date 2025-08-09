@@ -105,14 +105,11 @@ async def read_draft_progress_tool(
 
 
 @mcp.tool()
-async def get_available_players_tool(
-    draft_state: dict, position: str, limit: int
-) -> str:
+async def get_available_players_tool(position: str, limit: int) -> str:
     """
     Get a list of top undrafted players at a position.
 
     Args:
-        draft_state: Current draft state to determine who's available
         position: Position to filter (QB, RB, WR, TE, K, DST)
         limit: Maximum number of players to return
 
@@ -120,57 +117,9 @@ async def get_available_players_tool(
         JSON string with list of available players
     """
     logger.info(f"get_available_players called with position={position}, limit={limit}")
-    logger.debug(
-        f"Draft state structure: teams={len(draft_state.get('teams', []))}, picks={len(draft_state.get('picks', []))}"
-    )
 
     try:
-        # Convert dict to DraftState object
-        from src.models.draft_pick import DraftPick
-        from src.models.draft_state_simple import DraftState
-        from src.models.injury_status import InjuryStatus
-        from src.models.player_simple import Player
-
-        teams = draft_state.get("teams", [])
-        picks_data = draft_state.get("picks", [])
-
-        logger.debug(f"Processing {len(picks_data)} picks from draft state")
-
-        picks = []
-        for pick_data in picks_data:
-            player_data = pick_data.get("player")
-            if isinstance(player_data, dict):
-                # Already a Player object dict
-                player = Player(
-                    name=player_data.get("name", ""),
-                    team=player_data.get("team", ""),
-                    position=player_data.get("position", ""),
-                    bye_week=player_data.get("bye_week", 0),
-                    ranking=player_data.get("ranking", 999),
-                    projected_points=player_data.get("projected_points", 0.0),
-                    injury_status=InjuryStatus(
-                        player_data.get("injury_status", "HEALTHY")
-                    ),
-                    notes=player_data.get("notes", ""),
-                )
-            else:
-                # String format - create basic player object
-                player = Player(
-                    name=str(player_data or ""),
-                    team="",
-                    position="",
-                    bye_week=0,
-                    ranking=999,
-                    projected_points=0.0,
-                    injury_status=InjuryStatus.HEALTHY,
-                    notes="",
-                )
-
-            picks.append(DraftPick(player=player, owner=pick_data.get("owner", "")))
-
-        draft_state_obj = DraftState(teams=teams, picks=picks)
-
-        result = await get_available_players(draft_state_obj, position, limit)
+        result = await get_available_players(position, limit)
         return json.dumps(result, indent=2)
     except Exception as e:
         logger.error(f"Error in get_available_players: {e}")
