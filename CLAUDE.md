@@ -54,8 +54,8 @@ ffdrafttool2/
 │   │   └── injury_status.py         # Injury status enum
 │   └── services/                    # Data retrieval layer
 │       ├── sheets_service.py        # Google Sheets API integration
-│       ├── web_scraper.py           # FantasySharks scraper (creates Pydantic models directly)
-│       └── sheets_adapter.py        # Transforms sheets → models
+│       ├── web_scraper.py           # FantasySharks scraper
+│       └── team_mapping.py          # Team abbreviation normalization
 ├── tests/                           # 135 tests with 66% coverage
 ├── DESIGN.md                        # Architecture specification
 ├── example-prompt.md                # LLM client configuration
@@ -75,7 +75,7 @@ ffdrafttool2/
 - **Data Only**: Server provides data, client provides intelligence
 - **No Analysis**: Remove any code that analyzes, recommends, or strategizes
 - **Simple Models**: Use minimal data structures (see `src/models/`)
-- **Direct Model Creation**: Scrapers create Pydantic models directly, sheets use adapter for transformation
+- **Direct Model Creation**: Both scrapers and sheets service create Pydantic models directly
 
 ### Coding Standards
 - **Type Hints**: All functions must have type annotations
@@ -124,7 +124,7 @@ pytest tests/tools/test_draft_progress.py -v
 ### ✅ Completed
 - Simplified from 5 complex tools to 4 data-only tools
 - Removed all analysis logic from server
-- Direct Pydantic model creation in scrapers, sheets adapter for CSV transformation
+- Direct Pydantic model creation in both scrapers and sheets service
 - 135 tests passing with 66% coverage
 - Full conformance with DESIGN.md specification
 
