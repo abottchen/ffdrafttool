@@ -24,6 +24,7 @@ from src.tools.available_players import get_available_players
 from src.tools.draft_progress import read_draft_progress
 from src.tools.player_info import get_player_info
 from src.tools.player_rankings import get_player_rankings
+from src.tools.team_roster import get_team_roster
 
 logs_dir = Path(__file__).parent.parent / "logs"
 logs_dir.mkdir(exist_ok=True)
@@ -155,6 +156,31 @@ async def get_player_info_tool(
         return json.dumps(result, indent=2)
     except Exception as e:
         logger.error(f"Error in get_player_info: {e}")
+        return json.dumps({"success": False, "error": str(e)}, indent=2)
+
+
+@mcp.tool()
+async def get_team_roster_tool(owner_name: str) -> str:
+    """
+    Get all drafted players for a specific owner.
+
+    Args:
+        owner_name: Name of the team owner to get roster for
+
+    Returns:
+        JSON string with owner's name and list of Player objects
+    """
+    logger.info(f"get_team_roster called with owner_name={owner_name}")
+
+    try:
+        result = await get_team_roster(owner_name)
+        return json.dumps(
+            result,
+            indent=2,
+            default=lambda obj: obj.__dict__ if hasattr(obj, "__dict__") else str(obj),
+        )
+    except Exception as e:
+        logger.error(f"Error in get_team_roster: {e}")
         return json.dumps({"success": False, "error": str(e)}, indent=2)
 
 

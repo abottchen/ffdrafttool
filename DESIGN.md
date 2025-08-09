@@ -2,7 +2,7 @@
 
 ## Tools
 
-The MCP server provides three tools for data retrieval. All analysis and draft recommendations are handled by the MCP client.
+The MCP server provides five tools for data retrieval. All analysis and draft recommendations are handled by the MCP client.
 
 ### 1. Draft Progress Tool
 **Purpose**: Read current draft state from Google Sheets
@@ -56,7 +56,19 @@ The MCP server provides three tools for data retrieval. All analysis and draft r
   - Get cached rankings for the specified position
   - Filter out players already in draft_state.picks
   - Sort remaining players by projected_points (descending)
-  - Return top <limit> available players with all player data 
+  - Return top <limit> available players with all player data
+
+### 5. Team Roster Tool
+**Purpose**: Get all drafted players for a specific owner
+- **Inputs**:
+  - owner_name: Required string (exact owner name from draft data)
+- **Outputs**: List of Player objects for that owner
+- **Implementation**:
+  - Internally fetches current draft state from Google Sheets (with caching)
+  - Filter all picks by matching owner name (case-insensitive)
+  - Return list of Player objects from matching DraftPick entries
+  - Warms draft state cache for subsequent available_players calls
+  - Provides team context needed for MCP client recommendations
 
 
 ## Data Models
@@ -220,14 +232,16 @@ All settings in config.json:
 **User Question**: "Which 5 QBs should I be targeting at this point in the draft?"
 
 **MCP Client Actions**:
-1. Call Available Players Tool with:
+1. Call Team Roster Tool with:
+   - owner_name: "Adam" (from user configuration)
+2. Receive user's current roster composition
+3. Call Available Players Tool with:
    - position: "QB"  
    - limit: 10 (get extras for analysis)
-2. Receive list of available QBs with rankings/projections and draft context
-3. Use AI to analyze based on:
-   - Draft context included in response (teams, picks made)
+4. Use AI to analyze based on:
+   - Current team needs (from roster composition)
    - Draft strategy (from client's system prompt)
-   - Player data (from available players)
-4. Return recommendation of top 5 QBs with reasoning
+   - Available player data (rankings, projections)
+5. Return recommendation of top 5 QBs with reasoning
 
-**Note**: Client only needs 1 tool call. The server handles both draft state and rankings internally.
+**Note**: Team Roster Tool warms the draft state cache, making Available Players Tool calls fast.

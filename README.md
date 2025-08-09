@@ -5,7 +5,7 @@ A Model Context Protocol (MCP) server that provides fantasy football data to any
 ## Architecture Overview
 
 This MCP server implements a clean separation of concerns:
-- **MCP Server (this repository)**: Provides raw data through 4 simple tools
+- **MCP Server (this repository)**: Provides raw data through 5 simple tools
 - **MCP Client (e.g., Claude, GPT, etc.)**: Performs all analysis, strategy, and recommendations
 
 ## Features
@@ -74,7 +74,7 @@ pytest
 
 ## Available MCP Tools
 
-The server provides 4 data-retrieval tools. All analysis and recommendations are performed by the MCP client.
+The server provides 5 data-retrieval tools. All analysis and recommendations are performed by the MCP client.
 
 ### 1. `get_player_rankings`
 Retrieves player rankings from FantasySharks with caching.
@@ -99,13 +99,24 @@ Reads current draft state from Google Sheets.
 Lists top undrafted players at a specific position.
 
 **Parameters:**
-- `draft_state` (required): Current draft state from `read_draft_progress`
 - `position` (required): Position to filter (QB, RB, WR, TE, K, DST)
 - `limit` (default: 10): Maximum number of players to return
 
 **Returns:** List of available players at the specified position
 
-### 4. `get_player_info`
+**Note:** This tool automatically fetches current draft state internally with caching.
+
+### 4. `get_team_roster`
+Gets all drafted players for a specific owner.
+
+**Parameters:**
+- `owner_name` (required): Name of the team owner as it appears in draft data
+
+**Returns:** List of Player objects for that owner's team
+
+**Note:** This tool warms the draft state cache and should typically be called first for personalized recommendations.
+
+### 5. `get_player_info`
 Searches for specific players by name.
 
 **Parameters:**
@@ -132,9 +143,9 @@ When used with an LLM-based MCP client configured with the example prompt, you c
 
 1. **You ask your MCP client** for draft advice
 2. **The MCP client calls server tools** to get data:
-   - `read_draft_progress` to see current picks
-   - `get_player_rankings` to get player data
-   - `get_available_players` to filter by position
+   - `get_team_roster` to see your current team composition
+   - `get_available_players` to see undrafted players by position
+   - `get_player_rankings` to get comprehensive player data
    - `get_player_info` to look up specific players
 3. **The MCP client analyzes** the data considering:
    - Your roster needs
@@ -146,7 +157,7 @@ When used with an LLM-based MCP client configured with the example prompt, you c
 ## Performance Features
 
 - **In-memory caching** for player rankings (reduces web scraping)
-- **Draft state caching** (avoids redundant Google Sheets reads)  
+- **Draft state caching** with TTL (avoids redundant Google Sheets reads)  
 - **Simplified data models** (minimal data transfer)
 - **Fast response times** (data-only, no complex analysis)
 
@@ -156,11 +167,12 @@ When used with an LLM-based MCP client configured with the example prompt, you c
 ffdrafttool2/
 ├── src/
 │   ├── config.py                    # Configuration settings
-│   ├── server.py                    # Main MCP server with 4 tools
+│   ├── server.py                    # Main MCP server with 5 tools
 │   ├── tools/
 │   │   ├── player_rankings.py       # Get player rankings tool
 │   │   ├── draft_progress.py        # Read draft progress tool
 │   │   ├── available_players.py     # Get available players tool
+│   │   ├── team_roster.py           # Get team roster tool
 │   │   └── player_info.py           # Get player info tool
 │   ├── models/
 │   │   ├── player_simple.py         # Simplified Player model
