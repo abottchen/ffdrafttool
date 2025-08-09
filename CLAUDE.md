@@ -1,6 +1,6 @@
 # Fantasy Football Draft Assistant MCP Server
 
-This is a **data-only** MCP server that provides fantasy football information through 4 simple tools. The server retrieves and caches data, while all analysis and recommendations are performed by the MCP client.
+This is a **data-only** MCP server that provides fantasy football information through 5 simple tools. The server retrieves and caches data, while all analysis and recommendations are performed by the MCP client.
 
 ## Architecture Overview
 
@@ -41,12 +41,13 @@ python run_server.py
 ```
 ffdrafttool2/
 ├── src/
-│   ├── server.py                    # FastMCP server with 4 tool endpoints
+│   ├── server.py                    # FastMCP server with 5 tool endpoints
 │   ├── tools/                       # MCP tool implementations
 │   │   ├── draft_progress.py        # Reads Google Sheets draft data
 │   │   ├── player_rankings.py       # Gets rankings with caching
 │   │   ├── player_info.py           # Searches for specific players
-│   │   └── available_players.py     # Filters undrafted players
+│   │   ├── available_players.py     # Filters undrafted players
+│   │   └── team_roster.py           # Gets team roster for owner
 │   ├── models/                      # Simplified data models
 │   │   ├── player_simple.py         # Basic player with rankings
 │   │   ├── draft_state_simple.py    # Draft state (picks + teams)
@@ -55,8 +56,9 @@ ffdrafttool2/
 │   └── services/                    # Data retrieval layer
 │       ├── sheets_service.py        # Google Sheets API integration
 │       ├── web_scraper.py           # FantasySharks scraper
-│       └── team_mapping.py          # Team abbreviation normalization
-├── tests/                           # 135 tests with 66% coverage
+│       ├── team_mapping.py          # Team abbreviation normalization
+│       └── draft_state_cache.py     # Draft state caching
+├── tests/                           # Comprehensive test suite
 ├── DESIGN.md                        # Architecture specification
 ├── example-prompt.md                # LLM client configuration
 └── config.json                      # Server configuration
@@ -67,7 +69,8 @@ ffdrafttool2/
 1. **`get_player_rankings`** - Retrieves cached rankings by position
 2. **`read_draft_progress`** - Reads current draft from Google Sheets  
 3. **`get_available_players`** - Lists undrafted players at position
-4. **`get_player_info`** - Searches for specific player details
+4. **`get_team_roster`** - Gets all drafted players for a specific owner
+5. **`get_player_info`** - Searches for specific player details
 
 ## Development Guidelines
 
@@ -75,7 +78,7 @@ ffdrafttool2/
 - **Data Only**: Server provides data, client provides intelligence
 - **No Analysis**: Remove any code that analyzes, recommends, or strategizes
 - **Simple Models**: Use minimal data structures (see `src/models/`)
-- **Direct Model Creation**: Both scrapers and sheets service create Pydantic models directly
+- **Direct Model Creation**: Scrapers create Pydantic models directly
 
 ### Coding Standards
 - **Type Hints**: All functions must have type annotations
@@ -96,7 +99,7 @@ ffdrafttool2/
 
 ## Testing
 
-### Test Organization (135 tests total)
+### Test Organization
 - `tests/models/` - Data model tests
 - `tests/services/` - Service layer tests  
 - `tests/tools/` - MCP tool tests
@@ -122,18 +125,16 @@ pytest tests/tools/test_draft_progress.py -v
 ## Current Implementation Status
 
 ### ✅ Completed
-- Simplified from 5 complex tools to 4 data-only tools
-- Removed all analysis logic from server
-- Direct Pydantic model creation in both scrapers and sheets service
-- 135 tests passing with 66% coverage
+- Implements 5 focused data-only tools
+- Server provides data only, no analysis logic
+- Direct Pydantic model creation in scrapers and sheets service
+- Comprehensive test suite with good coverage
 - Full conformance with DESIGN.md specification
 
 ### ⚠️ Known Limitations  
 - Only FantasySharks scraper implemented (ESPN, Yahoo, FantasyPros are stubs)
-- Some unused files could be cleaned up:
-  - `src/services/rankings_service.py` (deprecated)
-  - `src/services/draft_cache.py` (partially used)
-  - `src/services/web_scraper_example.py` (example only)
+- Data sources limited to FantasySharks for rankings (other scrapers are planned)
+- Some integration opportunities remain for additional data sources
 
 ### 📝 Future Enhancements (per DESIGN.md)
 - Add ESPN, Yahoo, FantasyPros scrapers
