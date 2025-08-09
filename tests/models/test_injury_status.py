@@ -9,6 +9,7 @@ class TestInjuryStatus:
     def test_injury_status_values(self):
         """Test that all injury status values are defined correctly."""
         assert InjuryStatus.HEALTHY.value == "HEALTHY"
+        assert InjuryStatus.PROBABLE.value == "P"
         assert InjuryStatus.QUESTIONABLE.value == "Q"
         assert InjuryStatus.DOUBTFUL.value == "D"
         assert InjuryStatus.OUT.value == "O"
@@ -17,6 +18,7 @@ class TestInjuryStatus:
     def test_injury_status_from_string(self):
         """Test creating injury status from string values."""
         assert InjuryStatus("HEALTHY") == InjuryStatus.HEALTHY
+        assert InjuryStatus("P") == InjuryStatus.PROBABLE
         assert InjuryStatus("Q") == InjuryStatus.QUESTIONABLE
         assert InjuryStatus("D") == InjuryStatus.DOUBTFUL
         assert InjuryStatus("O") == InjuryStatus.OUT
@@ -28,5 +30,5 @@ class TestInjuryStatus:
             InjuryStatus("INVALID")
 
     def test_all_statuses_present(self):
-        """Test that we have exactly 5 injury statuses."""
-        assert len(list(InjuryStatus)) == 5
+        """Test that we have exactly 6 injury statuses."""
+        assert len(list(InjuryStatus)) == 6
