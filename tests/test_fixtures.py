@@ -5,7 +5,8 @@ from typing import Dict, List, Optional
 
 from bs4 import BeautifulSoup
 
-from src.models.player import InjuryStatus, Player, Position, RankingSource
+from src.models.injury_status import InjuryStatus
+from src.models.player_simple import Player
 from src.services.web_scraper import WebScraper
 
 
@@ -21,22 +22,20 @@ class FixtureFantasySharksScraper(WebScraper):
         super().__init__()
         self.fixtures_path = Path(__file__).parent / "fixtures"
 
-    async def scrape_rankings(
-        self, position: Optional[Position] = None
-    ) -> List[Player]:
+    async def scrape_rankings(self, position: Optional[str] = None) -> List[Player]:
         """Scrape rankings using HTML fixtures instead of web requests."""
         if not position:
             # For simplicity, just return QB data when no position specified
-            position = Position.QB
+            position = "QB"
 
         # Map position to fixture file
         fixture_files = {
-            Position.QB: "fantasy_sharks_qb.html",
-            Position.RB: "fantasy_sharks_qb.html",  # Reuse QB fixture for other positions in tests
-            Position.WR: "fantasy_sharks_qb.html",
-            Position.TE: "fantasy_sharks_qb.html",
-            Position.K: "fantasy_sharks_qb.html",
-            Position.DST: "fantasy_sharks_qb.html",
+            "QB": "fantasy_sharks_qb.html",
+            "RB": "fantasy_sharks_qb.html",  # Reuse QB fixture for other positions in tests
+            "WR": "fantasy_sharks_qb.html",
+            "TE": "fantasy_sharks_qb.html",
+            "K": "fantasy_sharks_qb.html",
+            "DST": "fantasy_sharks_qb.html",
         }
 
         fixture_file = fixture_files.get(position)
@@ -73,7 +72,11 @@ class FixtureFantasySharksScraper(WebScraper):
                             next_row = rows[i + 1]
                             commentary = self._extract_player_commentary(next_row)
                             if commentary:
-                                player.commentary = commentary
+                                # Update notes with additional commentary
+                                if player.notes:
+                                    player.notes = f"{player.notes} | {commentary}"
+                                else:
+                                    player.notes = commentary
 
                         players.append(player)
 
@@ -87,7 +90,7 @@ class FixtureFantasySharksScraper(WebScraper):
         except Exception:
             return []
 
-    def _parse_player_row(self, row, position: Position, rank: int) -> Optional[Player]:
+    def _parse_player_row(self, row, position: str, rank: int) -> Optional[Player]:
         """Parse a single player row from the fixture table."""
         try:
             cells = row.find_all(["td", "th"])
@@ -133,27 +136,32 @@ class FixtureFantasySharksScraper(WebScraper):
             except (ValueError, TypeError):
                 bye_week = 1
 
-            # Create player with injury status
+            # Create player with injury status and notes
             injury_status = (
                 injury_info.get("status", InjuryStatus.HEALTHY)
                 if injury_info
                 else InjuryStatus.HEALTHY
             )
+
+            # Prepare notes with injury details if available
+            notes = ""
+            if injury_info and injury_info.get("details"):
+                notes = f"Injury: {injury_info['details']}"
+
+            # Calculate projected points
+            score = max(0, 100 - rank)
+
+            # Create new Pydantic Player object
             player = Player(
                 name=name,
-                position=position,
                 team=team,
+                position=position,
                 bye_week=bye_week,
+                ranking=rank,
+                projected_points=float(score),
                 injury_status=injury_status,
+                notes=notes,
             )
-
-            # Add injury details to commentary if available
-            if injury_info and injury_info.get("details"):
-                player.commentary = f"Injury: {injury_info['details']}"
-
-            # Add ranking
-            score = max(0, 100 - rank)
-            player.add_ranking(RankingSource.OTHER, rank, score)
 
             return player
 

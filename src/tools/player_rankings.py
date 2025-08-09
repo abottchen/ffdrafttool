@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, Optional
 
 from src.models.player_rankings import PlayerRankings
-from src.services.scraper_adapter import ScraperAdapter
 from src.services.web_scraper import FantasySharksScraper
 
 logger = logging.getLogger(__name__)
@@ -110,23 +109,15 @@ async def get_player_rankings(
 
         try:
             if position:
-                from src.models.player import Position
-
-                position_enum = Position(position.upper())
-                raw_players = await scraper.scrape_rankings(position_enum)
+                # Scraper now accepts string positions directly
+                raw_players = await scraper.scrape_rankings(position.upper())
             else:
-                # Get all positions
-                from src.models.player import Position
-
+                # Get all draftable positions
+                draftable_positions = ["QB", "RB", "WR", "TE", "K", "DST"]
                 raw_players = []
-                for pos_enum in Position:
-                    if pos_enum not in [
-                        Position.FLEX,
-                        Position.BE,
-                        Position.IR,
-                    ]:  # Skip non-draftable positions
-                        pos_players = await scraper.scrape_rankings(pos_enum)
-                        raw_players.extend(pos_players)
+                for pos_str in draftable_positions:
+                    pos_players = await scraper.scrape_rankings(pos_str)
+                    raw_players.extend(pos_players)
         except Exception as e:
             logger.error(f"Failed to fetch data from FantasySharks: {e}")
             return {
@@ -155,26 +146,8 @@ async def get_player_rankings(
                 "position_filter": position,
             }
 
-        # Convert to simplified Player models
-        adapter = ScraperAdapter()
-        simplified_players = []
-
-        for raw_player in raw_players:
-            try:
-                simplified_player = adapter.convert_player(raw_player)
-                simplified_players.append(simplified_player)
-            except Exception as e:
-                logger.warning(f"Failed to convert player {raw_player}: {e}")
-                continue
-
-        if not simplified_players:
-            logger.error("No players could be converted from raw data")
-            return {
-                "success": False,
-                "error": "Failed to convert player data to simplified format",
-                "error_type": "conversion_failed",
-                "position_filter": position,
-            }
+        # Players are already in the correct Pydantic format from scrapers
+        simplified_players = raw_players
 
         # Cache the new data by position
         _rankings_cache.clear_cache()

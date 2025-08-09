@@ -7,6 +7,7 @@ class InjuryStatus(Enum):
     """Player injury status based on standard NFL designations."""
 
     HEALTHY = "HEALTHY"
+    PROBABLE = "P"
     QUESTIONABLE = "Q"
     DOUBTFUL = "D"
     OUT = "O"

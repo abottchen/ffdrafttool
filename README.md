@@ -181,8 +181,7 @@ ffdrafttool2/
 │   └── services/
 │       ├── sheets_service.py        # Google Sheets integration
 │       ├── web_scraper.py           # FantasySharks scraper
-│       ├── sheets_adapter.py        # Adapts sheets data to models
-│       └── scraper_adapter.py       # Adapts scraper data to models
+│       └── sheets_adapter.py        # Adapts sheets data to models
 ├── tests/                           # Comprehensive test suite (141 tests)
 ├── example-prompt.md                # Example prompt for LLM-based MCP clients
 ├── run_server.py                    # Server entry point
@@ -195,8 +194,8 @@ This MCP server follows the principle of **separation of concerns**:
 
 1. **Data Layer (MCP Server)**: Focuses solely on data retrieval and caching
 2. **Analysis Layer (MCP Client)**: Performs all intelligent analysis and recommendations
-3. **Simplified Models**: Uses minimal data structures optimized for transfer
-4. **Adapter Pattern**: Transforms external data formats to simplified internal models
+3. **Simplified Models**: Uses Pydantic models for type safety and validation
+4. **Clean Architecture**: Web scrapers directly create domain models without conversion
 
 This design makes the server:
 - **Client-agnostic**: Works with any MCP-compatible client

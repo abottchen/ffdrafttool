@@ -1,6 +1,6 @@
 from bs4 import BeautifulSoup
 
-from src.models.player import InjuryStatus
+from src.models.injury_status import InjuryStatus
 from src.services.web_scraper import FantasySharksScraper
 
 
