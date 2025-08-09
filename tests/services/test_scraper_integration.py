@@ -88,7 +88,7 @@ class TestScraperIntegration:
         assert josh.position == "QB"
         assert josh.bye_week == 12
         assert josh.ranking == 1
-        assert josh.projected_points == 99.0  # FantasySharks uses 100-rank formula
+        assert josh.projected_points > 300.0  # FantasySharks actual projected points
         assert "dual-threat" in josh.notes or "Elite" in josh.notes
 
         # Check second player (Lamar Jackson)
@@ -99,7 +99,7 @@ class TestScraperIntegration:
         assert lamar.position == "QB"
         assert lamar.bye_week == 14
         assert lamar.ranking == 2
-        assert lamar.projected_points == 98.0  # FantasySharks uses 100-rank formula
+        assert lamar.projected_points > 300.0  # FantasySharks actual projected points
 
     def test_adapter_handles_scraper_output_format(self):
         """Test that adapter correctly handles the specific format from FantasySharks scraper."""
@@ -113,7 +113,7 @@ class TestScraperIntegration:
         old_player = OldPlayer(
             name="Christian McCaffrey",
             position=OldPosition.RB,
-            team="SF",
+            team="SFO",  # FantasySharks uses "SFO", which maps to "SF"
             bye_week=9,
             commentary="Elite RB1 with receiving upside when healthy.",
         )
@@ -142,14 +142,18 @@ class TestScraperIntegration:
         from src.models.player import RankingSource
 
         # Test different positions that FantasySharks supports
+        # Using actual team abbreviations that FantasySharks uses
         test_cases = [
-            ("Travis Kelce", OldPosition.TE, "KC", 10, 1, 195.5),
-            ("Cooper Kupp", OldPosition.WR, "LAR", 7, 2, 245.0),
-            ("Justin Tucker", OldPosition.K, "BAL", 14, 1, 125.0),
-            ("Buffalo Bills", OldPosition.DST, "BUF", 12, 3, 115.5),
+            ("Travis Kelce", OldPosition.TE, "KCC", 10, 1, 195.5),  # KCC -> KC
+            ("Cooper Kupp", OldPosition.WR, "LAR", 7, 2, 245.0),    # LAR -> LAR  
+            ("Justin Tucker", OldPosition.K, "BAL", 14, 1, 125.0),   # BAL -> BAL
+            ("Buffalo Bills", OldPosition.DST, "BUF", 12, 3, 115.5), # BUF -> BUF
         ]
+        
+        # Expected results after team mapping
+        expected_teams = ["KC", "LAR", "BAL", "BUF"]
 
-        for name, position, team, bye, rank, points in test_cases:
+        for i, (name, position, team, bye, rank, points) in enumerate(test_cases):
             old_player = OldPlayer(
                 name=name, position=position, team=team, bye_week=bye
             )
@@ -161,7 +165,7 @@ class TestScraperIntegration:
             assert (
                 simple_player.position == position.value
             )  # Position enum value as string
-            assert simple_player.team == team
+            assert simple_player.team == expected_teams[i]  # Use expected mapped team
             assert simple_player.bye_week == bye
             assert simple_player.ranking == rank
             assert simple_player.projected_points == points

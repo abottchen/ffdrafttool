@@ -392,10 +392,26 @@ class FantasySharksScraper(WebScraper):
             if injury_info and injury_info.get("details"):
                 player.commentary = f"Injury: {injury_info['details']}"
 
-            # Add FantasySharks ranking
-            # Calculate a score based on rank (higher rank = lower score)
-            score = max(0, 100 - rank)
-            player.add_ranking(RankingSource.OTHER, rank, score)
+            # Extract projected fantasy points from FantasySharks table
+            # Projected points are always in the last cell, regardless of position
+            # (QBs have 24 cells, WRs have 23 cells, etc.)
+            projected_points = 0.0
+            try:
+                if len(cells) >= 6:  # Make sure we have at least basic cells (rank, adp, name, team, bye, stats...)
+                    points_text = cells[-1].get_text(strip=True)  # Last cell is always FantasyPoints
+                    if points_text and points_text.replace('.', '').replace('-', '').isdigit():
+                        projected_points = float(points_text)
+                        logger.debug(f"Row {rank}: Extracted projected points: {projected_points} from last cell (index {len(cells)-1})")
+                    else:
+                        logger.debug(f"Row {rank}: Could not parse projected points from last cell '{points_text}'")
+                else:
+                    logger.debug(f"Row {rank}: Not enough cells for projected points parsing ({len(cells)} cells)")
+            except (IndexError, ValueError, AttributeError) as e:
+                logger.debug(f"Row {rank}: Error parsing projected points: {str(e)}")
+                projected_points = 0.0
+
+            # Add FantasySharks ranking with actual projected points
+            player.add_ranking(RankingSource.OTHER, rank, projected_points)
 
             return player
 
