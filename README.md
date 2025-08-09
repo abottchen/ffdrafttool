@@ -1,27 +1,29 @@
 # Fantasy Football Draft Assistant MCP Server
 
-A Model Context Protocol (MCP) server that provides real-time fantasy football draft assistance by analyzing player rankings, draft progress from Google Sheets, and generating intelligent draft recommendations.
+A Model Context Protocol (MCP) server that provides fantasy football data to any MCP client for intelligent draft assistance. This server follows a **data-only architecture** - it retrieves and caches data from various sources, while the MCP client performs all analysis and recommendations.
+
+## Architecture Overview
+
+This MCP server implements a clean separation of concerns:
+- **MCP Server (this repository)**: Provides raw data through 5 simple tools
+- **MCP Client (e.g., Claude, GPT, etc.)**: Performs all analysis, strategy, and recommendations
 
 ## Features
 
-- **Multi-source player rankings** - Aggregates data from FantasySharks, ESPN, Yahoo, and FantasyPros
-- **Real-time draft tracking** - Integrates with Google Sheets to track live draft progress
-- **Intelligent recommendations** - AI-powered draft pick suggestions based on roster needs and strategy
-- **Value analysis** - Advanced metrics including positional scarcity and player value scores
-- **Bye week optimization** - Avoids creating roster conflicts during bye weeks
-- **Personalized assistance** - Recognizes "I/me/my team" references for personalized recommendations
-- **Caching system** - Optimized performance with in-memory caching
-- **Multiple draft formats** - Supports auction, keeper, and snake draft formats
+- **Multi-source player rankings** - Retrieves data from FantasySharks web scraping
+- **Real-time draft tracking** - Reads draft progress from Google Sheets
+- **Player information search** - Finds specific players by name, team, or position
+- **Available players filtering** - Lists undrafted players at each position
+- **Efficient caching** - In-memory caching for optimal performance
+- **Simple data models** - Lightweight, focused data structures
 
 ## Data Sources
 
-This tool aggregates data from publicly accessible fantasy football websites:
-- **FantasySharks**: Expert rankings and analysis
-- **ESPN Fantasy Football**: Player rankings and projections  
-- **Yahoo Fantasy Sports**: Rankings and draft analysis
-- **FantasyPros**: Consensus rankings from multiple experts
+The server currently retrieves data from:
+- **FantasySharks**: Player rankings via web scraping (no API key required)
+- **Google Sheets**: Live draft tracking data (requires Google API credentials)
 
-No API keys are required - all data is gathered from public web pages.
+Future versions may add additional sources like ESPN, Yahoo, and FantasyPros.
 
 ## Installation
 
@@ -49,9 +51,19 @@ No API keys are required - all data is gathered from public web pages.
    - `GOOGLE_CREDENTIALS_FILE`: Custom path to credentials.json (defaults to project root)
    - `GOOGLE_TOKEN_FILE`: Custom path to token.json (defaults to project root)
 
-## 👤 Owner Configuration
+## 🤖 Using with MCP Clients
 
-The assistant can be personalized to recognize first-person references ("I", "me", "my team") as referring to your team.
+This server can be used with any MCP-compatible client. For LLM-based clients (Claude, GPT, etc.), we provide an example prompt configuration in `example-prompt.md` that enables the client to:
+- Analyze player value and rankings
+- Generate draft recommendations based on team needs
+- Consider positional scarcity and bye weeks
+- Provide personalized advice based on draft strategy
+
+### For Claude Code Users
+Copy `example-prompt.md` to your project root as `CLAUDE.md` to enable intelligent draft analysis.
+
+### For Other MCP Clients
+Adapt the prompt in `example-prompt.md` to your client's configuration format. The prompt contains domain knowledge about fantasy football strategy that helps LLMs provide better recommendations.
 
 ## Testing
 
@@ -62,130 +74,133 @@ pytest
 
 ## Available MCP Tools
 
-The server provides the following MCP tools for fantasy football draft assistance:
+The server provides 5 data-retrieval tools. All analysis and recommendations are performed by the MCP client.
 
-### 1. `get_player_rankings_tool`
-Fetch current player rankings from multiple fantasy football sources.
+### 1. `get_player_rankings`
+Retrieves player rankings from FantasySharks with caching.
 
 **Parameters:**
-- `position` (optional): Filter by position (QB, RB, WR, TE, K, DST)
-- `limit` (default: 20): Number of players to return per page
-- `offset` (default: 0): Starting position for pagination
+- `position_filter` (optional): Filter by position (QB, RB, WR, TE, K, DST, or null for all)
 - `force_refresh` (default: false): Bypass cache and fetch fresh data
 
-**Usage:**
-- Get top 20 players: `get_player_rankings_tool()`
-- Get top 10 QBs: `get_player_rankings_tool(position="QB", limit=10)`
-- Get RBs 21-40: `get_player_rankings_tool(position="RB", limit=20, offset=20)`
+**Returns:** List of players with rankings and basic information
 
-### 2. `read_draft_progress_tool`
-Read live draft progress from Google Sheets.
+### 2. `read_draft_progress`
+Reads current draft state from Google Sheets.
 
 **Parameters:**
 - `sheet_id` (optional): Google Sheets ID (uses configured default if not provided)
 - `sheet_range` (default: "Draft!A1:V24"): Range to read from the sheet
 - `force_refresh` (default: false): Ignore cache and fetch fresh data
 
-**Usage:**
-- Read current draft state: `read_draft_progress_tool()`
-- Read from specific sheet: `read_draft_progress_tool(sheet_id="your_sheet_id")`
+**Returns:** Draft state with picks made and team rosters
 
-### 3. `analyze_available_players_tool`
-Analyze available players with value metrics, positional scarcity, and bye week considerations.
+### 3. `get_available_players`
+Lists top undrafted players at a specific position.
 
 **Parameters:**
-- `draft_state` (required): Current draft state from `read_draft_progress_tool`
-- `position_filter` (optional): Focus on specific position (QB, RB, WR, TE, K, DST)
-- `limit` (default: 20): Number of players to analyze and return
-- `force_refresh` (default: false): Fetch fresh rankings data
+- `position` (required): Position to filter (QB, RB, WR, TE, K, DST)
+- `limit` (default: 10): Maximum number of players to return
 
-**Usage:**
-- Analyze top available players: `analyze_available_players_tool(draft_state)`
-- Focus on available RBs: `analyze_available_players_tool(draft_state, position_filter="RB")`
+**Returns:** List of available players at the specified position
 
-### 4. `suggest_draft_pick_tool`
-Get personalized draft pick recommendations based on team needs and strategy.
+**Note:** This tool automatically fetches current draft state internally with caching.
+
+### 4. `get_team_roster`
+Gets all drafted players for a specific owner.
 
 **Parameters:**
-- `draft_state` (required): Current draft state from `read_draft_progress_tool`
-- `owner_name` (required): Name of the team owner to provide recommendations for (e.g., "Adam", "Jodi")
-- `strategy` (default: "balanced"): Draft strategy - "balanced", "best_available", "upside", "safe"
-- `consider_bye_weeks` (default: true): Factor in bye week conflicts
-- `force_refresh` (default: false): Use fresh rankings data
+- `owner_name` (required): Name of the team owner as it appears in draft data
 
-**Usage:**
-- Get balanced recommendation: `suggest_draft_pick_tool(draft_state, owner_name="Adam")`
-- Use upside strategy: `suggest_draft_pick_tool(draft_state, owner_name="Jodi", strategy="upside")`
-- Ignore bye weeks: `suggest_draft_pick_tool(draft_state, owner_name="Chuck", consider_bye_weeks=false)`
+**Returns:** List of Player objects for that owner's team
 
-### 5. `get_player_info_tool`
-Get detailed information about specific players by name.
+**Note:** This tool warms the draft state cache and should typically be called first for personalized recommendations.
+
+### 5. `get_player_info`
+Searches for specific players by name.
 
 **Parameters:**
-- `last_name` (required): Player's last name (handles partial matches and suffixes)
+- `last_name` (required): Player's last name (handles partial matches)
 - `first_name` (optional): Player's first name to narrow results
-- `team` (optional): Team abbreviation filter (e.g., "KC", "SF")
-- `position` (optional): Position filter (QB, RB, WR, TE, K, DST)
+- `team` (optional): Team abbreviation filter
+- `position` (optional): Position filter
 
-**Usage:**
-- Find player by last name: `get_player_info_tool(last_name="Mahomes")`
-- Handle suffixes: `get_player_info_tool(last_name="Penix")` (finds "Michael Penix Jr.")
-- Narrow by first name: `get_player_info_tool(first_name="Patrick", last_name="Mahomes")`
-- Filter by team: `get_player_info_tool(last_name="Williams", team="NYJ")`
+**Returns:** Matching players with their information
 
 ## Usage Examples
 
-### Basic Draft Assistance
+When used with an LLM-based MCP client configured with the example prompt, you can ask questions like:
+
+### Draft Assistance
 ```
-Who should I pick next?
-Show me the best available quarterbacks
-What positions do I still need to fill?
-What do you know about Patrick Mahomes?
-Tell me about Penix (finds Michael Penix Jr.)
+"Who should I draft next?"
+"Show me the best available running backs"
+"What positions does my team still need?"
+"Tell me about Patrick Mahomes"
 ```
 
-### Advanced Analysis
-```
-First, read my draft progress from the Google Sheet. Then analyze the top 20 available players and suggest my next pick using an upside strategy, considering bye weeks.
-```
+### How It Works
 
-### Multi-Step Workflow
-```
-1. Get current player rankings for RBs
-2. Read my draft state  
-3. Analyze available RBs based on my team needs
-4. Suggest the best RB pick using safe strategy
-```
-
-### Pagination Examples
-```
-Get the top 20 quarterbacks (page 1)
-Get quarterbacks ranked 21-40 using offset=20
-Get the next page of running backs
-Show me 10 wide receivers starting from rank 31
-```
+1. **You ask your MCP client** for draft advice
+2. **The MCP client calls server tools** to get data:
+   - `get_team_roster` to see your current team composition
+   - `get_available_players` to see undrafted players by position
+   - `get_player_rankings` to get comprehensive player data
+   - `get_player_info` to look up specific players
+3. **The MCP client analyzes** the data considering:
+   - Your roster needs
+   - Positional scarcity
+   - Player value and rankings
+   - Bye week conflicts
+4. **The MCP client provides** intelligent recommendations
 
 ## Performance Features
 
-- **In-memory caching** for player rankings (reduces API calls)
-- **Draft state caching** (avoids redundant Google Sheets reads)  
-- **Token optimization** (responses under 25k tokens for faster processing)
-- **Incremental updates** (only processes new draft picks)
+- **In-memory caching** for player rankings (reduces web scraping)
+- **Draft state caching** with TTL (avoids redundant Google Sheets reads)  
+- **Simplified data models** (minimal data transfer)
+- **Fast response times** (data-only, no complex analysis)
 
 ## Project Structure
 
 ```
-ffdrafttool/
+ffdrafttool2/
 ├── src/
-│   ├── config.py              # Configuration settings
-│   ├── server.py              # Main MCP server
+│   ├── config.py                    # Configuration settings
+│   ├── server.py                    # Main MCP server with 5 tools
 │   ├── tools/
-│   │   ├── mcp_tools.py       # Core MCP tool implementations
-│   │   ├── rankings_cache.py  # Player rankings caching
-│   │   └── web_scraper.py     # Data collection from sources
-│   ├── models/                # Data models
-│   └── services/              # Business logic services
-├── tests/                     # Comprehensive test suite
-├── run_server.py             # Server entry point
-└── README.md                 # This file
+│   │   ├── player_rankings.py       # Get player rankings tool
+│   │   ├── draft_progress.py        # Read draft progress tool
+│   │   ├── available_players.py     # Get available players tool
+│   │   ├── team_roster.py           # Get team roster tool
+│   │   └── player_info.py           # Get player info tool
+│   ├── models/
+│   │   ├── player_simple.py         # Simplified Player model
+│   │   ├── draft_state_simple.py    # Simplified DraftState model
+│   │   └── draft_pick.py            # DraftPick model
+│   └── services/
+│       ├── sheets_service.py        # Google Sheets integration
+│       ├── web_scraper.py           # FantasySharks scraper
+│       └── team_mapping.py          # Team abbreviation normalization
+├── tests/                           # Comprehensive test suite (141 tests)
+├── example-prompt.md                # Example prompt for LLM-based MCP clients
+├── run_server.py                    # Server entry point
+└── README.md                        # This file
 ```
+
+## Design Philosophy
+
+This MCP server follows the principle of **separation of concerns**:
+
+1. **Data Layer (MCP Server)**: Focuses solely on data retrieval and caching
+2. **Analysis Layer (MCP Client)**: Performs all intelligent analysis and recommendations
+3. **Simplified Models**: Uses Pydantic models for type safety and validation
+4. **Clean Architecture**: Web scrapers directly create domain models without conversion
+
+This design makes the server:
+- **Client-agnostic**: Works with any MCP-compatible client
+- **Maintainable**: Clear separation between data and logic
+- **Testable**: Simple interfaces with predictable outputs
+- **Efficient**: Minimal data transfer and processing
+
+The example prompt (`example-prompt.md`) provides domain knowledge that enables LLM-based clients to deliver sophisticated fantasy football analysis.

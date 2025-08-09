@@ -18,7 +18,8 @@
       "mcp__fantasy-football-draft-assistant__get_player_rankings_tool",
       "Bash(find:*)",
       "Bash(mv:*)",
-      "Bash(ruff check:*)"
+      "Bash(ruff check:*)",
+      "Bash(pytest:*)"
     ],
     "deny": []
   }
