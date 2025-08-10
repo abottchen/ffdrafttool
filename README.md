@@ -48,7 +48,9 @@ Future versions may add additional sources like ESPN, Yahoo, and FantasyPros.
    ```
    Edit `config.json` with your settings:
    - `google_sheets.default_sheet_id`: Your Google Sheet ID for draft tracking
+   - `draft.format`: Set to "dan" for snake drafts or "adam" for auction drafts
    - `draft.owner_name`: Your name as it appears in the draft data
+   - Configure sheet ranges for each format in `draft.formats` section
    - Cache settings can be left as defaults
 
 3. **Set up Google Sheets API** (for draft tracking):
@@ -95,14 +97,14 @@ Retrieves player rankings from FantasySharks with caching.
 **Returns:** List of players with rankings and basic information
 
 ### 2. `read_draft_progress`
-Reads current draft state from Google Sheets.
+Reads current draft state from Google Sheets with format-aware parsing.
 
 **Parameters:**
-- `sheet_id` (optional): Google Sheets ID (uses configured default if not provided)
-- `sheet_range` (default: "Draft!A1:V24"): Range to read from the sheet
 - `force_refresh` (default: false): Ignore cache and fetch fresh data
 
 **Returns:** Draft state with picks made and team rosters
+
+**Note:** Sheet ID and range are automatically determined from configuration based on the selected draft format. The parser automatically handles both Dan format (snake draft) and Adam format (auction draft) based on your `draft.format` setting.
 
 ### 3. `get_available_players`
 Lists top undrafted players at a specific position.
@@ -152,7 +154,7 @@ When used with an LLM-based MCP client configured with the example prompt, you c
 
 1. **You ask your MCP client** for draft advice
 2. **The MCP client calls server tools** to get data:
-   - `read_draft_progress` to get current draft state and picks
+   - `read_draft_progress` to get current draft state and picks (format-aware)
    - `get_team_roster` to see your current team composition
    - `get_available_players` to see undrafted players by position
    - `get_player_rankings` to get comprehensive player data

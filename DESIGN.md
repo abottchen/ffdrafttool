@@ -6,15 +6,15 @@ The MCP server provides five tools for data retrieval. All analysis and draft re
 
 ### 1. Draft Progress Tool
 **Purpose**: Read current draft state from Google Sheets
-- **Inputs**: None (uses configuration defaults)
+- **Inputs**: 
+  - force_refresh: Optional boolean (default: false) to bypass cache
 - **Outputs**: Draft state object containing all picks and team/owner pairs
 - **Implementation**:
-  - Uses existing Google Sheets reading code (sheets_service.py works correctly)
-  - Reads from Google Sheets specified in config.json
-  - Expected sheet format: columns for team names, owners, and drafted players
-  - Transform sheet data into simplified DraftState and DraftPick objects
+  - Uses configuration-driven sheet selection (sheet_id and range from config.json)
+  - Format-aware parsing based on draft.format configuration setting
+  - Transform sheet data into simplified DraftState and DraftPick objects using appropriate parser
+  - TTL-based caching for draft state with configurable cache duration
   - On error: Retry once, then return error for MCP client to handle
-  - No caching needed (draft state changes frequently)
 
 ### 2. Player Rankings Tool  
 **Purpose**: Retrieve player rankings by position
@@ -197,14 +197,19 @@ _draft_state_cache = TTLCache(
     ttl=DRAFT_STATE_CACHE_TTL_SECONDS  # From config.py
 )
 
-async def get_cached_draft_state(sheet_id, sheet_range):
+async def get_cached_draft_state():
+    # Configuration determines sheet_id and sheet_range automatically
+    sheet_id = DEFAULT_SHEET_ID
+    format_config = _config['draft']['formats'].get(DRAFT_FORMAT)
+    sheet_range = format_config['sheet_range'] if format_config else "Draft!A1:V24"
+    
     cache_key = f"{sheet_id}:{sheet_range}"
     
     if cache_key in _draft_state_cache:
         return _draft_state_cache[cache_key]
     
-    # Fetch fresh from Google Sheets
-    draft_state = await read_draft_progress(sheet_id, sheet_range)
+    # Fetch fresh from Google Sheets using format-aware parsing
+    draft_state = await read_draft_progress(force_refresh=True)
     _draft_state_cache[cache_key] = draft_state
     return draft_state
 ```
