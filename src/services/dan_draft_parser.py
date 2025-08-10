@@ -226,20 +226,12 @@ class DanDraftParser(SheetParser):
 
         # Now assign pick numbers and determine correct team ownership
         for pick_idx, sheet_pick in enumerate(all_sheet_picks):
-            pick_number = pick_idx + 1
+            pick_idx + 1
             round_num = sheet_pick["round"]
 
-            # Determine which team should have made this pick based on draft rules
-            correct_team = self._find_team_by_pick_position(
-                full_teams, pick_number, len(full_teams), round_num
-            )
-
-            # Use the correct team (from draft logic) rather than just the column position
-            if correct_team:
-                final_team = correct_team
-            else:
-                # For auction/keeper rounds, or when logic fails, use the team found in the column
-                final_team = sheet_pick["team_found"]
+            # Use the team found in the column - the sheet is the source of truth
+            # The picks are already in the correct columns, no need to recalculate ownership
+            final_team = sheet_pick["team_found"]
 
             # Create Player object
             player = self._create_player_from_pick(sheet_pick)

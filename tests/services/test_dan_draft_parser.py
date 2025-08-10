@@ -252,8 +252,8 @@ class TestDanDraftParser:
         assert teams[1]["position_col"] == 4
 
     @pytest.mark.asyncio
-    async def test_parse_draft_data_snake_draft_order(self):
-        """Test that snake draft pick order is correctly calculated."""
+    async def test_parse_draft_data_column_ownership(self):
+        """Test that picks belong to the owner of their column position."""
         sheet_data = [
             ["2024 Fantasy Draft"],
             ["", "Buffy", "", "Willow"],  # Row 1: Owners
@@ -278,13 +278,13 @@ class TestDanDraftParser:
         assert result.picks[1].player.name == "CMC"  # Willow, Pick 2
         assert result.picks[1].owner == "Willow"
 
-        # Round 2 should snake back - parser correctly assigns picks by snake logic, not column position
+        # Parser uses actual column positions - picks belong to the owner of their column
         assert (
             result.picks[2].player.name == "Tyreek Hill"
-        )  # Willow, Pick 3 (from Buffy's column but assigned to Willow)
-        assert result.picks[2].owner == "Willow"
+        )  # Buffy, Pick 3 (from Buffy's column, stays with Buffy)
+        assert result.picks[2].owner == "Buffy"
 
         assert (
             result.picks[3].player.name == "Travis Kelce"
-        )  # Buffy, Pick 4 (from Willow's column but assigned to Buffy)
-        assert result.picks[3].owner == "Buffy"
+        )  # Willow, Pick 4 (from Willow's column, stays with Willow)
+        assert result.picks[3].owner == "Willow"
