@@ -75,54 +75,41 @@ The MCP server provides five tools for data retrieval. All analysis and draft re
 
 ### 1. DraftState
 Represents the current state of the draft.
-```python
-class DraftState:
-    - picks: List[DraftPick]  # All picks made so far
-    - teams: List[Dict]       # Team/owner pairs: [{"owner": str, "team_name": str}]
-```
+- **picks**: List of all draft picks made so far
+- **teams**: List of team/owner pairs with owner name and team name
+
 Note: Team rosters can be derived from picks list when needed. No need for separate roster tracking.
 
 ### 2. DraftPick
 Represents a single draft pick.
-```python
-class DraftPick:
-    - player: Player          # The drafted player
-    - owner: str              # Fantasy owner who drafted them
-```
+- **player**: The drafted player object
+- **owner**: Fantasy owner who drafted them
+
 Note: Round/pick numbers and timestamps are not needed for this implementation.
 
 ### 3. Player
 Core player information with ranking data.
-```python
-class Player:
-    - name: str               # Full player name
-    - team: str               # NFL team abbreviation
-    - position: str           # Position (QB, RB, WR, TE, K, DST)
-    - bye_week: int           # Bye week number
-    - injury_status: InjuryStatus  # Enum for injury states
-    - ranking: int            # FantasySharks ranking
-    - projected_points: float # Projected fantasy points
-    - notes: str              # Additional notes/analysis from source
-```
+- **name**: Full player name
+- **team**: NFL team abbreviation
+- **position**: Position (QB, RB, WR, TE, K, DST)
+- **bye_week**: Bye week number
+- **injury_status**: Enum for injury states
+- **ranking**: FantasySharks ranking
+- **projected_points**: Projected fantasy points
+- **notes**: Additional notes/analysis from source
 
 ### 4. InjuryStatus
-Enum for tracking player health.
-```python
-class InjuryStatus(Enum):
-    HEALTHY = "HEALTHY"
-    QUESTIONABLE = "Q"
-    DOUBTFUL = "D"
-    OUT = "O"
-    INJURED_RESERVE = "IR"
-```
+Enumeration for tracking player health status.
+- HEALTHY: Player is healthy
+- QUESTIONABLE: Listed as questionable (Q)
+- DOUBTFUL: Listed as doubtful (D)
+- OUT: Listed as out (O)
+- INJURED_RESERVE: On injured reserve (IR)
 
 ### 5. PlayerRankings
 Container for cached rankings data.
-```python
-class PlayerRankings:
-    - position_data: Dict[str, List[Player]]  # Cached by position
-    - last_updated: Dict[str, datetime]       # Track cache age by position
-```
+- **position_data**: Dictionary mapping positions to lists of players
+- **last_updated**: Dictionary tracking cache age by position
 
 ## Responsibilities Division
 
@@ -151,68 +138,23 @@ class PlayerRankings:
 3. Refactor for clarity while keeping tests green
 4. Each module should have corresponding test file in tests/
 
-### Error Handling Strategy
-```python
-def fetch_with_retry(func, max_retries=1):
-    try:
-        return func()
-    except Exception as e:
-        if max_retries > 0:
-            return fetch_with_retry(func, max_retries - 1)
-        return {"success": False, "error": str(e)}
-```
-
-### Caching Implementation
+### Caching Strategy
 
 #### Rankings Cache
-```python
-# Global in-memory cache for rankings (persistent for server session)
-_rankings_cache = {
-    "QB": None,
-    "RB": None,
-    "WR": None,
-    "TE": None,
-    "K": None,
-    "DST": None
-}
+- Global in-memory cache for rankings data, persists for server session duration
+- Cache organized by position (QB, RB, WR, TE, K, DST)
+- On cache miss: Fetch from FantasySharks, store in memory, return data
+- On cache hit: Return immediately from memory
+- No expiration within session - rankings assumed stable during draft
 
-def get_cached_or_fetch(position):
-    if _rankings_cache[position] is not None:
-        return _rankings_cache[position]
-    
-    data = scrape_fantasysharks(position)
-    _rankings_cache[position] = data
-    return data
-```
-
-#### Draft State Cache
-```python
-# TTL-based cache for draft state (configurable expiration)
-from cachetools import TTLCache
-from datetime import timedelta
-
-# Cache with configurable TTL from config
-_draft_state_cache = TTLCache(
-    maxsize=1,  # Only cache the latest draft state
-    ttl=DRAFT_STATE_CACHE_TTL_SECONDS  # From config.py
-)
-
-async def get_cached_draft_state():
-    # Configuration determines sheet_id and sheet_range automatically
-    sheet_id = DEFAULT_SHEET_ID
-    format_config = _config['draft']['formats'].get(DRAFT_FORMAT)
-    sheet_range = format_config['sheet_range'] if format_config else "Draft!A1:V24"
-    
-    cache_key = f"{sheet_id}:{sheet_range}"
-    
-    if cache_key in _draft_state_cache:
-        return _draft_state_cache[cache_key]
-    
-    # Fetch fresh from Google Sheets using format-aware parsing
-    draft_state = await read_draft_progress(force_refresh=True)
-    _draft_state_cache[cache_key] = draft_state
-    return draft_state
-```
+#### Draft State Cache  
+- TTL-based cache using cachetools library for automatic expiration
+- Single entry cache (only latest draft state stored)
+- Configurable TTL from configuration file (default: 60 seconds)
+- Cache key generated from sheet_id and sheet_range (format-aware)
+- Configuration automatically determines sheet parameters based on draft format
+- On cache miss: Fetch fresh from Google Sheets using appropriate parser
+- On cache hit: Return cached draft state if within TTL window
 
 ### Configuration
 All settings in config.json:
@@ -299,24 +241,15 @@ Each parser implements a standard interface:
 ### Configuration
 
 #### Required Configuration
-```json
-{
-  "draft": {
-    "format": "dan",                    // REQUIRED: "dan" or "adam"
-    "sheet_id": "google_sheet_id",      // Same sheet ID for both formats
-    "formats": {
-      "dan": {
-        "sheet_name": "Draft",
-        "sheet_range": "Draft!A1:V24"
-      },
-      "adam": {
-        "sheet_name": "Adam", 
-        "sheet_range": "Adam!A1:T20"
-      }
-    }
-  }
-}
-```
+The configuration file must specify:
+- **draft.format**: Set to "dan" or "adam" to select the parser
+- **draft.sheet_id**: Google Sheet ID (same for both formats)
+- **draft.formats.dan**: Configuration for Dan format including sheet name and range
+- **draft.formats.adam**: Configuration for Adam format including sheet name and range
+
+Each format configuration includes:
+- **sheet_name**: Name of the sheet tab
+- **sheet_range**: Cell range to read (e.g., "Draft!A1:V24" or "Adam!A1:T20")
 
 #### Format Selection
 The factory pattern selects the appropriate parser based on configuration:
