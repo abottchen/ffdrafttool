@@ -6,15 +6,11 @@ from src.services.sheets_service import GoogleSheetsProvider, SheetsService
 logger = logging.getLogger(__name__)
 
 
-async def read_draft_progress(
-    sheet_id: str, sheet_range: str = "Draft!A1:V24", force_refresh: bool = False
-) -> Dict[str, Any]:
+async def read_draft_progress(force_refresh: bool = False) -> Dict[str, Any]:
     """
     Read draft progress from Google Sheets using cached data when available.
 
     Args:
-        sheet_id: Google Sheets ID
-        sheet_range: Range to read (e.g., "Draft!A1:V24")
         force_refresh: If True, ignore cache and fetch fresh data from Google Sheets
 
     Returns:
@@ -23,13 +19,21 @@ async def read_draft_progress(
     import time
 
     start_time = time.time()
-    logger.info(
-        f"Reading draft progress from sheet {sheet_id}, range {sheet_range} (force_refresh={force_refresh})"
-    )
+    logger.info(f"Reading draft progress (force_refresh={force_refresh})")
 
     if force_refresh:
         # Force refresh bypasses cache and goes directly to sheets service
         try:
+            # Get sheet_id and sheet_range from config
+            from src.config import DEFAULT_SHEET_ID, DRAFT_FORMAT, _config
+
+            sheet_id = DEFAULT_SHEET_ID
+            format_config = _config["draft"]["formats"].get(DRAFT_FORMAT)
+            if format_config and "sheet_range" in format_config:
+                sheet_range = format_config["sheet_range"]
+            else:
+                sheet_range = "Draft!A1:V24"
+
             provider = GoogleSheetsProvider()
             sheets_service = SheetsService(provider)
             result = await sheets_service.read_draft_data(
@@ -72,7 +76,7 @@ async def read_draft_progress(
     # Use cached version (will fetch fresh if cache miss)
     from src.services.draft_state_cache import get_cached_draft_state
 
-    result = await get_cached_draft_state(sheet_id, sheet_range)
+    result = await get_cached_draft_state()
 
     logger.info(
         f"read_draft_progress (cached) completed in {time.time() - start_time:.2f} seconds"

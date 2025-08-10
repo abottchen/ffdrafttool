@@ -1,6 +1,7 @@
 """Comprehensive integration tests using real Google Sheets data format."""
 
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -21,6 +22,26 @@ class TestComprehensiveSheetsIntegration:
     def csv_provider(self, csv_fixture_path):
         """CSV provider using real sheet format fixture."""
         return CSVSheetsProvider(str(csv_fixture_path))
+
+    @pytest.fixture(autouse=True)
+    def mock_config_for_dan_format(self):
+        """Mock configuration to use Dan format for tests."""
+        mock_config = {
+            "draft": {
+                "formats": {
+                    "dan": {"sheet_name": "Draft", "sheet_range": "Draft!A1:V24"}
+                }
+            }
+        }
+
+        with (
+            patch("src.config.DRAFT_FORMAT", "dan"),
+            patch("src.config._config", mock_config),
+            patch("src.services.draft_state_cache.DRAFT_FORMAT", "dan"),
+            patch("src.services.draft_state_cache._config", mock_config),
+            patch("src.services.sheets_service.DRAFT_FORMAT", "dan"),
+        ):
+            yield
 
     @pytest.mark.asyncio
     async def test_complete_pipeline_csv_to_draft_state(self, csv_provider):

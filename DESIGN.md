@@ -265,18 +265,11 @@ src/services/
 ```
 
 #### Parser Interface
-```python
-class SheetParser(ABC):
-    @abstractmethod
-    async def parse_draft_data(self, sheet_data: List[List], rankings_cache: Optional[Dict] = None) -> DraftState:
-        """Parse raw Google Sheets data into DraftState object."""
-        pass
-    
-    @abstractmethod
-    def detect_format(self, sheet_data: List[List]) -> bool:
-        """Validate that sheet data matches expected format."""
-        pass
-```
+Each parser implements a standard interface:
+- **Parse Method**: Converts raw sheet data to `DraftState` objects
+- **Format Detection**: Validates sheet structure matches expected format
+- **Error Handling**: Graceful handling of malformed or missing data
+- **Rankings Integration**: Optional rankings cache for team/position lookup
 
 ### Draft Format Specifications
 
@@ -320,50 +313,20 @@ class SheetParser(ABC):
 }
 ```
 
-#### Format Selection Logic
-```python
-def get_parser(format_type: str, rankings_cache: Optional[Dict] = None) -> SheetParser:
-    if format_type == "dan":
-        return DanDraftParser()
-    elif format_type == "adam":
-        return AdamDraftParser(rankings_cache)
-    else:
-        raise ValueError(f"Unsupported draft format: {format_type}")
-```
+#### Format Selection
+The factory pattern selects the appropriate parser based on configuration:
+- **Dan Format**: Uses `DanDraftParser` for snake drafts
+- **Adam Format**: Uses `AdamDraftParser` with rankings cache for auction drafts
+- **Configuration Driven**: Format selection based on `draft.format` setting
 
-### Implementation Phases
-
-#### Phase 1: Refactor Current Implementation
-1. Extract existing parsing logic into `DanDraftParser`
-2. Create `SheetParser` abstract base class
-3. Refactor `sheets_service.py` to use strategy pattern
-4. Add format configuration support
-5. Update all tests to work with refactored architecture
-6. Ensure zero functional changes to existing behavior
-
-**Success Criteria**: All existing tests pass, MCP tools work identically
-
-#### Phase 2: Add Adam Format Support  
-1. Implement `AdamDraftParser` class
-2. Add name reversal logic ("Hall, Breece" → "Breece Hall")
-3. Implement team lookup from rankings cache
-4. Add defense team name mapping ("Ravens D/ST" → "BAL")
-5. Handle auction draft characteristics (unequal rosters, gaps)
-6. Add comprehensive tests for Adam format
-7. Update configuration to support both formats
-
-**Success Criteria**: Can switch between formats via config, both work correctly
 
 ### Data Flow
-```
-sheets_service.read_draft_progress()
-  ↓
-config.DRAFT_FORMAT → get_parser() → DanDraftParser | AdamDraftParser
-  ↓
-parser.parse_draft_data(sheet_data, rankings_cache?) → DraftState
-  ↓
-MCP tools receive identical DraftState regardless of source format
-```
+1. **Configuration** determines which format parser to use
+2. **Sheets Service** fetches raw data from Google Sheets
+3. **Format Parser** converts sheet data to standardized `DraftState`
+4. **MCP Tools** receive identical `DraftState` regardless of source format
+
+This abstraction ensures all tools work with both draft formats without modification.
 
 ### Validation & Error Handling
 - **Format Detection**: Parsers validate sheet structure matches expected format
@@ -378,13 +341,7 @@ MCP tools receive identical DraftState regardless of source format
 4. **Testable**: Each parser can be unit tested independently
 5. **Configurable**: Switch formats without code changes
 
-### Migration Strategy
-- Phase 1 maintains 100% backward compatibility
-- Phase 2 adds new functionality without affecting existing users
-- Configuration changes are additive only
-- Existing tools require no modifications
-
-### Implementation TODOs
+### Future Enhancements
 
 #### DanDraftParser Simplification (Future)
 The current `DanDraftParser` uses a complex row-based approach that:

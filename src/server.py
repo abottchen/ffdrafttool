@@ -19,7 +19,7 @@ from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
-from src.config import DEFAULT_SHEET_ID, DEFAULT_SHEET_RANGE, LOG_LEVEL
+from src.config import DEFAULT_SHEET_ID, LOG_LEVEL
 from src.tools.available_players import get_available_players
 from src.tools.draft_progress import read_draft_progress
 from src.tools.player_info import get_player_info
@@ -72,28 +72,20 @@ async def get_player_rankings_tool(
 
 
 @mcp.tool()
-async def read_draft_progress_tool(
-    sheet_id: str = DEFAULT_SHEET_ID,
-    sheet_range: str = DEFAULT_SHEET_RANGE,
-    force_refresh: bool = False,
-) -> str:
+async def read_draft_progress_tool(force_refresh: bool = False) -> str:
     """
     Read current draft progress from Google Sheets.
 
     Args:
-        sheet_id: Google Sheets ID from the URL
-        sheet_range: Range to read from the sheet
         force_refresh: If True, ignore cache and fetch fresh data from Google Sheets
 
     Returns:
         JSON string with current draft state and picks
     """
-    logger.info(
-        f"read_draft_progress called with sheet_id={sheet_id}, range={sheet_range}, force_refresh={force_refresh}"
-    )
+    logger.info(f"read_draft_progress called with force_refresh={force_refresh}")
 
     try:
-        result = await read_draft_progress(sheet_id, sheet_range, force_refresh)
+        result = await read_draft_progress(force_refresh)
         # Check if result is a Pydantic model or a dict (for error responses)
         if hasattr(result, "model_dump_json"):
             return result.model_dump_json(indent=2)

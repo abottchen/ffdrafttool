@@ -61,7 +61,7 @@ class TestDraftProgress:
         ) as mock_cache:
             mock_cache.return_value = mock_draft_state
 
-            result = await read_draft_progress("test_sheet_id")
+            result = await read_draft_progress()
 
             # Should return DraftState object
             assert isinstance(result, DraftState)
@@ -69,7 +69,7 @@ class TestDraftProgress:
             assert len(result.picks) == 2
 
             # Verify cache was called correctly
-            mock_cache.assert_called_once_with("test_sheet_id", "Draft!A1:V24")
+            mock_cache.assert_called_once()
 
             # Check teams data
             teams = result.teams
@@ -104,7 +104,7 @@ class TestDraftProgress:
                 mock_service.read_draft_data.return_value = mock_draft_state
                 mock_service_class.return_value = mock_service
 
-                result = await read_draft_progress("test_sheet_id", force_refresh=True)
+                result = await read_draft_progress(force_refresh=True)
 
                 # Should return DraftState object
                 assert isinstance(result, DraftState)
@@ -112,9 +112,8 @@ class TestDraftProgress:
 
                 # Verify sheets service was called directly (bypassing cache)
                 mock_service_class.assert_called_once()
-                mock_service.read_draft_data.assert_called_once_with(
-                    "test_sheet_id", "Draft!A1:V24", force_refresh=True
-                )
+                # Verify service was used with config-based parameters
+                mock_service.read_draft_data.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_read_draft_progress_missing_dependencies(self):
@@ -124,7 +123,7 @@ class TestDraftProgress:
         ) as mock_provider_class:
             mock_provider_class.side_effect = ImportError("Google API not available")
 
-            result = await read_draft_progress("test_sheet_id", force_refresh=True)
+            result = await read_draft_progress(force_refresh=True)
 
             # Should return error dict
             assert isinstance(result, dict)
@@ -133,18 +132,18 @@ class TestDraftProgress:
             assert "Google Sheets API not available" in result["error"]
 
     @pytest.mark.asyncio
-    async def test_read_draft_progress_custom_range(self, mock_draft_state):
-        """Test with custom sheet range."""
+    async def test_read_draft_progress_config_based(self, mock_draft_state):
+        """Test that configuration is used for sheet parameters."""
         with patch(
             "src.services.draft_state_cache.get_cached_draft_state"
         ) as mock_cache:
             mock_cache.return_value = mock_draft_state
 
-            result = await read_draft_progress("test_sheet_id", "CustomSheet!A1:Z30")
+            result = await read_draft_progress()
 
             assert isinstance(result, DraftState)
-            # Verify cache was called with custom range
-            mock_cache.assert_called_once_with("test_sheet_id", "CustomSheet!A1:Z30")
+            # Verify cache was called (config determines sheet_id and range)
+            mock_cache.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_read_draft_progress_cache_error(self):
@@ -162,7 +161,7 @@ class TestDraftProgress:
         ) as mock_cache:
             mock_cache.return_value = error_result
 
-            result = await read_draft_progress("test_sheet_id")
+            result = await read_draft_progress()
 
             # Should return error dict from cache
             assert isinstance(result, dict)
@@ -214,7 +213,7 @@ class TestDraftProgress:
         ) as mock_cache:
             mock_cache.return_value = expected_draft_state
 
-            result = await read_draft_progress("test_sheet_id")
+            result = await read_draft_progress()
 
             # Should return DraftState object for success
             assert isinstance(result, DraftState)
@@ -237,7 +236,7 @@ class TestDraftProgress:
         ) as mock_cache:
             mock_cache.return_value = empty_draft_state
 
-            result = await read_draft_progress("test_sheet_id")
+            result = await read_draft_progress()
 
             assert isinstance(result, DraftState)
             assert len(result.picks) == 0

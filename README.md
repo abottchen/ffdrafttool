@@ -8,6 +8,15 @@ This MCP server implements a clean separation of concerns:
 - **MCP Server (this repository)**: Provides raw data through 5 simple tools
 - **MCP Client (e.g., Claude, GPT, etc.)**: Performs all analysis, strategy, and recommendations
 
+## Supported Draft Formats
+
+The server supports multiple Google Sheets draft formats through a pluggable parser architecture:
+
+- **Dan Format**: Snake draft with team abbreviations in player names (`"Josh Allen BUF"`)
+- **Adam Format**: Auction draft with "Last, First" names and team lookup (`"Hall, Breece"`)
+
+Switch between formats by updating the `draft.format` setting in your configuration.
+
 ## Features
 
 - **Multi-source player rankings** - Retrieves data from FantasySharks web scraping
@@ -143,6 +152,7 @@ When used with an LLM-based MCP client configured with the example prompt, you c
 
 1. **You ask your MCP client** for draft advice
 2. **The MCP client calls server tools** to get data:
+   - `read_draft_progress` to get current draft state and picks
    - `get_team_roster` to see your current team composition
    - `get_available_players` to see undrafted players by position
    - `get_player_rankings` to get comprehensive player data
@@ -179,10 +189,14 @@ ffdrafttool2/
 │   │   ├── draft_state_simple.py    # Simplified DraftState model
 │   │   └── draft_pick.py            # DraftPick model
 │   └── services/
-│       ├── sheets_service.py        # Google Sheets integration
+│       ├── sheet_parser.py          # Abstract parser interface
+│       ├── dan_draft_parser.py      # Dan format parser (snake draft)
+│       ├── adam_draft_parser.py     # Adam format parser (auction draft)
+│       ├── sheets_service.py        # Google Sheets integration & parser factory
 │       ├── web_scraper.py           # FantasySharks scraper
+│       ├── draft_state_cache.py     # TTL-based caching for draft data
 │       └── team_mapping.py          # Team abbreviation normalization
-├── tests/                           # Comprehensive test suite (141 tests)
+├── tests/                           # Comprehensive test suite
 ├── example-prompt.md                # Example prompt for LLM-based MCP clients
 ├── run_server.py                    # Server entry point
 └── README.md                        # This file

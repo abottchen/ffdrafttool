@@ -5,12 +5,13 @@ import sys
 from abc import ABC, abstractmethod
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 sys.path.append(str(Path(__file__).parent.parent))
 
 from src.config import DRAFT_FORMAT
 from src.models.draft_state_simple import DraftState
+from src.services.adam_draft_parser import AdamDraftParser
 from src.services.dan_draft_parser import DanDraftParser
 from src.services.sheet_parser import SheetParser
 
@@ -132,11 +133,12 @@ class GoogleSheetsProvider(SheetsProvider):
             raise
 
 
-def get_parser(format_type: str = None) -> SheetParser:
+def get_parser(format_type: str = None, rankings_cache: Dict = None) -> SheetParser:
     """Factory function to get the appropriate parser for the draft format.
 
     Args:
         format_type: Draft format type ('dan' or 'adam'). Uses config if not specified.
+        rankings_cache: Optional rankings cache for team lookup (needed for adam format).
 
     Returns:
         SheetParser instance for the specified format
@@ -149,9 +151,11 @@ def get_parser(format_type: str = None) -> SheetParser:
 
     if format_type == "dan":
         return DanDraftParser()
+    elif format_type == "adam":
+        return AdamDraftParser(rankings_cache)
     else:
         raise ValueError(
-            f"Unsupported draft format: {format_type}. Supported formats: dan"
+            f"Unsupported draft format: {format_type}. Supported formats: dan, adam"
         )
 
 
