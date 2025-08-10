@@ -1,4 +1,4 @@
-"""Tests for draft progress tool."""
+"""Tests for draft progress tool with proper caching support."""
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -12,79 +12,87 @@ from src.tools.draft_progress import read_draft_progress
 
 
 class TestDraftProgress:
-    """Test draft progress functionality."""
-
-    @pytest.fixture
-    def mock_processed_data(self):
-        """Mock processed data from sheets service."""
-        return {
-            "teams": [
-                {"team_name": "Sunnydale Slayers", "owner": "Buffy", "team_number": 1},
-                {"team_name": "Willow's Witches", "owner": "Willow", "team_number": 2},
-            ],
-            "picks": [
-                {
-                    "pick_number": 1,
-                    "round": 1,
-                    "column_team": 1,
-                    "player": "Josh Allen",
-                    "position": "QB",
-                    "team": "BUF",
-                },
-                {
-                    "pick_number": 2,
-                    "round": 1,
-                    "column_team": 2,
-                    "player": "Christian McCaffrey",
-                    "position": "RB",
-                    "team": "SF",
-                },
-            ],
-        }
+    """Test suite for draft progress tool with caching."""
 
     @pytest.fixture
     def mock_draft_state(self):
-        """Mock simplified draft state after adapter conversion."""
+        """Create a mock DraftState for testing."""
         teams = [
-            {"team_name": "Sunnydale Slayers", "owner": "Buffy", "team_number": 1},
-            {"team_name": "Willow's Witches", "owner": "Willow", "team_number": 2},
+            {"team_name": "Sunnydale Slayers", "owner": "Buffy"},
+            {"team_name": "Willow's Witches", "owner": "Willow"},
         ]
 
         picks = [
             DraftPick(
-                owner="Buffy",
                 player=Player(
                     name="Josh Allen",
                     team="BUF",
                     position="QB",
                     bye_week=12,
                     ranking=1,
-                    projected_points=99.0,
+                    projected_points=25.5,
                     injury_status=InjuryStatus.HEALTHY,
+                    notes="Elite QB1",
                 ),
+                owner="Buffy",
             ),
             DraftPick(
-                owner="Willow",
                 player=Player(
                     name="Christian McCaffrey",
                     team="SF",
                     position="RB",
                     bye_week=9,
                     ranking=2,
-                    projected_points=98.0,
+                    projected_points=20.8,
                     injury_status=InjuryStatus.HEALTHY,
+                    notes="Top RB when healthy",
                 ),
+                owner="Willow",
             ),
         ]
 
         return DraftState(teams=teams, picks=picks)
 
     @pytest.mark.asyncio
-    async def test_read_draft_progress_success(
-        self, mock_processed_data, mock_draft_state
-    ):
-        """Test successful draft progress read."""
+    async def test_read_draft_progress_success(self, mock_draft_state):
+        """Test successful draft progress read using cache."""
+        with patch(
+            "src.services.draft_state_cache.get_cached_draft_state"
+        ) as mock_cache:
+            mock_cache.return_value = mock_draft_state
 
+            result = await read_draft_progress()
+
+            # Should return DraftState object
+            assert isinstance(result, DraftState)
+            assert len(result.teams) == 2
+            assert len(result.picks) == 2
+
+            # Verify cache was called correctly
+            mock_cache.assert_called_once()
+
+            # Check teams data
+            teams = result.teams
+            assert teams[0]["team_name"] == "Sunnydale Slayers"
+            assert teams[0]["owner"] == "Buffy"
+            assert teams[1]["owner"] == "Willow"
+
+            # Check picks data
+            picks = result.picks
+            pick1 = picks[0]
+            assert pick1.owner == "Buffy"
+            assert pick1.player.name == "Josh Allen"
+            assert pick1.player.position == "QB"
+            assert pick1.player.team == "BUF"
+
+            pick2 = picks[1]
+            assert pick2.owner == "Willow"
+            assert pick2.player.name == "Christian McCaffrey"
+            assert pick2.player.position == "RB"
+
+    @pytest.mark.asyncio
+    async def test_read_draft_progress_force_refresh(self, mock_draft_state):
+        """Test force refresh bypasses cache."""
         with patch(
             "src.tools.draft_progress.GoogleSheetsProvider"
         ) as mock_provider_class:
@@ -93,279 +101,76 @@ class TestDraftProgress:
 
             with patch("src.tools.draft_progress.SheetsService") as mock_service_class:
                 mock_service = AsyncMock()
-                # SheetsService now returns DraftState directly (no adapter needed)
                 mock_service.read_draft_data.return_value = mock_draft_state
                 mock_service_class.return_value = mock_service
 
-                result = await read_draft_progress("test_sheet_id")
+                result = await read_draft_progress(force_refresh=True)
 
                 # Should return DraftState object
                 assert isinstance(result, DraftState)
                 assert len(result.teams) == 2
-                assert len(result.picks) == 2
 
-                # Check teams data
-                teams = result.teams
-                assert len(teams) == 2
-                assert teams[0]["team_name"] == "Sunnydale Slayers"
-                assert teams[0]["owner"] == "Buffy"
-                assert teams[1]["owner"] == "Willow"
-
-                # Check picks data
-                picks = result.picks
-                assert len(picks) == 2
-
-                # Verify first pick
-                pick1 = picks[0]
-                assert pick1.owner == "Buffy"
-                assert pick1.player.name == "Josh Allen"
-                assert pick1.player.position == "QB"
-                assert pick1.player.team == "BUF"
-                assert pick1.player.injury_status == InjuryStatus.HEALTHY
-
-                # Verify second pick
-                pick2 = picks[1]
-                assert pick2.owner == "Willow"
-                assert pick2.player.name == "Christian McCaffrey"
-                assert pick2.player.position == "RB"
+                # Verify sheets service was called directly (bypassing cache)
+                mock_service_class.assert_called_once()
+                # Verify service was used with config-based parameters
+                mock_service.read_draft_data.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_read_draft_progress_missing_dependencies(self):
-        """Test handling of missing Google Sheets dependencies."""
-
+        """Test handling of missing Google Sheets dependencies with force refresh."""
         with patch(
             "src.tools.draft_progress.GoogleSheetsProvider"
         ) as mock_provider_class:
-            mock_provider_class.side_effect = ImportError(
-                "google-api-python-client not found"
-            )
+            mock_provider_class.side_effect = ImportError("Google API not available")
 
-            result = await read_draft_progress("test_sheet_id")
+            result = await read_draft_progress(force_refresh=True)
 
+            # Should return error dict
+            assert isinstance(result, dict)
             assert result["success"] is False
             assert result["error_type"] == "missing_dependencies"
             assert "Google Sheets API not available" in result["error"]
-            assert "troubleshooting" in result
-            assert "pip install" in result["troubleshooting"]["solution"]
 
     @pytest.mark.asyncio
-    async def test_read_draft_progress_missing_credentials(self):
-        """Test handling of missing credentials."""
+    async def test_read_draft_progress_config_based(self, mock_draft_state):
+        """Test that configuration is used for sheet parameters."""
+        with patch(
+            "src.services.draft_state_cache.get_cached_draft_state"
+        ) as mock_cache:
+            mock_cache.return_value = mock_draft_state
+
+            result = await read_draft_progress()
+
+            assert isinstance(result, DraftState)
+            # Verify cache was called (config determines sheet_id and range)
+            mock_cache.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_read_draft_progress_cache_error(self):
+        """Test handling of cache errors."""
+        error_result = {
+            "success": False,
+            "error": "Sheet not found",
+            "error_type": "sheet_access_failed",
+            "sheet_id": "test_sheet_id",
+            "sheet_range": "Draft!A1:V24",
+        }
 
         with patch(
-            "src.tools.draft_progress.GoogleSheetsProvider"
-        ) as mock_provider_class:
-            mock_provider_class.side_effect = FileNotFoundError(
-                "credentials.json not found"
-            )
+            "src.services.draft_state_cache.get_cached_draft_state"
+        ) as mock_cache:
+            mock_cache.return_value = error_result
 
-            result = await read_draft_progress("test_sheet_id")
+            result = await read_draft_progress()
 
+            # Should return error dict from cache
+            assert isinstance(result, dict)
             assert result["success"] is False
-            assert result["error_type"] == "missing_credentials"
-            assert "credentials not configured" in result["error"]
-            assert (
-                "console.developers.google.com"
-                in result["troubleshooting"]["next_steps"][0]
-            )
-
-    @pytest.mark.asyncio
-    async def test_read_draft_progress_permission_error(self, mock_processed_data):
-        """Test handling of permission errors."""
-
-        with patch(
-            "src.tools.draft_progress.GoogleSheetsProvider"
-        ) as mock_provider_class:
-            mock_provider = MagicMock()
-            mock_provider_class.return_value = mock_provider
-
-            with patch("src.tools.draft_progress.SheetsService") as mock_service_class:
-                mock_service = AsyncMock()
-                mock_service.read_draft_data.side_effect = Exception(
-                    "403 Forbidden - Permission denied"
-                )
-                mock_service_class.return_value = mock_service
-
-                result = await read_draft_progress("test_sheet_id")
-
-                assert result["success"] is False
-                assert result["error_type"] == "sheet_access_failed"
-                assert "403 Forbidden" in result["error"]
-                assert "check permissions" in result["troubleshooting"]["solution"]
-                assert (
-                    "shared with your Google account"
-                    in result["troubleshooting"]["next_steps"][0]
-                )
-
-    @pytest.mark.asyncio
-    async def test_read_draft_progress_not_found_error(self):
-        """Test handling of sheet not found errors."""
-
-        with patch(
-            "src.tools.draft_progress.GoogleSheetsProvider"
-        ) as mock_provider_class:
-            mock_provider = MagicMock()
-            mock_provider_class.return_value = mock_provider
-
-            with patch("src.tools.draft_progress.SheetsService") as mock_service_class:
-                mock_service = AsyncMock()
-                mock_service.read_draft_data.side_effect = Exception(
-                    "404 Not Found - Sheet not found"
-                )
-                mock_service_class.return_value = mock_service
-
-                result = await read_draft_progress("invalid_sheet_id")
-
-                assert result["success"] is False
-                assert result["error_type"] == "sheet_access_failed"
-                assert "404 Not Found" in result["error"]
-                assert (
-                    "check sheet ID and range" in result["troubleshooting"]["solution"]
-                )
-                assert (
-                    "Verify the Google Sheet ID"
-                    in result["troubleshooting"]["next_steps"][0]
-                )
-
-    @pytest.mark.asyncio
-    async def test_read_draft_progress_authentication_error(self):
-        """Test handling of authentication errors."""
-
-        with patch(
-            "src.tools.draft_progress.GoogleSheetsProvider"
-        ) as mock_provider_class:
-            mock_provider = MagicMock()
-            mock_provider_class.return_value = mock_provider
-
-            with patch("src.tools.draft_progress.SheetsService") as mock_service_class:
-                mock_service = AsyncMock()
-                mock_service.read_draft_data.side_effect = Exception(
-                    "Authentication failed - invalid credentials"
-                )
-                mock_service_class.return_value = mock_service
-
-                result = await read_draft_progress("test_sheet_id")
-
-                assert result["success"] is False
-                assert result["error_type"] == "sheet_access_failed"
-                assert "Authentication failed" in result["error"]
-                assert "refresh credentials" in result["troubleshooting"]["solution"]
-                assert "Delete token.json" in result["troubleshooting"]["next_steps"][0]
-
-    @pytest.mark.asyncio
-    async def test_read_draft_progress_with_custom_range(
-        self, mock_processed_data, mock_draft_state
-    ):
-        """Test reading draft progress with custom sheet range."""
-
-        with patch(
-            "src.tools.draft_progress.GoogleSheetsProvider"
-        ) as mock_provider_class:
-            mock_provider = MagicMock()
-            mock_provider_class.return_value = mock_provider
-
-            with patch("src.tools.draft_progress.SheetsService") as mock_service_class:
-                mock_service = AsyncMock()
-                # SheetsService now returns DraftState directly (no adapter needed)
-                mock_service.read_draft_data.return_value = mock_draft_state
-                mock_service_class.return_value = mock_service
-
-                result = await read_draft_progress(
-                    "test_sheet_id", sheet_range="CustomRange!A1:Z30"
-                )
-
-                # Should return DraftState object for success
-                assert isinstance(result, DraftState)
-
-                # Verify the custom range was passed to the service
-                mock_service.read_draft_data.assert_called_once_with(
-                    "test_sheet_id", "CustomRange!A1:Z30", False
-                )
-
-    @pytest.mark.asyncio
-    async def test_read_draft_progress_force_refresh(
-        self, mock_processed_data, mock_draft_state
-    ):
-        """Test reading draft progress with force refresh."""
-
-        with patch(
-            "src.tools.draft_progress.GoogleSheetsProvider"
-        ) as mock_provider_class:
-            mock_provider = MagicMock()
-            mock_provider_class.return_value = mock_provider
-
-            with patch("src.tools.draft_progress.SheetsService") as mock_service_class:
-                mock_service = AsyncMock()
-                # SheetsService now returns DraftState directly (no adapter needed)
-                mock_service.read_draft_data.return_value = mock_draft_state
-                mock_service_class.return_value = mock_service
-
-                result = await read_draft_progress("test_sheet_id", force_refresh=True)
-
-                # Should return DraftState object for success
-                assert isinstance(result, DraftState)
-
-                # Verify force_refresh was passed to the service
-                mock_service.read_draft_data.assert_called_once_with(
-                    "test_sheet_id", "Draft!A1:V24", True
-                )
-
-    @pytest.mark.asyncio
-    async def test_read_draft_progress_service_error(self, mock_processed_data):
-        """Test handling of sheets service errors."""
-
-        with patch(
-            "src.tools.draft_progress.GoogleSheetsProvider"
-        ) as mock_provider_class:
-            mock_provider = MagicMock()
-            mock_provider_class.return_value = mock_provider
-
-            with patch("src.tools.draft_progress.SheetsService") as mock_service_class:
-                mock_service = AsyncMock()
-                # Make the service raise an exception
-                mock_service.read_draft_data.side_effect = Exception(
-                    "Service processing failed"
-                )
-                mock_service_class.return_value = mock_service
-
-                result = await read_draft_progress("test_sheet_id")
-
-                # Should return error dict when service fails
-                assert result["success"] is False
-                assert result["error_type"] == "sheet_access_failed"
-                assert "Service processing failed" in result["error"]
-
-    @pytest.mark.asyncio
-    async def test_read_draft_progress_empty_data(self, mock_draft_state):
-        """Test handling of empty draft data."""
-
-        # Create empty DraftState
-        empty_draft_state = DraftState(teams=[], picks=[])
-
-        with patch(
-            "src.tools.draft_progress.GoogleSheetsProvider"
-        ) as mock_provider_class:
-            mock_provider = MagicMock()
-            mock_provider_class.return_value = mock_provider
-
-            with patch("src.tools.draft_progress.SheetsService") as mock_service_class:
-                mock_service = AsyncMock()
-                # SheetsService now returns DraftState directly (no adapter needed)
-                mock_service.read_draft_data.return_value = empty_draft_state
-                mock_service_class.return_value = mock_service
-
-                result = await read_draft_progress("test_sheet_id")
-
-                # Should return DraftState object for success
-                assert isinstance(result, DraftState)
-                assert len(result.teams) == 0
-                assert len(result.picks) == 0
+            assert result["error"] == "Sheet not found"
 
     @pytest.mark.asyncio
     async def test_read_draft_progress_with_composite_names(self):
-        """Test that composite player names with team abbreviations are properly handled."""
-
-        # Create expected DraftState with parsed composite names
+        """Test handling of composite player names (with team abbreviations)."""
         teams = [
             {"team_name": "Sunnydale Slayers", "owner": "Buffy"},
             {"team_name": "Willow's Witches", "owner": "Willow"},
@@ -404,37 +209,35 @@ class TestDraftProgress:
         expected_draft_state = DraftState(teams=teams, picks=picks)
 
         with patch(
-            "src.tools.draft_progress.GoogleSheetsProvider"
-        ) as mock_provider_class:
-            mock_provider = MagicMock()
-            mock_provider_class.return_value = mock_provider
+            "src.services.draft_state_cache.get_cached_draft_state"
+        ) as mock_cache:
+            mock_cache.return_value = expected_draft_state
 
-            with patch("src.tools.draft_progress.SheetsService") as mock_service_class:
-                mock_service = AsyncMock()
-                # SheetsService now returns DraftState directly with parsed names
-                mock_service.read_draft_data.return_value = expected_draft_state
-                mock_service_class.return_value = mock_service
+            result = await read_draft_progress()
 
-                result = await read_draft_progress("test_sheet_id")
+            # Should return DraftState object for success
+            assert isinstance(result, DraftState)
+            assert len(result.picks) == 2
 
-                # Should return DraftState object for success
-                assert isinstance(result, DraftState)
-                assert len(result.picks) == 2
+            # Verify team extraction worked
+            picks = result.picks
+            assert picks[0].player.name == "Josh Allen"
+            assert picks[0].player.team == "BUF"
+            assert picks[1].player.name == "Lamar Jackson"
+            assert picks[1].player.team == "BAL"
 
-                # Check that player names were cleaned and teams were extracted
-                picks = result.picks
-                assert len(picks) == 2
+    @pytest.mark.asyncio
+    async def test_read_draft_progress_empty_data(self):
+        """Test handling of empty draft data."""
+        empty_draft_state = DraftState(picks=[], teams=[])
 
-                # Verify first pick - name cleaned, team extracted
-                pick1 = picks[0]
-                assert pick1.owner == "Buffy"
-                assert pick1.player.name == "Josh Allen"  # Team suffix removed
-                assert pick1.player.team == "BUF"  # Team extracted from name
-                assert pick1.player.position == "QB"
+        with patch(
+            "src.services.draft_state_cache.get_cached_draft_state"
+        ) as mock_cache:
+            mock_cache.return_value = empty_draft_state
 
-                # Verify second pick - name cleaned, team extracted
-                pick2 = picks[1]
-                assert pick2.owner == "Willow"
-                assert pick2.player.name == "Lamar Jackson"  # Team suffix removed
-                assert pick2.player.team == "BAL"  # Team extracted from name
-                assert pick2.player.position == "QB"
+            result = await read_draft_progress()
+
+            assert isinstance(result, DraftState)
+            assert len(result.picks) == 0
+            assert len(result.teams) == 0

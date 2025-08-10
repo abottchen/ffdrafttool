@@ -6,15 +6,15 @@ The MCP server provides five tools for data retrieval. All analysis and draft re
 
 ### 1. Draft Progress Tool
 **Purpose**: Read current draft state from Google Sheets
-- **Inputs**: None (uses configuration defaults)
+- **Inputs**: 
+  - force_refresh: Optional boolean (default: false) to bypass cache
 - **Outputs**: Draft state object containing all picks and team/owner pairs
 - **Implementation**:
-  - Uses existing Google Sheets reading code (sheets_service.py works correctly)
-  - Reads from Google Sheets specified in config.json
-  - Expected sheet format: columns for team names, owners, and drafted players
-  - Transform sheet data into simplified DraftState and DraftPick objects
+  - Uses configuration-driven sheet selection (sheet_id and range from config.json)
+  - Format-aware parsing based on draft.format configuration setting
+  - Transform sheet data into simplified DraftState and DraftPick objects using appropriate parser
+  - TTL-based caching for draft state with configurable cache duration
   - On error: Retry once, then return error for MCP client to handle
-  - No caching needed (draft state changes frequently)
 
 ### 2. Player Rankings Tool  
 **Purpose**: Retrieve player rankings by position
@@ -75,54 +75,41 @@ The MCP server provides five tools for data retrieval. All analysis and draft re
 
 ### 1. DraftState
 Represents the current state of the draft.
-```python
-class DraftState:
-    - picks: List[DraftPick]  # All picks made so far
-    - teams: List[Dict]       # Team/owner pairs: [{"owner": str, "team_name": str}]
-```
+- **picks**: List of all draft picks made so far
+- **teams**: List of team/owner pairs with owner name and team name
+
 Note: Team rosters can be derived from picks list when needed. No need for separate roster tracking.
 
 ### 2. DraftPick
 Represents a single draft pick.
-```python
-class DraftPick:
-    - player: Player          # The drafted player
-    - owner: str              # Fantasy owner who drafted them
-```
+- **player**: The drafted player object
+- **owner**: Fantasy owner who drafted them
+
 Note: Round/pick numbers and timestamps are not needed for this implementation.
 
 ### 3. Player
 Core player information with ranking data.
-```python
-class Player:
-    - name: str               # Full player name
-    - team: str               # NFL team abbreviation
-    - position: str           # Position (QB, RB, WR, TE, K, DST)
-    - bye_week: int           # Bye week number
-    - injury_status: InjuryStatus  # Enum for injury states
-    - ranking: int            # FantasySharks ranking
-    - projected_points: float # Projected fantasy points
-    - notes: str              # Additional notes/analysis from source
-```
+- **name**: Full player name
+- **team**: NFL team abbreviation
+- **position**: Position (QB, RB, WR, TE, K, DST)
+- **bye_week**: Bye week number
+- **injury_status**: Enum for injury states
+- **ranking**: FantasySharks ranking
+- **projected_points**: Projected fantasy points
+- **notes**: Additional notes/analysis from source
 
 ### 4. InjuryStatus
-Enum for tracking player health.
-```python
-class InjuryStatus(Enum):
-    HEALTHY = "HEALTHY"
-    QUESTIONABLE = "Q"
-    DOUBTFUL = "D"
-    OUT = "O"
-    INJURED_RESERVE = "IR"
-```
+Enumeration for tracking player health status.
+- HEALTHY: Player is healthy
+- QUESTIONABLE: Listed as questionable (Q)
+- DOUBTFUL: Listed as doubtful (D)
+- OUT: Listed as out (O)
+- INJURED_RESERVE: On injured reserve (IR)
 
 ### 5. PlayerRankings
 Container for cached rankings data.
-```python
-class PlayerRankings:
-    - position_data: Dict[str, List[Player]]  # Cached by position
-    - last_updated: Dict[str, datetime]       # Track cache age by position
-```
+- **position_data**: Dictionary mapping positions to lists of players
+- **last_updated**: Dictionary tracking cache age by position
 
 ## Responsibilities Division
 
@@ -151,63 +138,23 @@ class PlayerRankings:
 3. Refactor for clarity while keeping tests green
 4. Each module should have corresponding test file in tests/
 
-### Error Handling Strategy
-```python
-def fetch_with_retry(func, max_retries=1):
-    try:
-        return func()
-    except Exception as e:
-        if max_retries > 0:
-            return fetch_with_retry(func, max_retries - 1)
-        return {"success": False, "error": str(e)}
-```
-
-### Caching Implementation
+### Caching Strategy
 
 #### Rankings Cache
-```python
-# Global in-memory cache for rankings (persistent for server session)
-_rankings_cache = {
-    "QB": None,
-    "RB": None,
-    "WR": None,
-    "TE": None,
-    "K": None,
-    "DST": None
-}
+- Global in-memory cache for rankings data, persists for server session duration
+- Cache organized by position (QB, RB, WR, TE, K, DST)
+- On cache miss: Fetch from FantasySharks, store in memory, return data
+- On cache hit: Return immediately from memory
+- No expiration within session - rankings assumed stable during draft
 
-def get_cached_or_fetch(position):
-    if _rankings_cache[position] is not None:
-        return _rankings_cache[position]
-    
-    data = scrape_fantasysharks(position)
-    _rankings_cache[position] = data
-    return data
-```
-
-#### Draft State Cache
-```python
-# TTL-based cache for draft state (configurable expiration)
-from cachetools import TTLCache
-from datetime import timedelta
-
-# Cache with configurable TTL from config
-_draft_state_cache = TTLCache(
-    maxsize=1,  # Only cache the latest draft state
-    ttl=DRAFT_STATE_CACHE_TTL_SECONDS  # From config.py
-)
-
-async def get_cached_draft_state(sheet_id, sheet_range):
-    cache_key = f"{sheet_id}:{sheet_range}"
-    
-    if cache_key in _draft_state_cache:
-        return _draft_state_cache[cache_key]
-    
-    # Fetch fresh from Google Sheets
-    draft_state = await read_draft_progress(sheet_id, sheet_range)
-    _draft_state_cache[cache_key] = draft_state
-    return draft_state
-```
+#### Draft State Cache  
+- TTL-based cache using cachetools library for automatic expiration
+- Single entry cache (only latest draft state stored)
+- Configurable TTL from configuration file (default: 60 seconds)
+- Cache key generated from sheet_id and sheet_range (format-aware)
+- Configuration automatically determines sheet parameters based on draft format
+- On cache miss: Fetch fresh from Google Sheets using appropriate parser
+- On cache hit: Return cached draft state if within TTL window
 
 ### Configuration
 All settings in config.json:
@@ -245,3 +192,105 @@ All settings in config.json:
 5. Return recommendation of top 5 QBs with reasoning
 
 **Note**: Team Roster Tool warms the draft state cache, making Available Players Tool calls fast.
+
+## Dual Draft Format Support Architecture
+
+### Overview
+The MCP server supports two different Google Sheets draft formats through a pluggable parser architecture:
+- **Dan Format**: Snake draft with team abbreviations included in player names
+- **Adam Format**: Auction draft with "last, first" names and no team abbreviations
+
+### Architecture Design
+
+#### Strategy Pattern Implementation
+```
+src/services/
+├── sheet_parser.py           # Abstract base class defining parse interface
+├── dan_draft_parser.py       # Handles current "Draft" sheet format
+├── adam_draft_parser.py      # Handles "Adam" sheet auction format  
+└── sheets_service.py         # Strategy context, selects parser based on config
+```
+
+#### Parser Interface
+Each parser implements a standard interface:
+- **Parse Method**: Converts raw sheet data to `DraftState` objects
+- **Format Detection**: Validates sheet structure matches expected format
+- **Error Handling**: Graceful handling of malformed or missing data
+- **Rankings Integration**: Optional rankings cache for team/position lookup
+
+### Draft Format Specifications
+
+#### Dan Format (Current Implementation)
+- **Sheet Name**: "Draft"
+- **Draft Type**: Snake draft
+- **Player Format**: "Josh Allen (BUF)" - includes team abbreviations
+- **Team Names**: Embedded in sheet cells
+- **Roster Balance**: Equal rounds, balanced rosters
+- **Owner Information**: Explicit team names and owners in sheet
+
+#### Adam Format (New Implementation)  
+- **Sheet Name**: "Adam"
+- **Draft Type**: Auction draft
+- **Player Format**: "Hall, Breece" - last name first, no team info
+- **Team Names**: Must be looked up from rankings cache
+- **Roster Balance**: Unequal rosters, gaps allowed (auction style)
+- **Owner Information**: Names in header row only
+- **Defense Format**: "Ravens D/ST" - full team name + D/ST
+- **Special Handling**: Skip $ value columns, reverse name format
+
+### Configuration
+
+#### Required Configuration
+The configuration file must specify:
+- **draft.format**: Set to "dan" or "adam" to select the parser
+- **draft.sheet_id**: Google Sheet ID (same for both formats)
+- **draft.formats.dan**: Configuration for Dan format including sheet name and range
+- **draft.formats.adam**: Configuration for Adam format including sheet name and range
+
+Each format configuration includes:
+- **sheet_name**: Name of the sheet tab
+- **sheet_range**: Cell range to read (e.g., "Draft!A1:V24" or "Adam!A1:T20")
+
+#### Format Selection
+The factory pattern selects the appropriate parser based on configuration:
+- **Dan Format**: Uses `DanDraftParser` for snake drafts
+- **Adam Format**: Uses `AdamDraftParser` with rankings cache for auction drafts
+- **Configuration Driven**: Format selection based on `draft.format` setting
+
+
+### Data Flow
+1. **Configuration** determines which format parser to use
+2. **Sheets Service** fetches raw data from Google Sheets
+3. **Format Parser** converts sheet data to standardized `DraftState`
+4. **MCP Tools** receive identical `DraftState` regardless of source format
+
+This abstraction ensures all tools work with both draft formats without modification.
+
+### Validation & Error Handling
+- **Format Detection**: Parsers validate sheet structure matches expected format
+- **Configuration Validation**: Ensure format is specified, sheet configuration exists
+- **Runtime Validation**: Detect format mismatches between config and actual sheet data
+- **Graceful Degradation**: Handle missing players, team lookup failures
+
+### Benefits
+1. **Zero Impact on MCP Tools**: All tools continue to work with DraftState objects
+2. **Clean Separation**: Format-specific logic isolated in parser classes  
+3. **Extensible**: Easy to add new draft formats in the future
+4. **Testable**: Each parser can be unit tested independently
+5. **Configurable**: Switch formats without code changes
+
+### Future Enhancements
+
+#### DanDraftParser Simplification (Future)
+The current `DanDraftParser` uses a complex row-based approach that:
+- Iterates through rows and extracts picks for each team column
+- Uses snake draft logic to determine "correct" team ownership  
+- Rebuilds team structures multiple times
+
+**Opportunity**: Simplify to column-based approach since Google Sheets draft format is naturally columnar:
+- Column 0: Round numbers
+- Column 1,2: Team 1 (Player, Position)
+- Column 3,4: Team 2 (Player, Position) 
+- etc.
+
+This would eliminate the need for complex pick ordering logic since each team's picks are already in chronological order within their column. However, this refactoring is deferred to avoid functional changes in Phase 1.

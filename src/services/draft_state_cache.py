@@ -3,16 +3,17 @@ Draft state caching with TTL support.
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from cachetools import TTLCache
 
 from src.config import (
     DEFAULT_SHEET_ID,
-    DEFAULT_SHEET_RANGE,
     DRAFT_CACHE_MINUTES,
+    DRAFT_FORMAT,
+    _config,
 )
-from src.tools.draft_progress import read_draft_progress
+from src.services.sheets_service import GoogleSheetsProvider, SheetsService
 
 logger = logging.getLogger(__name__)
 
@@ -22,22 +23,22 @@ _draft_state_cache: TTLCache = TTLCache(
 )
 
 
-async def get_cached_draft_state(
-    sheet_id: Optional[str] = None, sheet_range: Optional[str] = None
-) -> Dict[str, Any]:
+async def get_cached_draft_state() -> Dict[str, Any]:
     """
     Get draft state with caching.
-
-    Args:
-        sheet_id: Google Sheets ID (uses default if not provided)
-        sheet_range: Range to read (uses default if not provided)
 
     Returns:
         DraftState object or error dict
     """
-    # Use defaults if not provided
-    sheet_id = sheet_id or DEFAULT_SHEET_ID
-    sheet_range = sheet_range or DEFAULT_SHEET_RANGE
+    # Get sheet ID and range from config based on current format
+    sheet_id = DEFAULT_SHEET_ID
+
+    format_config = _config["draft"]["formats"].get(DRAFT_FORMAT)
+    if format_config and "sheet_range" in format_config:
+        sheet_range = format_config["sheet_range"]
+    else:
+        # Fallback to Draft range if format config not found
+        sheet_range = "Draft!A1:V24"
 
     cache_key = f"{sheet_id}:{sheet_range}"
 
@@ -46,18 +47,35 @@ async def get_cached_draft_state(
         logger.info(f"Returning cached draft state for {cache_key}")
         return _draft_state_cache[cache_key]
 
-    # Fetch fresh from Google Sheets
+    # Fetch fresh from Google Sheets using sheets service directly
     logger.info(f"Fetching fresh draft state for {cache_key}")
-    result = await read_draft_progress(sheet_id, sheet_range)
 
-    # Cache successful results (read_draft_progress now returns DraftState directly)
-    if isinstance(result, dict) and result.get("success", False):
-        # This is an error dict, don't cache
-        return result
-    else:
-        # It's a DraftState object, cache it
+    try:
+        provider = GoogleSheetsProvider()
+        sheets_service = SheetsService(provider)
+        result = await sheets_service.read_draft_data(
+            sheet_id, sheet_range, force_refresh=True
+        )
+
+        # Cache the DraftState object
         _draft_state_cache[cache_key] = result
         return result
+
+    except Exception as e:
+        # Return error information for client handling
+        error_message = str(e)
+        logger.error(f"Error fetching fresh draft state: {error_message}")
+
+        error_result = {
+            "success": False,
+            "error": error_message,
+            "error_type": "sheet_access_failed",
+            "sheet_id": sheet_id,
+            "sheet_range": sheet_range,
+        }
+
+        # Don't cache errors
+        return error_result
 
 
 def clear_draft_state_cache():

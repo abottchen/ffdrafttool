@@ -6,29 +6,45 @@ from src.services.sheets_service import GoogleSheetsProvider, SheetsService
 logger = logging.getLogger(__name__)
 
 
-async def read_draft_progress(
-    sheet_id: str, sheet_range: str = "Draft!A1:V24", force_refresh: bool = False
-) -> Dict[str, Any]:
+async def read_draft_progress(force_refresh: bool = False) -> Dict[str, Any]:
     """
-    Read draft progress from Google Sheets and return simplified draft state.
+    Read draft progress from Google Sheets using cached data when available.
 
     Args:
-        sheet_id: Google Sheets ID
-        sheet_range: Range to read (e.g., "Draft!A1:V24")
         force_refresh: If True, ignore cache and fetch fresh data from Google Sheets
 
     Returns:
-        Dict containing simplified draft state data
+        DraftState object or error dict
     """
     import time
 
     start_time = time.time()
-    logger.info(f"Reading draft progress from sheet {sheet_id}, range {sheet_range}")
+    logger.info(f"Reading draft progress (force_refresh={force_refresh})")
 
-    try:
-        # Create Google Sheets provider - fail fast if not available
+    if force_refresh:
+        # Force refresh bypasses cache and goes directly to sheets service
         try:
+            # Get sheet_id and sheet_range from config
+            from src.config import DEFAULT_SHEET_ID, DRAFT_FORMAT, _config
+
+            sheet_id = DEFAULT_SHEET_ID
+            format_config = _config["draft"]["formats"].get(DRAFT_FORMAT)
+            if format_config and "sheet_range" in format_config:
+                sheet_range = format_config["sheet_range"]
+            else:
+                sheet_range = "Draft!A1:V24"
+
             provider = GoogleSheetsProvider()
+            sheets_service = SheetsService(provider)
+            result = await sheets_service.read_draft_data(
+                sheet_id, sheet_range, force_refresh=True
+            )
+
+            logger.info(
+                f"read_draft_progress (force refresh) completed in {time.time() - start_time:.2f} seconds"
+            )
+            return result
+
         except ImportError as e:
             logger.error(f"Google Sheets API dependencies not installed: {e}")
             return {
@@ -47,96 +63,22 @@ async def read_draft_progress(
                 "sheet_id": sheet_id,
                 "sheet_range": sheet_range,
             }
-        except FileNotFoundError as e:
-            logger.error(f"Google Sheets credentials not found: {e}")
+        except Exception as e:
+            logger.error(f"Error in force refresh: {e}")
             return {
                 "success": False,
-                "error": "Google Sheets credentials not configured",
-                "error_type": "missing_credentials",
-                "troubleshooting": {
-                    "problem": "Google Sheets API credentials file (credentials.json) not found",
-                    "solution": "Set up Google Sheets API authentication",
-                    "next_steps": [
-                        "1. Go to https://console.developers.google.com/",
-                        "2. Create a project and enable Google Sheets API",
-                        "3. Create OAuth 2.0 credentials for desktop application",
-                        "4. Download credentials.json to the project directory",
-                        "5. Run setup_google_sheets.py to test authentication",
-                        "6. Retry reading draft progress",
-                    ],
-                },
+                "error": str(e),
+                "error_type": "sheet_access_failed",
                 "sheet_id": sheet_id,
                 "sheet_range": sheet_range,
             }
 
-        sheets_service = SheetsService(provider)
+    # Use cached version (will fetch fresh if cache miss)
+    from src.services.draft_state_cache import get_cached_draft_state
 
-        # Read and parse draft data with caching support
-        # sheets_service now returns DraftState directly (no adapter needed)
-        draft_state = await sheets_service.read_draft_data(
-            sheet_id, sheet_range, force_refresh
-        )
+    result = await get_cached_draft_state()
 
-        logger.info(
-            f"read_draft_progress completed in {time.time() - start_time:.2f} seconds"
-        )
-
-        # Return the DraftState object directly (as per DESIGN.md)
-        return draft_state
-
-    except Exception as e:
-        error_message = str(e)
-        logger.error(f"Error reading draft progress: {error_message}")
-
-        # Provide specific troubleshooting based on error type
-        troubleshooting = {
-            "problem": f"Failed to read draft data from Google Sheets: {error_message}",
-            "next_steps": [
-                "1. Verify the Google Sheet ID is correct",
-                "2. Ensure the sheet is accessible (shared with your Google account or public)",
-                "3. Check that the sheet range exists and contains data",
-                "4. Verify your Google Sheets API authentication is working",
-            ],
-        }
-
-        # Add specific guidance for common errors
-        if "403" in error_message or "permission" in error_message.lower():
-            troubleshooting["solution"] = "Sheet access denied - check permissions"
-            troubleshooting["next_steps"] = [
-                "1. Ensure the Google Sheet is shared with your Google account",
-                "2. Or make the sheet publicly viewable with link sharing",
-                "3. Verify the sheet ID in the URL is correct",
-                "4. Check that your Google account has access to the sheet",
-            ]
-        elif "404" in error_message or "not found" in error_message.lower():
-            troubleshooting["solution"] = "Sheet not found - check sheet ID and range"
-            troubleshooting["next_steps"] = [
-                "1. Verify the Google Sheet ID from the URL",
-                "2. Check that the sheet tab name is correct (e.g., 'Draft')",
-                "3. Ensure the range exists in the sheet",
-                "4. Confirm the sheet hasn't been deleted or moved",
-            ]
-        elif (
-            "authentication" in error_message.lower()
-            or "credentials" in error_message.lower()
-        ):
-            troubleshooting["solution"] = "Authentication failed - refresh credentials"
-            troubleshooting["next_steps"] = [
-                "1. Delete token.json to force re-authentication",
-                "2. Run setup_google_sheets.py to re-authenticate",
-                "3. Ensure credentials.json is valid and for the correct project",
-                "4. Check that Google Sheets API is enabled in your project",
-            ]
-        else:
-            troubleshooting["solution"] = (
-                "Check network connection and sheet accessibility"
-            )
-
-        return {
-            "success": False,
-            "error": error_message,
-            "error_type": "sheet_access_failed",
-            "troubleshooting": troubleshooting,
-            "sheet_id": sheet_id,
-            "sheet_range": sheet_range,
-        }
+    logger.info(
+        f"read_draft_progress (cached) completed in {time.time() - start_time:.2f} seconds"
+    )
+    return result
