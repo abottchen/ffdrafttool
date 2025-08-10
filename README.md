@@ -38,7 +38,7 @@ Future versions may add additional sources like ESPN, Yahoo, and FantasyPros.
 
 1. **Clone and install dependencies**:
    ```bash
-   cd C:\Users\adam\Documents\Projects\ffdrafttool2
+   cd fantasy-football-draft-assistant
    pip install -e ".[dev]"
    ```
 
@@ -176,7 +176,7 @@ When used with an LLM-based MCP client configured with the example prompt, you c
 ## Project Structure
 
 ```
-ffdrafttool2/
+.
 ├── src/
 │   ├── config.py                    # Configuration settings
 │   ├── server.py                    # Main MCP server with 5 tools

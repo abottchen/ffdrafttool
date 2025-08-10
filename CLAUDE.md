@@ -39,7 +39,7 @@ python run_server.py
 ## Project Structure
 
 ```
-ffdrafttool2/
+./
 ├── src/
 │   ├── server.py                    # FastMCP server with 5 tool endpoints
 │   ├── tools/                       # MCP tool implementations
