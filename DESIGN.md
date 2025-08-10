@@ -383,3 +383,19 @@ MCP tools receive identical DraftState regardless of source format
 - Phase 2 adds new functionality without affecting existing users
 - Configuration changes are additive only
 - Existing tools require no modifications
+
+### Implementation TODOs
+
+#### DanDraftParser Simplification (Future)
+The current `DanDraftParser` uses a complex row-based approach that:
+- Iterates through rows and extracts picks for each team column
+- Uses snake draft logic to determine "correct" team ownership  
+- Rebuilds team structures multiple times
+
+**Opportunity**: Simplify to column-based approach since Google Sheets draft format is naturally columnar:
+- Column 0: Round numbers
+- Column 1,2: Team 1 (Player, Position)
+- Column 3,4: Team 2 (Player, Position) 
+- etc.
+
+This would eliminate the need for complex pick ordering logic since each team's picks are already in chronological order within their column. However, this refactoring is deferred to avoid functional changes in Phase 1.

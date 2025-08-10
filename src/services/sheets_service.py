@@ -134,23 +134,25 @@ class GoogleSheetsProvider(SheetsProvider):
 
 def get_parser(format_type: str = None) -> SheetParser:
     """Factory function to get the appropriate parser for the draft format.
-    
+
     Args:
         format_type: Draft format type ('dan' or 'adam'). Uses config if not specified.
-        
+
     Returns:
         SheetParser instance for the specified format
-        
+
     Raises:
         ValueError: If format_type is not supported
     """
     if format_type is None:
         format_type = DRAFT_FORMAT
-        
+
     if format_type == "dan":
         return DanDraftParser()
     else:
-        raise ValueError(f"Unsupported draft format: {format_type}. Supported formats: dan")
+        raise ValueError(
+            f"Unsupported draft format: {format_type}. Supported formats: dan"
+        )
 
 
 class SheetsService:
@@ -174,29 +176,32 @@ class SheetsService:
         try:
             # Get the appropriate parser for the configured format
             parser = get_parser()
-            
+
             logger.info(f"Reading draft data for {sheet_id} range {range_name}")
-            
+
             # Fetch sheet data from Google Sheets
             data = await self.provider.read_range(sheet_id, range_name)
-            
+
             # Use the parser to convert sheet data to DraftState
             draft_state = await parser.parse_draft_data(data)
-            
-            logger.info(f"Successfully parsed {len(draft_state.picks)} picks for {len(draft_state.teams)} teams")
-            
+
+            logger.info(
+                f"Successfully parsed {len(draft_state.picks)} picks for {len(draft_state.teams)} teams"
+            )
+
             return draft_state
 
         except Exception as e:
             # Import ParseError here to avoid circular imports
             from src.services.sheet_parser import ParseError
-            
+
             if isinstance(e, ParseError):
                 # For format/parsing errors, return empty state with warning
-                logger.warning(f"Draft data parsing failed: {str(e)}. Returning empty draft state.")
+                logger.warning(
+                    f"Draft data parsing failed: {str(e)}. Returning empty draft state."
+                )
                 return DraftState(picks=[], teams=[])
             else:
                 # For other errors (network, auth, etc.), re-raise
                 logger.error(f"Error reading draft data: {str(e)}")
                 raise
-

@@ -15,50 +15,48 @@ logger = logging.getLogger(__name__)
 
 class DanDraftParser(SheetParser):
     """Parser for Dan's draft format.
-    
+
     Expected format:
     - Snake draft with balanced rosters
-    - Player names include team abbreviations: "Josh Allen (BUF)" 
+    - Player names include team abbreviations: "Josh Allen (BUF)"
     - Team names and owners embedded in sheet structure
     - Equal rounds, structured layout
     """
 
     def detect_format(self, sheet_data: List[List]) -> bool:
         """Detect if sheet data matches Dan's format.
-        
+
         Dan format characteristics:
         - Has team abbreviations in parentheses in player names
         - Structured team/owner layout with position columns
         """
         if not sheet_data or len(sheet_data) < 5:
             return False
-            
+
         # Look for owner/team structure in rows 2-3
         if len(sheet_data) > 2:
             owner_row = sheet_data[1] if len(sheet_data) > 1 else []
             team_row = sheet_data[2] if len(sheet_data) > 2 else []
-            
+
             # Check for alternating owner/position pattern
             owner_count = sum(1 for cell in owner_row[1:] if cell and str(cell).strip())
             team_count = sum(1 for cell in team_row[1:] if cell and str(cell).strip())
-            
+
             if owner_count > 0 and team_count > 0:
                 return True
-                
+
         return False
 
     async def parse_draft_data(
-        self, 
-        sheet_data: List[List], 
-        rankings_cache: Optional[Dict] = None
+        self, sheet_data: List[List], rankings_cache: Optional[Dict] = None
     ) -> DraftState:
         """Parse Dan's format sheet data into DraftState.
-        
+
         This implements the existing parsing logic from sheets_service.py.
         """
         if not sheet_data:
             raise ParseError("Sheet data is empty")
-            
+
         if not self.detect_format(sheet_data):
             error_msg = (
                 "Sheet data does not match Dan's draft format. "
@@ -69,7 +67,7 @@ class DanDraftParser(SheetParser):
             raise ParseError(error_msg)
 
         logger.info("Parsing Dan format draft data")
-        
+
         try:
             if len(sheet_data) < 5:
                 # Return empty DraftState when no data is available
@@ -77,14 +75,16 @@ class DanDraftParser(SheetParser):
 
             # Extract team structure from rows 2 and 3 (indices 1 and 2)
             teams = self._extract_teams_and_owners(sheet_data)
-            
+
             # Parse draft picks from data rows (starting at row 5, index 4)
             picks = self._extract_draft_picks(sheet_data, teams)
-            
-            logger.info(f"Successfully parsed {len(picks)} picks for {len(teams)} teams")
-            
+
+            logger.info(
+                f"Successfully parsed {len(picks)} picks for {len(teams)} teams"
+            )
+
             return DraftState(picks=picks, teams=teams)
-            
+
         except Exception as e:
             logger.error(f"Error parsing Dan format draft data: {str(e)}")
             raise ParseError(f"Failed to parse Dan format sheet: {str(e)}")
@@ -175,11 +175,13 @@ class DanDraftParser(SheetParser):
 
         return simple_teams
 
-    def _extract_draft_picks(self, sheet_data: List[List], teams: List[Dict]) -> List[DraftPick]:
+    def _extract_draft_picks(
+        self, sheet_data: List[List], teams: List[Dict]
+    ) -> List[DraftPick]:
         """Extract draft picks from Dan's format."""
         # Rebuild full teams structure for pick extraction
         full_teams = self._rebuild_full_teams_structure(sheet_data)
-        
+
         picks = []
 
         # Create a comprehensive list of all picks found in the sheet
@@ -311,7 +313,9 @@ class DanDraftParser(SheetParser):
 
         return teams
 
-    def _find_team_by_pick_position(self, teams: List[Dict], pick_number: int, total_teams: int, round_num: int) -> Optional[Dict]:
+    def _find_team_by_pick_position(
+        self, teams: List[Dict], pick_number: int, total_teams: int, round_num: int
+    ) -> Optional[Dict]:
         """Find which team should make a pick based on snake draft logic."""
         if not teams or total_teams == 0:
             return None
@@ -342,15 +346,15 @@ class DanDraftParser(SheetParser):
             team=team,
             position=position,
             bye_week=0,  # Not available from sheet
-            ranking=0,   # Not available from sheet
+            ranking=0,  # Not available from sheet
             projected_points=0.0,  # Not available from sheet
             injury_status=InjuryStatus.HEALTHY,
-            notes=""
+            notes="",
         )
 
     def _parse_player_info(self, player_cell: str) -> tuple[str, str]:
         """Parse player name and team from cell with team abbreviation.
-        
+
         Handles patterns like:
         - "Isiah Pacheco   KC" (multiple spaces)
         - "DJ Moore -  CHI" (space-hyphen-space)
@@ -358,13 +362,13 @@ class DanDraftParser(SheetParser):
         """
         if not player_cell:
             return "", "UNK"
-            
+
         # Match team abbreviation at the end with flexible separators
         match = re.search(r"[\s\-]+([A-Z]{2,3})\s*$", player_cell.strip())
 
         if match:
             team = match.group(1)  # Extract team abbreviation
-            clean_name = player_cell[:match.start()].strip()  # Remove team from name
+            clean_name = player_cell[: match.start()].strip()  # Remove team from name
         else:
             team = "UNK"  # No team found
             clean_name = player_cell.strip()
