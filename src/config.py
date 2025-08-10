@@ -40,6 +40,16 @@ DEFAULT_SHEET_ID = _config["google_sheets"]["default_sheet_id"]
 DEFAULT_SHEET_RANGE = _config["google_sheets"]["default_range"]
 """Default range to read from the draft sheet."""
 
+# Draft Format Configuration
+DRAFT_FORMAT = _config["draft"]["format"]
+"""Draft format type: 'dan' for current format, 'adam' for auction format (Phase 2)."""
+
+DRAFT_SHEET_NAME = _config["draft"]["formats"][DRAFT_FORMAT]["sheet_name"]
+"""Sheet name within the Google Sheets document for the current format."""
+
+DRAFT_SHEET_RANGE = _config["draft"]["formats"][DRAFT_FORMAT]["sheet_range"]
+"""Sheet range for the current draft format."""
+
 # Cache Configuration
 RANKINGS_CACHE_HOURS = _config["cache"]["rankings_cache_hours"]
 """How many hours to cache player rankings data."""

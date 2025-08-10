@@ -4,7 +4,14 @@
     "default_range": "Draft!A1:V24"
   },
   "draft": {
-    "owner_name": "YourName"
+    "owner_name": "YourName",
+    "format": "dan",
+    "formats": {
+      "dan": {
+        "sheet_name": "Draft", 
+        "sheet_range": "Draft!A1:V24"
+      }
+    }
   },
   "cache": {
     "rankings_cache_hours": 24,
