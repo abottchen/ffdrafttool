@@ -193,12 +193,13 @@ All settings in config.json:
 
 **Note**: Team Roster Tool warms the draft state cache, making Available Players Tool calls fast.
 
-## Dual Draft Format Support Architecture
+## Multi-Format Draft Support Architecture
 
 ### Overview
-The MCP server supports two different Google Sheets draft formats through a pluggable parser architecture:
-- **Dan Format**: Snake draft with team abbreviations included in player names
-- **Adam Format**: Auction draft with "last, first" names and no team abbreviations
+The MCP server supports three different draft data sources through a pluggable parser architecture:
+- **Dan Format**: Snake draft from Google Sheets with team abbreviations included in player names
+- **Adam Format**: Auction draft from Google Sheets with "last, first" names and no team abbreviations
+- **Tracker Format**: Real-time draft data from HTTP API endpoints (no Google Sheets dependency)
 
 ### Architecture Design
 
@@ -207,16 +208,18 @@ The MCP server supports two different Google Sheets draft formats through a plug
 src/services/
 ├── sheet_parser.py           # Abstract base class defining parse interface
 ├── dan_draft_parser.py       # Handles current "Draft" sheet format
-├── adam_draft_parser.py      # Handles "Adam" sheet auction format  
+├── adam_draft_parser.py      # Handles "Adam" sheet auction format
+├── tracker_draft_parser.py   # Handles tracker API format
+├── tracker_api_service.py    # HTTP client for tracker endpoints
 └── sheets_service.py         # Strategy context, selects parser based on config
 ```
 
 #### Parser Interface
 Each parser implements a standard interface:
-- **Parse Method**: Converts raw sheet data to `DraftState` objects
-- **Format Detection**: Validates sheet structure matches expected format
+- **Parse Method**: Converts raw data (sheets or API) to `DraftState` objects
+- **Format Detection**: Validates data structure matches expected format
 - **Error Handling**: Graceful handling of malformed or missing data
-- **Rankings Integration**: Optional rankings cache for team/position lookup
+- **Rankings Integration**: Optional rankings cache for team/position lookup (Adam format)
 
 ### Draft Format Specifications
 
@@ -238,46 +241,68 @@ Each parser implements a standard interface:
 - **Defense Format**: "Ravens D/ST" - full team name + D/ST
 - **Special Handling**: Skip $ value columns, reverse name format
 
+#### Tracker Format (API Implementation)
+- **Data Source**: HTTP API at localhost:8175
+- **Draft Type**: Flexible (auction or snake)
+- **API Endpoints**:
+  - `/api/v1/draft-state`: Current draft state with teams and picks
+  - `/api/v1/owners/{id}`: Owner and team name lookup
+  - `/api/v1/players`: Player ID to name/position/team mapping
+- **Player Format**: First and last names from API
+- **Team Names**: Retrieved from owners API endpoint
+- **Owner Information**: Resolved via owner ID lookup
+- **No Google Sheets**: Completely independent of Google Sheets API
+
 ### Configuration
 
 #### Required Configuration
 The configuration file must specify:
-- **draft.format**: Set to "dan" or "adam" to select the parser
-- **draft.sheet_id**: Google Sheet ID (same for both formats)
+- **draft.format**: Set to "dan", "adam", or "tracker" to select the parser
+- **draft.sheet_id**: Google Sheet ID (required for dan/adam formats only)
 - **draft.formats.dan**: Configuration for Dan format including sheet name and range
 - **draft.formats.adam**: Configuration for Adam format including sheet name and range
+- **draft.formats.tracker**: Configuration for Tracker format including base_url
 
-Each format configuration includes:
-- **sheet_name**: Name of the sheet tab
-- **sheet_range**: Cell range to read (e.g., "Draft!A1:V24" or "Adam!A1:T20")
+Format-specific configuration:
+- **Dan/Adam formats**:
+  - **sheet_name**: Name of the sheet tab
+  - **sheet_range**: Cell range to read (e.g., "Draft!A1:V24" or "Adam!A1:T20")
+- **Tracker format**:
+  - **base_url**: API endpoint URL (default: "http://localhost:8175")
+  - **sheet_name/sheet_range**: Set to "N/A" (not used)
 
 #### Format Selection
 The factory pattern selects the appropriate parser based on configuration:
-- **Dan Format**: Uses `DanDraftParser` for snake drafts
-- **Adam Format**: Uses `AdamDraftParser` with rankings cache for auction drafts
+- **Dan Format**: Uses `DanDraftParser` for snake drafts from Google Sheets
+- **Adam Format**: Uses `AdamDraftParser` with rankings cache for auction drafts from Google Sheets
+- **Tracker Format**: Uses `TrackerDraftParser` with `TrackerAPIService` for API-based drafts
 - **Configuration Driven**: Format selection based on `draft.format` setting
 
 
 ### Data Flow
 1. **Configuration** determines which format parser to use
-2. **Sheets Service** fetches raw data from Google Sheets
-3. **Format Parser** converts sheet data to standardized `DraftState`
+2. **Data Retrieval**:
+   - **Dan/Adam**: Sheets Service fetches raw data from Google Sheets
+   - **Tracker**: TrackerAPIService fetches data from HTTP endpoints
+3. **Format Parser** converts raw data to standardized `DraftState`
 4. **MCP Tools** receive identical `DraftState` regardless of source format
 
-This abstraction ensures all tools work with both draft formats without modification.
+This abstraction ensures all tools work with all draft formats without modification.
 
 ### Validation & Error Handling
-- **Format Detection**: Parsers validate sheet structure matches expected format
-- **Configuration Validation**: Ensure format is specified, sheet configuration exists
-- **Runtime Validation**: Detect format mismatches between config and actual sheet data
-- **Graceful Degradation**: Handle missing players, team lookup failures
+- **Format Detection**: Parsers validate data structure matches expected format
+- **Configuration Validation**: Ensure format is specified, appropriate configuration exists
+- **Runtime Validation**: Detect format mismatches between config and actual data
+- **Graceful Degradation**: Handle missing players, team lookup failures, API errors
+- **HTTP Errors**: Tracker format handles network failures with retry logic
 
 ### Benefits
 1. **Zero Impact on MCP Tools**: All tools continue to work with DraftState objects
 2. **Clean Separation**: Format-specific logic isolated in parser classes  
-3. **Extensible**: Easy to add new draft formats in the future
+3. **Extensible**: Easy to add new draft formats or data sources in the future
 4. **Testable**: Each parser can be unit tested independently
 5. **Configurable**: Switch formats without code changes
+6. **Flexible Data Sources**: Support for both Google Sheets and HTTP APIs
 
 ### Future Enhancements
 

@@ -13,7 +13,7 @@ from src.config import (
     DRAFT_FORMAT,
     _config,
 )
-from src.services.sheets_service import GoogleSheetsProvider, SheetsService
+from src.services.sheets_service import GoogleSheetsProvider, SheetsService, get_parser
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,40 @@ async def get_cached_draft_state() -> Dict[str, Any]:
     Returns:
         DraftState object or error dict
     """
-    # Get sheet ID and range from config based on current format
+    # Special handling for tracker format (uses API instead of sheets)
+    if DRAFT_FORMAT == "tracker":
+        cache_key = "tracker:api"
+
+        # Check cache first
+        if cache_key in _draft_state_cache:
+            logger.info("Returning cached draft state for tracker API")
+            return _draft_state_cache[cache_key]
+
+        # Fetch fresh from tracker API
+        logger.info("Fetching fresh draft state from tracker API")
+
+        try:
+            parser = get_parser()
+            result = await parser.parse_draft_data([], None)
+
+            # Cache the DraftState object
+            _draft_state_cache[cache_key] = result
+            return result
+
+        except Exception as e:
+            error_message = str(e)
+            logger.error(
+                f"Error fetching draft state from tracker API: {error_message}"
+            )
+
+            return {
+                "success": False,
+                "error": error_message,
+                "error_type": "api_access_failed",
+                "source": "tracker_api",
+            }
+
+    # Regular sheet-based formats (dan, adam)
     sheet_id = DEFAULT_SHEET_ID
 
     format_config = _config["draft"]["formats"].get(DRAFT_FORMAT)
