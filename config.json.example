@@ -14,6 +14,11 @@
       "adam": {
         "sheet_name": "Adam",
         "sheet_range": "Adam!A1:T20"
+      },
+      "tracker": {
+        "base_url": "http://localhost:8175",
+        "sheet_name": "N/A",
+        "sheet_range": "N/A"
       }
     }
   },

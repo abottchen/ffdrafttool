@@ -9,11 +9,12 @@ from typing import Any, Dict, List, Optional
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-from src.config import DRAFT_FORMAT
+from src.config import DRAFT_FORMAT, _config
 from src.models.draft_state_simple import DraftState
 from src.services.adam_draft_parser import AdamDraftParser
 from src.services.dan_draft_parser import DanDraftParser
 from src.services.sheet_parser import SheetParser
+from src.services.tracker_draft_parser import TrackerDraftParser
 
 try:
     from google.auth.transport.requests import Request
@@ -137,7 +138,7 @@ def get_parser(format_type: str = None, rankings_cache: Dict = None) -> SheetPar
     """Factory function to get the appropriate parser for the draft format.
 
     Args:
-        format_type: Draft format type ('dan' or 'adam'). Uses config if not specified.
+        format_type: Draft format type ('dan', 'adam', or 'tracker'). Uses config if not specified.
         rankings_cache: Optional rankings cache for team lookup (needed for adam format).
 
     Returns:
@@ -153,9 +154,14 @@ def get_parser(format_type: str = None, rankings_cache: Dict = None) -> SheetPar
         return DanDraftParser()
     elif format_type == "adam":
         return AdamDraftParser(rankings_cache)
+    elif format_type == "tracker":
+        # Get base_url from config if available
+        tracker_config = _config["draft"]["formats"].get("tracker", {})
+        base_url = tracker_config.get("base_url", "http://localhost:8175")
+        return TrackerDraftParser(base_url)
     else:
         raise ValueError(
-            f"Unsupported draft format: {format_type}. Supported formats: dan, adam"
+            f"Unsupported draft format: {format_type}. Supported formats: dan, adam, tracker"
         )
 
 
@@ -176,18 +182,24 @@ class SheetsService:
     async def read_draft_data(
         self, sheet_id: str, range_name: str, force_refresh: bool = False
     ) -> DraftState:
-        """Read and parse draft data from sheets using format-specific parser."""
+        """Read and parse draft data from sheets or API using format-specific parser."""
         try:
             # Get the appropriate parser for the configured format
             parser = get_parser()
 
-            logger.info(f"Reading draft data for {sheet_id} range {range_name}")
-
-            # Fetch sheet data from Google Sheets
-            data = await self.provider.read_range(sheet_id, range_name)
-
-            # Use the parser to convert sheet data to DraftState
-            draft_state = await parser.parse_draft_data(data)
+            # Check if we're using tracker format (which doesn't need Google Sheets)
+            if DRAFT_FORMAT == "tracker":
+                logger.info(
+                    "Reading draft data from tracker API (ignoring sheet_id/range_name)"
+                )
+                # For tracker format, we don't need sheet data
+                draft_state = await parser.parse_draft_data([], None)
+            else:
+                logger.info(f"Reading draft data for {sheet_id} range {range_name}")
+                # Fetch sheet data from Google Sheets
+                data = await self.provider.read_range(sheet_id, range_name)
+                # Use the parser to convert sheet data to DraftState
+                draft_state = await parser.parse_draft_data(data)
 
             logger.info(
                 f"Successfully parsed {len(draft_state.picks)} picks for {len(draft_state.teams)} teams"

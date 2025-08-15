@@ -10,10 +10,11 @@ This MCP server implements a clean separation of concerns:
 
 ## Supported Draft Formats
 
-The server supports multiple Google Sheets draft formats through a pluggable parser architecture:
+The server supports multiple draft data sources through a pluggable parser architecture:
 
-- **Dan Format**: Snake draft with team abbreviations in player names (`"Josh Allen BUF"`)
-- **Adam Format**: Auction draft with "Last, First" names and team lookup (`"Hall, Breece"`)
+- **Dan Format**: Snake draft from Google Sheets with team abbreviations in player names (`"Josh Allen BUF"`)
+- **Adam Format**: Auction draft from Google Sheets with "Last, First" names and team lookup (`"Hall, Breece"`)
+- **Tracker Format**: Real-time draft data from HTTP API endpoints (no Google Sheets required)
 
 Switch between formats by updating the `draft.format` setting in your configuration.
 
@@ -30,7 +31,8 @@ Switch between formats by updating the `draft.format` setting in your configurat
 
 The server currently retrieves data from:
 - **FantasySharks**: Player rankings via web scraping (no API key required)
-- **Google Sheets**: Live draft tracking data (requires Google API credentials)
+- **Google Sheets**: Live draft tracking data for Dan/Adam formats (requires Google API credentials)
+- **HTTP API**: Real-time draft tracking for Tracker format (requires API server at localhost:8175)
 
 Future versions may add additional sources like ESPN, Yahoo, and FantasyPros.
 
@@ -47,22 +49,30 @@ Future versions may add additional sources like ESPN, Yahoo, and FantasyPros.
    cp config.json.example config.json
    ```
    Edit `config.json` with your settings:
-   - `google_sheets.default_sheet_id`: Your Google Sheet ID for draft tracking
-   - `draft.format`: Set to "dan" for snake drafts or "adam" for auction drafts
+   - `draft.format`: Set to "dan" (snake draft), "adam" (auction draft), or "tracker" (API-based)
    - `draft.owner_name`: Your name as it appears in the draft data
+   
+   **For Google Sheets formats (Dan/Adam)**:
+   - `google_sheets.default_sheet_id`: Your Google Sheet ID for draft tracking
    - Configure sheet ranges for each format in `draft.formats` section
+   
+   **For Tracker format**:
+   - `draft.formats.tracker.base_url`: API endpoint (default: http://localhost:8175)
+   - No Google Sheets configuration needed
+   
    - Cache settings can be left as defaults
 
-3. **Set up Google Sheets API** (for draft tracking):
+3. **Set up Google Sheets API** (for Dan/Adam formats only):
    - Create credentials at [Google Cloud Console](https://console.developers.google.com/)
    - Download `credentials.json` to the project directory
    - Run the authentication flow when first using Google Sheets features
+   - Not required for Tracker format
 
    **Optional environment variables:**
    - `GOOGLE_CREDENTIALS_FILE`: Custom path to credentials.json (defaults to project root)
    - `GOOGLE_TOKEN_FILE`: Custom path to token.json (defaults to project root)
 
-## 🤖 Using with MCP Clients
+## Using with MCP Clients
 
 This server can be used with any MCP-compatible client. For LLM-based clients (Claude, GPT, etc.), we provide an example prompt configuration in `example-prompt.md` that enables the client to:
 - Analyze player value and rankings
@@ -97,14 +107,16 @@ Retrieves player rankings from FantasySharks with caching.
 **Returns:** List of players with rankings and basic information
 
 ### 2. `read_draft_progress`
-Reads current draft state from Google Sheets with format-aware parsing.
+Reads current draft state from configured data source with format-aware parsing.
 
 **Parameters:**
 - `force_refresh` (default: false): Ignore cache and fetch fresh data
 
 **Returns:** Draft state with picks made and team rosters
 
-**Note:** Sheet ID and range are automatically determined from configuration based on the selected draft format. The parser automatically handles both Dan format (snake draft) and Adam format (auction draft) based on your `draft.format` setting.
+**Note:** Data source is automatically determined from configuration based on the selected draft format:
+- **Dan/Adam formats**: Reads from Google Sheets with appropriate parser
+- **Tracker format**: Fetches from HTTP API endpoints (localhost:8175)
 
 ### 3. `get_available_players`
 Lists top undrafted players at a specific position.
@@ -194,6 +206,8 @@ When used with an LLM-based MCP client configured with the example prompt, you c
 │       ├── sheet_parser.py          # Abstract parser interface
 │       ├── dan_draft_parser.py      # Dan format parser (snake draft)
 │       ├── adam_draft_parser.py     # Adam format parser (auction draft)
+│       ├── tracker_draft_parser.py  # Tracker format parser (API-based)
+│       ├── tracker_api_service.py   # HTTP client for tracker API
 │       ├── sheets_service.py        # Google Sheets integration & parser factory
 │       ├── web_scraper.py           # FantasySharks scraper
 │       ├── draft_state_cache.py     # TTL-based caching for draft data
