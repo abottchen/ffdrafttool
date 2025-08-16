@@ -37,9 +37,6 @@ Set in config.json under draft.owner_name.
 DEFAULT_SHEET_ID = _config["google_sheets"]["default_sheet_id"]
 """Default Google Sheet ID for draft tracking."""
 
-DEFAULT_SHEET_RANGE = _config["google_sheets"]["default_range"]
-"""Default range to read from the draft sheet."""
-
 # Draft Format Configuration
 DRAFT_FORMAT = _config["draft"]["format"]
 """Draft format type: 'dan' for current format, 'adam' for auction format (Phase 2)."""
