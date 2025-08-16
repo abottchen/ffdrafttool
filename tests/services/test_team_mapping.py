@@ -3,6 +3,7 @@
 from src.services.team_mapping import (
     get_all_valid_sheet_teams,
     is_valid_team_abbreviation,
+    normalize_position_for_rankings,
     normalize_team_abbreviation,
 )
 
@@ -136,3 +137,32 @@ class TestTeamMapping:
         # All expected teams should be in valid teams
         for team in expected_teams:
             assert team in valid_teams, f"Team {team} not found in valid teams"
+
+    def test_normalize_position_for_rankings(self):
+        """Test position normalization for rankings lookup."""
+        # Test defense position variations all map to DST
+        assert normalize_position_for_rankings("D/ST") == "DST"
+        assert normalize_position_for_rankings("DEF") == "DST"
+        assert normalize_position_for_rankings("D") == "DST"
+        assert normalize_position_for_rankings("DST") == "DST"
+
+        # Test case insensitive
+        assert normalize_position_for_rankings("d/st") == "DST"
+        assert normalize_position_for_rankings("def") == "DST"
+        assert normalize_position_for_rankings("d") == "DST"
+        assert normalize_position_for_rankings("dst") == "DST"
+
+        # Test with whitespace
+        assert normalize_position_for_rankings(" D/ST ") == "DST"
+        assert normalize_position_for_rankings("\tDEF\t") == "DST"
+
+        # Test other positions remain unchanged
+        assert normalize_position_for_rankings("QB") == "QB"
+        assert normalize_position_for_rankings("RB") == "RB"
+        assert normalize_position_for_rankings("WR") == "WR"
+        assert normalize_position_for_rankings("TE") == "TE"
+        assert normalize_position_for_rankings("K") == "K"
+
+        # Test case normalization for other positions
+        assert normalize_position_for_rankings("qb") == "QB"
+        assert normalize_position_for_rankings("rb") == "RB"

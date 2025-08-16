@@ -8,6 +8,7 @@ from src.models.draft_state_simple import DraftState
 from src.models.injury_status import InjuryStatus
 from src.models.player_simple import Player
 from src.services.sheet_parser import ParseError, SheetParser
+from src.services.team_mapping import normalize_position_for_rankings
 from src.services.tracker_api_service import TrackerAPIService
 
 logger = logging.getLogger(__name__)
@@ -111,7 +112,9 @@ class TrackerDraftParser(SheetParser):
                     player = Player(
                         name=f"{player_info['first_name']} {player_info['last_name']}",
                         team=player_info["team"],
-                        position=player_info["position"],
+                        position=normalize_position_for_rankings(
+                            player_info["position"]
+                        ),
                         bye_week=0,  # Not available from tracker API
                         ranking=0,  # Not available from tracker API
                         projected_points=0.0,  # Not available from tracker API

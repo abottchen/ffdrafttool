@@ -102,3 +102,26 @@ def is_valid_team_abbreviation(team_abbrev: str) -> bool:
 
     valid_teams = get_all_valid_sheet_teams()
     return team_abbrev.upper() in valid_teams
+
+
+def normalize_position_for_rankings(position: str) -> str:
+    """
+    Normalize position string for rankings lookup.
+
+    Maps various defense position formats to the standard DST format
+    expected by the rankings scraper.
+
+    Args:
+        position: Position string from draft data (e.g., "D/ST", "DEF", "D")
+
+    Returns:
+        Normalized position string for rankings lookup
+    """
+    position_upper = position.upper().strip()
+
+    # Map defense variations to DST (which FantasySharks expects)
+    if position_upper in ["D/ST", "DEF", "D", "DST"]:
+        return "DST"
+
+    # Return other positions as-is
+    return position_upper
