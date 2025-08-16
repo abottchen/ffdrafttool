@@ -19,7 +19,6 @@ class TestConfigLoading:
         config_data = {
             "google_sheets": {
                 "default_sheet_id": "sunnydale_sheet_id",
-                "default_range": "Draft!A1:V24",
             },
             "draft": {"owner_name": "Buffy"},
             "cache": {"rankings_cache_hours": 12, "draft_cache_minutes": 2},
@@ -87,7 +86,6 @@ class TestConfigValues:
         """Test that config constants are loaded with correct types."""
         from src.config import (
             DEFAULT_SHEET_ID,
-            DEFAULT_SHEET_RANGE,
             DRAFT_CACHE_MINUTES,
             LOG_LEVEL,
             RANKINGS_CACHE_HOURS,
@@ -96,7 +94,6 @@ class TestConfigValues:
 
         # Test that all constants exist and have correct types
         assert isinstance(DEFAULT_SHEET_ID, str)
-        assert isinstance(DEFAULT_SHEET_RANGE, str)
         assert isinstance(USER_OWNER_NAME, str)
         assert isinstance(RANKINGS_CACHE_HOURS, int)
         assert isinstance(DRAFT_CACHE_MINUTES, int)
@@ -104,7 +101,6 @@ class TestConfigValues:
 
         # Test that string values are not empty
         assert len(DEFAULT_SHEET_ID) > 0
-        assert len(DEFAULT_SHEET_RANGE) > 0
         assert len(USER_OWNER_NAME) > 0
         assert len(LOG_LEVEL) > 0
 
@@ -130,7 +126,6 @@ class TestConfigValues:
 
         # Test required subsections
         assert "default_sheet_id" in _config["google_sheets"]
-        assert "default_range" in _config["google_sheets"]
         assert "owner_name" in _config["draft"]
         assert "rankings_cache_hours" in _config["cache"]
         assert "draft_cache_minutes" in _config["cache"]
@@ -167,13 +162,11 @@ class TestConfigIntegration:
         """Test that server module imports config values correctly."""
         # Import server to ensure config values are accessible
         try:
-            from src.server import DEFAULT_SHEET_ID, DEFAULT_SHEET_RANGE, LOG_LEVEL
+            from src.server import DEFAULT_SHEET_ID, LOG_LEVEL
 
             assert DEFAULT_SHEET_ID is not None
-            assert DEFAULT_SHEET_RANGE is not None
             assert LOG_LEVEL is not None
             assert isinstance(DEFAULT_SHEET_ID, str)
-            assert isinstance(DEFAULT_SHEET_RANGE, str)
             assert isinstance(LOG_LEVEL, str)
         except ImportError as e:
             pytest.skip(f"Server module not importable in test environment: {e}")
