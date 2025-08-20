@@ -103,19 +103,25 @@ async def get_player_info(
 
         # If no matches found after all search attempts
         if not matching_players:
+            # Build player name properly (first_name last_name)
+            player_name = ""
+            if first_name and last_name:
+                player_name = f"'{first_name} {last_name}'"
+            elif last_name:
+                player_name = f"'{last_name}'"
+            elif first_name:
+                player_name = f"'{first_name}'"
             if not position:
                 # No position provided, suggest providing one
                 error_msg = (
-                    f"No players found for '{last_name}'"
-                    + (f" {first_name}" if first_name else "")
+                    f"No players found for {player_name}"
                     + (f" ({team})" if team else "")
                     + ". Try providing a position to search more data."
                 )
             else:
                 # Position was provided but still no matches
                 error_msg = (
-                    f"No players found for '{last_name}'"
-                    + (f" {first_name}" if first_name else "")
+                    f"No players found for {player_name}"
                     + (f" ({team})" if team else "")
                     + (f" at {position}" if position else "")
                 )
