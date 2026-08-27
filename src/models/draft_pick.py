@@ -1,6 +1,6 @@
 """DraftPick model for fantasy football draft tracking."""
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from pydantic import BaseModel
 
@@ -12,6 +12,7 @@ class DraftPick(BaseModel):
 
     player: Player
     owner: str  # Fantasy owner who drafted the player
+    price: Optional[int] = None  # Auction price; None for non-auction formats
 
     def __str__(self) -> str:
         """String representation showing owner and player."""
@@ -35,6 +36,7 @@ class DraftPick(BaseModel):
         return {
             "owner": self.owner,
             "player": self.player.to_dict(),
+            "price": self.price,
         }
 
     @classmethod

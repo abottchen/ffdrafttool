@@ -2,7 +2,7 @@
 
 ## Tools
 
-The MCP server provides five tools for data retrieval. All analysis and draft recommendations are handled by the MCP client.
+The MCP server provides six tools for data retrieval. All analysis and draft recommendations are handled by the MCP client.
 
 ### 1. Draft Progress Tool
 **Purpose**: Read current draft state from Google Sheets
@@ -62,13 +62,23 @@ The MCP server provides five tools for data retrieval. All analysis and draft re
 **Purpose**: Get all drafted players for a specific owner
 - **Inputs**:
   - owner_name: Required string (exact owner name from draft data)
-- **Outputs**: List of Player objects for that owner
+- **Outputs**: That owner's roster; each entry is the player's data plus the auction price paid
 - **Implementation**:
-  - Internally fetches current draft state from Google Sheets (with caching)
+  - Internally fetches current draft state from the configured source (with caching)
   - Filter all picks by matching owner name (case-insensitive)
-  - Return list of Player objects from matching DraftPick entries
+  - Return each matching DraftPick as player data plus its price
   - Warms draft state cache for subsequent available_players calls
   - Provides team context needed for MCP client recommendations
+
+### 6. Auction State Tool
+**Purpose**: Get live auction budgets and the current nomination
+- **Inputs**: None
+- **Outputs**: Per-team remaining budget and maximum bid, the nominated player with
+  its high bid and bidder, and the owner who nominates next
+- **Implementation**:
+  - Reads the tracker API directly (not cached - budgets change with every pick)
+  - Resolves tracker owner IDs and player IDs to names
+  - Returns an `unsupported_format` error when the draft format is not "tracker"
 
 
 ## Data Models
@@ -76,7 +86,8 @@ The MCP server provides five tools for data retrieval. All analysis and draft re
 ### 1. DraftState
 Represents the current state of the draft.
 - **picks**: List of all draft picks made so far
-- **teams**: List of team/owner pairs with owner name and team name
+- **teams**: List of team entries with owner name and team name; the tracker format
+  also carries budget_remaining and max_bid
 
 Note: Team rosters can be derived from picks list when needed. No need for separate roster tracking.
 
@@ -84,6 +95,7 @@ Note: Team rosters can be derived from picks list when needed. No need for separ
 Represents a single draft pick.
 - **player**: The drafted player object
 - **owner**: Fantasy owner who drafted them
+- **price**: Auction price paid; None for non-auction formats
 
 Note: Round/pick numbers and timestamps are not needed for this implementation.
 
@@ -196,10 +208,9 @@ All settings in config.json:
 ## Multi-Format Draft Support Architecture
 
 ### Overview
-The MCP server supports three different draft data sources through a pluggable parser architecture:
+The MCP server supports two different draft data sources through a pluggable parser architecture:
+- **Tracker Format**: Real-time auction draft data from HTTP API endpoints (no Google Sheets dependency)
 - **Dan Format**: Snake draft from Google Sheets with team abbreviations included in player names
-- **Adam Format**: Auction draft from Google Sheets with "last, first" names and no team abbreviations
-- **Tracker Format**: Real-time draft data from HTTP API endpoints (no Google Sheets dependency)
 
 ### Architecture Design
 
@@ -208,7 +219,6 @@ The MCP server supports three different draft data sources through a pluggable p
 src/services/
 ├── sheet_parser.py           # Abstract base class defining parse interface
 ├── dan_draft_parser.py       # Handles current "Draft" sheet format
-├── adam_draft_parser.py      # Handles "Adam" sheet auction format
 ├── tracker_draft_parser.py   # Handles tracker API format
 ├── tracker_api_service.py    # HTTP client for tracker endpoints
 └── sheets_service.py         # Strategy context, selects parser based on config
@@ -219,7 +229,6 @@ Each parser implements a standard interface:
 - **Parse Method**: Converts raw data (sheets or API) to `DraftState` objects
 - **Format Detection**: Validates data structure matches expected format
 - **Error Handling**: Graceful handling of malformed or missing data
-- **Rankings Integration**: Optional rankings cache for team/position lookup (Adam format)
 
 ### Draft Format Specifications
 
@@ -231,19 +240,9 @@ Each parser implements a standard interface:
 - **Roster Balance**: Equal rounds, balanced rosters
 - **Owner Information**: Explicit team names and owners in sheet
 
-#### Adam Format (New Implementation)  
-- **Sheet Name**: "Adam"
-- **Draft Type**: Auction draft
-- **Player Format**: "Hall, Breece" - last name first, no team info
-- **Team Names**: Must be looked up from rankings cache
-- **Roster Balance**: Unequal rosters, gaps allowed (auction style)
-- **Owner Information**: Names in header row only
-- **Defense Format**: "Ravens D/ST" - full team name + D/ST
-- **Special Handling**: Skip $ value columns, reverse name format
-
 #### Tracker Format (API Implementation)
 - **Data Source**: HTTP API at localhost:8175
-- **Draft Type**: Flexible (auction or snake)
+- **Draft Type**: Auction ($200 budget, 17 roster spots, $1 minimum bid)
 - **API Endpoints**:
   - `/api/v1/draft-state`: Current draft state with teams and picks
   - `/api/v1/owners/{id}`: Owner and team name lookup
@@ -251,39 +250,41 @@ Each parser implements a standard interface:
 - **Player Format**: First and last names from API
 - **Team Names**: Retrieved from owners API endpoint
 - **Owner Information**: Resolved via owner ID lookup
+- **Auction Data**: Pick prices, per-team `budget_remaining` and `max_bid`, and the
+  live nomination are carried through to the client
+- **Team Abbreviations**: Normalized to the rankings format (the tracker's `JAX`
+  becomes `JAC`) so drafted players match rankings data
 - **No Google Sheets**: Completely independent of Google Sheets API
 
 ### Configuration
 
 #### Required Configuration
 The configuration file must specify:
-- **draft.format**: Set to "dan", "adam", or "tracker" to select the parser
-- **draft.sheet_id**: Google Sheet ID (required for dan/adam formats only)
+- **draft.format**: Set to "tracker" or "dan" to select the parser
+- **draft.sheet_id**: Google Sheet ID (required for the dan format only)
 - **draft.formats.dan**: Configuration for Dan format including sheet name and range
-- **draft.formats.adam**: Configuration for Adam format including sheet name and range
 - **draft.formats.tracker**: Configuration for Tracker format including base_url
 
 Format-specific configuration:
-- **Dan/Adam formats**:
+- **Dan format**:
   - **sheet_name**: Name of the sheet tab
-  - **sheet_range**: Cell range to read (e.g., "Draft!A1:V24" or "Adam!A1:T20")
+  - **sheet_range**: Cell range to read (e.g., "Draft!A1:V24")
 - **Tracker format**:
   - **base_url**: API endpoint URL (default: "http://localhost:8175")
   - **sheet_name/sheet_range**: Set to "N/A" (not used)
 
 #### Format Selection
 The factory pattern selects the appropriate parser based on configuration:
+- **Tracker Format**: Uses `TrackerDraftParser` with `TrackerAPIService` for API-based auction drafts
 - **Dan Format**: Uses `DanDraftParser` for snake drafts from Google Sheets
-- **Adam Format**: Uses `AdamDraftParser` with rankings cache for auction drafts from Google Sheets
-- **Tracker Format**: Uses `TrackerDraftParser` with `TrackerAPIService` for API-based drafts
 - **Configuration Driven**: Format selection based on `draft.format` setting
 
 
 ### Data Flow
 1. **Configuration** determines which format parser to use
 2. **Data Retrieval**:
-   - **Dan/Adam**: Sheets Service fetches raw data from Google Sheets
    - **Tracker**: TrackerAPIService fetches data from HTTP endpoints
+   - **Dan**: Sheets Service fetches raw data from Google Sheets
 3. **Format Parser** converts raw data to standardized `DraftState`
 4. **MCP Tools** receive identical `DraftState` regardless of source format
 

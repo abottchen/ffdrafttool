@@ -5,13 +5,12 @@ import sys
 from abc import ABC, abstractmethod
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional
 
 sys.path.append(str(Path(__file__).parent.parent))
 
 from src.config import DRAFT_FORMAT, _config
 from src.models.draft_state_simple import DraftState
-from src.services.adam_draft_parser import AdamDraftParser
 from src.services.dan_draft_parser import DanDraftParser
 from src.services.sheet_parser import SheetParser
 from src.services.tracker_draft_parser import TrackerDraftParser
@@ -134,12 +133,11 @@ class GoogleSheetsProvider(SheetsProvider):
             raise
 
 
-def get_parser(format_type: str = None, rankings_cache: Dict = None) -> SheetParser:
+def get_parser(format_type: str = None) -> SheetParser:
     """Factory function to get the appropriate parser for the draft format.
 
     Args:
-        format_type: Draft format type ('dan', 'adam', or 'tracker'). Uses config if not specified.
-        rankings_cache: Optional rankings cache for team lookup (needed for adam format).
+        format_type: Draft format type ('dan' or 'tracker'). Uses config if not specified.
 
     Returns:
         SheetParser instance for the specified format
@@ -152,8 +150,6 @@ def get_parser(format_type: str = None, rankings_cache: Dict = None) -> SheetPar
 
     if format_type == "dan":
         return DanDraftParser()
-    elif format_type == "adam":
-        return AdamDraftParser(rankings_cache)
     elif format_type == "tracker":
         # Get base_url from config if available
         tracker_config = _config["draft"]["formats"].get("tracker", {})
@@ -161,7 +157,7 @@ def get_parser(format_type: str = None, rankings_cache: Dict = None) -> SheetPar
         return TrackerDraftParser(base_url)
     else:
         raise ValueError(
-            f"Unsupported draft format: {format_type}. Supported formats: dan, adam, tracker"
+            f"Unsupported draft format: {format_type}. Supported formats: dan, tracker"
         )
 
 

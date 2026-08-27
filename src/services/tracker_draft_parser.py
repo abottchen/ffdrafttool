@@ -8,7 +8,10 @@ from src.models.draft_state_simple import DraftState
 from src.models.injury_status import InjuryStatus
 from src.models.player_simple import Player
 from src.services.sheet_parser import ParseError, SheetParser
-from src.services.team_mapping import normalize_position_for_rankings
+from src.services.team_mapping import (
+    normalize_position_for_rankings,
+    normalize_team_abbreviation,
+)
 from src.services.tracker_api_service import TrackerAPIService
 
 logger = logging.getLogger(__name__)
@@ -92,8 +95,15 @@ class TrackerDraftParser(SheetParser):
                 owner_name = owner_detail.get("owner_name", f"Owner {owner_id}")
                 team_name = owner_detail.get("team_name", owner_name)
 
-                # Add team info
-                teams_info.append({"owner": owner_name, "team": team_name})
+                # Add team info, including the auction budget the tracker reports
+                teams_info.append(
+                    {
+                        "owner": owner_name,
+                        "team_name": team_name,
+                        "budget_remaining": team_data.get("budget_remaining"),
+                        "max_bid": team_data.get("max_bid"),
+                    }
+                )
 
                 # Process picks for this team
                 picks = team_data.get("picks", [])
@@ -111,7 +121,9 @@ class TrackerDraftParser(SheetParser):
                     # Create Player object
                     player = Player(
                         name=f"{player_info['first_name']} {player_info['last_name']}",
-                        team=player_info["team"],
+                        team=normalize_team_abbreviation(
+                            player_info["team"], source="tracker"
+                        ),
                         position=normalize_position_for_rankings(
                             player_info["position"]
                         ),
@@ -122,8 +134,12 @@ class TrackerDraftParser(SheetParser):
                         notes="",  # No notes from tracker API
                     )
 
-                    # Create DraftPick object
-                    draft_pick = DraftPick(player=player, owner=owner_name)
+                    # Create DraftPick object, keeping the auction price
+                    draft_pick = DraftPick(
+                        player=player,
+                        owner=owner_name,
+                        price=pick_data.get("price"),
+                    )
 
                     all_picks.append(draft_pick)
 

@@ -1,6 +1,6 @@
 # Fantasy Football Draft Assistant MCP Server
 
-This is a **data-only** MCP server that provides fantasy football information through 5 simple tools. The server retrieves and caches data, while all analysis and recommendations are performed by the MCP client.
+This is a **data-only** MCP server that provides fantasy football information through 6 simple tools. The server retrieves and caches data, while all analysis and recommendations are performed by the MCP client.
 
 ## Architecture Overview
 
@@ -41,20 +41,24 @@ python run_server.py
 ```
 ./
 ├── src/
-│   ├── server.py                    # FastMCP server with 5 tool endpoints
+│   ├── server.py                    # FastMCP server with 6 tool endpoints
 │   ├── tools/                       # MCP tool implementations
-│   │   ├── draft_progress.py        # Reads Google Sheets draft data
+│   │   ├── draft_progress.py        # Reads tracker API or Google Sheets draft data
 │   │   ├── player_rankings.py       # Gets rankings with caching
 │   │   ├── player_info.py           # Searches for specific players
 │   │   ├── available_players.py     # Filters undrafted players
-│   │   └── team_roster.py           # Gets team roster for owner
+│   │   ├── team_roster.py           # Gets team roster (with auction prices) for owner
+│   │   └── auction_state.py         # Live auction budgets and nominations
 │   ├── models/                      # Simplified data models
 │   │   ├── player_simple.py         # Basic player with rankings
 │   │   ├── draft_state_simple.py    # Draft state (picks + teams)
-│   │   ├── draft_pick.py            # Single pick (player + owner)
+│   │   ├── draft_pick.py            # Single pick (player + owner + auction price)
 │   │   └── injury_status.py         # Injury status enum
 │   └── services/                    # Data retrieval layer
-│       ├── sheets_service.py        # Google Sheets API integration
+│       ├── sheets_service.py        # Google Sheets API integration & parser factory
+│       ├── tracker_api_service.py   # HTTP client for the draft tracker
+│       ├── tracker_draft_parser.py  # Tracker (auction) format parser
+│       ├── dan_draft_parser.py      # Dan (snake) format parser
 │       ├── web_scraper.py           # FantasySharks scraper
 │       ├── team_mapping.py          # Team abbreviation normalization
 │       └── draft_state_cache.py     # Draft state caching
@@ -67,10 +71,19 @@ python run_server.py
 ## Available MCP Tools
 
 1. **`get_player_rankings`** - Retrieves cached rankings by position
-2. **`read_draft_progress`** - Reads current draft from Google Sheets  
+2. **`read_draft_progress`** - Reads current draft from the tracker API or Google Sheets
 3. **`get_available_players`** - Lists undrafted players at position
-4. **`get_team_roster`** - Gets all drafted players for a specific owner
+4. **`get_team_roster`** - Gets all drafted players for a specific owner, with prices paid
 5. **`get_player_info`** - Searches for specific player details
+6. **`get_auction_state`** - Live auction budgets, max bids, and the current nomination (tracker only)
+
+## Draft Formats
+
+Two formats are supported, selected via `draft.format` in `config.json`:
+- **`tracker`** - Adam's auction league, read live from the tracker API at `localhost:8175`
+- **`dan`** - Dan's snake draft, read from Google Sheets
+
+The tracker's `JAX` is normalized to the rankings' `JAC`; see `src/services/team_mapping.py`.
 
 ## Development Guidelines
 
@@ -147,7 +160,8 @@ pytest tests/tools/test_draft_progress.py -v
 
 2. **Data Sources**: Currently using:
    - FantasySharks for player rankings (web scraping)
-   - Google Sheets for draft tracking (API)
+   - The draft tracker HTTP API for the auction draft (`tracker` format)
+   - Google Sheets for Dan's snake draft (`dan` format)
 
 3. **No Persistence**: Rankings cache is in-memory only and resets when server restarts.
 

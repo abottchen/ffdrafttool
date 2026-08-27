@@ -56,6 +56,21 @@ class TestTeamMapping:
         )  # No mapping applied
         assert normalize_team_abbreviation("GB", "sheets") == "GB"
 
+    def test_tracker_jaguars_normalized_to_rankings_abbreviation(self):
+        """Tracker uses JAX for Jacksonville; rankings use JAC. Normalize to JAC.
+
+        Without this mapping, every drafted Jaguar fails the name+team match in
+        get_team_roster and loses its bye week, ranking and projected points.
+        """
+        assert normalize_team_abbreviation("JAX", "tracker") == "JAC"
+        assert normalize_team_abbreviation("jax", "tracker") == "JAC"
+        assert normalize_team_abbreviation("  JAX  ", "tracker") == "JAC"
+
+    def test_tracker_source_passes_through_matching_teams(self):
+        """Tracker abbreviations that already match rankings are left alone."""
+        for team in ["SF", "GB", "KC", "NE", "TB", "LV", "NO", "BUF", "ATL"]:
+            assert normalize_team_abbreviation(team, "tracker") == team
+
     def test_unknown_source_passthrough(self):
         """Test that unknown source passes through unchanged."""
         assert normalize_team_abbreviation("SF", "unknown") == "SF"

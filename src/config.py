@@ -39,7 +39,7 @@ DEFAULT_SHEET_ID = _config["google_sheets"]["default_sheet_id"]
 
 # Draft Format Configuration
 DRAFT_FORMAT = _config["draft"]["format"]
-"""Draft format type: 'dan' for current format, 'adam' for auction format (Phase 2)."""
+"""Draft format type: 'dan' for snake draft sheet, 'tracker' for the auction tracker API."""
 
 DRAFT_SHEET_NAME = _config["draft"]["formats"][DRAFT_FORMAT]["sheet_name"]
 """Sheet name within the Google Sheets document for the current format."""

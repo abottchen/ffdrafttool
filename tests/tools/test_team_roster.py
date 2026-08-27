@@ -27,6 +27,7 @@ class TestTeamRoster:
         picks = [
             DraftPick(
                 owner="Buffy",
+                price=34,
                 player=Player(
                     name="Josh Allen",
                     team="BUF",
@@ -40,6 +41,7 @@ class TestTeamRoster:
             ),
             DraftPick(
                 owner="Buffy",
+                price=51,
                 player=Player(
                     name="Christian McCaffrey",
                     team="SF",
@@ -53,6 +55,7 @@ class TestTeamRoster:
             ),
             DraftPick(
                 owner="Willow",
+                price=47,
                 player=Player(
                     name="Tyreek Hill",
                     team="MIA",
@@ -66,6 +69,7 @@ class TestTeamRoster:
             ),
             DraftPick(
                 owner="Xander",
+                price=29,
                 player=Player(
                     name="Lamar Jackson",
                     team="BAL",
@@ -137,21 +141,19 @@ class TestTeamRoster:
                 assert len(result["players"]) == 2
 
                 # Check that Buffy's players are returned with enriched data
-                players_by_name = {p.name: p for p in result["players"]}
+                players_by_name = {p["name"]: p for p in result["players"]}
 
                 josh = players_by_name["Josh Allen"]
-                assert josh.bye_week == 12  # Should be enriched, not default 1
-                assert josh.projected_points == 99.0
-                assert josh.ranking == 1
+                assert josh["bye_week"] == 12  # Should be enriched, not default 1
+                assert josh["projected_points"] == 99.0
+                assert josh["ranking"] == 1
+                assert josh["price"] == 34
 
                 cmc = players_by_name["Christian McCaffrey"]
-                assert cmc.bye_week == 9  # Should be enriched, not default 1
-                assert cmc.projected_points == 98.0
-                assert cmc.ranking == 2
-
-                # Verify players are Player objects
-                for player in result["players"]:
-                    assert isinstance(player, Player)
+                assert cmc["bye_week"] == 9  # Should be enriched, not default 1
+                assert cmc["projected_points"] == 98.0
+                assert cmc["ranking"] == 2
+                assert cmc["price"] == 51
 
                 # Verify draft state and rankings were fetched
                 mock_draft.assert_called_once()
@@ -173,7 +175,7 @@ class TestTeamRoster:
             assert len(result["players"]) == 2
 
             # Check that Buffy's players are returned despite case difference
-            player_names = [p.name for p in result["players"]]
+            player_names = [p["name"] for p in result["players"]]
             assert "Josh Allen" in player_names
             assert "Christian McCaffrey" in player_names
 
@@ -205,9 +207,9 @@ class TestTeamRoster:
             assert len(result["players"]) == 1
 
             player = result["players"][0]
-            assert player.name == "Tyreek Hill"
-            assert player.position == "WR"
-            assert isinstance(player, Player)
+            assert player["name"] == "Tyreek Hill"
+            assert player["position"] == "WR"
+            assert player["price"] == 47
 
     @pytest.mark.asyncio
     async def test_get_team_roster_empty_owner_name(self):
@@ -293,20 +295,20 @@ class TestTeamRoster:
             # Test Buffy (2 picks)
             result_buffy = await get_team_roster("Buffy")
             assert len(result_buffy["players"]) == 2
-            buffy_names = [p.name for p in result_buffy["players"]]
+            buffy_names = [p["name"] for p in result_buffy["players"]]
             assert "Josh Allen" in buffy_names
             assert "Christian McCaffrey" in buffy_names
 
             # Test Willow (1 pick)
             result_willow = await get_team_roster("Willow")
             assert len(result_willow["players"]) == 1
-            willow_names = [p.name for p in result_willow["players"]]
+            willow_names = [p["name"] for p in result_willow["players"]]
             assert "Tyreek Hill" in willow_names
 
             # Test Xander (1 pick)
             result_xander = await get_team_roster("Xander")
             assert len(result_xander["players"]) == 1
-            xander_names = [p.name for p in result_xander["players"]]
+            xander_names = [p["name"] for p in result_xander["players"]]
             assert "Lamar Jackson" in xander_names
 
             # Verify no cross-contamination
@@ -350,3 +352,52 @@ class TestTeamRoster:
                     or "Christian McCaffrey" in error_logs[0].message
                 )
                 assert "was not found in" in error_logs[0].message
+
+
+class TestTeamRosterAuctionPrices:
+    """An auction roster is only meaningful alongside what each player cost."""
+
+    @pytest.mark.asyncio
+    async def test_roster_reports_price_paid_for_each_player(
+        self,
+    ):
+        """Each roster entry carries the auction price from the draft pick."""
+        picks = [
+            DraftPick(
+                owner="Buffy",
+                price=34,
+                player=Player(
+                    name="Josh Allen",
+                    team="BUF",
+                    position="QB",
+                    bye_week=12,
+                    ranking=1,
+                    projected_points=99.0,
+                ),
+            ),
+        ]
+        draft_state = DraftState(teams=[{"owner": "Buffy"}], picks=picks)
+
+        with patch("src.tools.team_roster.get_cached_draft_state") as mock_draft:
+            with patch("src.tools.team_roster.get_player_rankings") as mock_rankings:
+                mock_draft.return_value = draft_state
+                mock_rankings.return_value = {
+                    "success": True,
+                    "players": [
+                        {
+                            "name": "Josh Allen",
+                            "team": "BUF",
+                            "position": "QB",
+                            "bye_week": 12,
+                            "ranking": 1,
+                            "projected_points": 99.0,
+                            "notes": "Elite QB",
+                        }
+                    ],
+                }
+
+                result = await get_team_roster("Buffy")
+
+                assert result["players"][0]["price"] == 34
+                assert result["players"][0]["name"] == "Josh Allen"
+                assert result["players"][0]["bye_week"] == 12

@@ -12,9 +12,8 @@ This MCP server implements a clean separation of concerns:
 
 The server supports multiple draft data sources through a pluggable parser architecture:
 
+- **Tracker Format**: Real-time auction draft data from HTTP API endpoints (no Google Sheets required)
 - **Dan Format**: Snake draft from Google Sheets with team abbreviations in player names (`"Josh Allen BUF"`)
-- **Adam Format**: Auction draft from Google Sheets with "Last, First" names and team lookup (`"Hall, Breece"`)
-- **Tracker Format**: Real-time draft data from HTTP API endpoints (no Google Sheets required)
 
 Switch between formats by updating the `draft.format` setting in your configuration.
 
@@ -31,7 +30,7 @@ Switch between formats by updating the `draft.format` setting in your configurat
 
 The server currently retrieves data from:
 - **FantasySharks**: Player rankings via web scraping (no API key required)
-- **Google Sheets**: Live draft tracking data for Dan/Adam formats (requires Google API credentials)
+- **Google Sheets**: Live draft tracking data for the Dan format (requires Google API credentials)
 - **HTTP API**: Real-time draft tracking for Tracker format (requires API server at localhost:8175)
 
 Future versions may add additional sources like ESPN, Yahoo, and FantasyPros.
@@ -49,12 +48,12 @@ Future versions may add additional sources like ESPN, Yahoo, and FantasyPros.
    cp config.json.example config.json
    ```
    Edit `config.json` with your settings:
-   - `draft.format`: Set to "dan" (snake draft), "adam" (auction draft), or "tracker" (API-based)
+   - `draft.format`: Set to "tracker" (auction draft via API) or "dan" (snake draft via Sheets)
    - `draft.owner_name`: Your name as it appears in the draft data
    
-   **For Google Sheets formats (Dan/Adam)**:
+   **For the Google Sheets format (Dan)**:
    - `google_sheets.default_sheet_id`: Your Google Sheet ID for draft tracking
-   - Configure sheet ranges for each format in `draft.formats` section
+   - Configure the sheet range in `draft.formats.dan`
    
    **For Tracker format**:
    - `draft.formats.tracker.base_url`: API endpoint (default: http://localhost:8175)
@@ -62,7 +61,7 @@ Future versions may add additional sources like ESPN, Yahoo, and FantasyPros.
    
    - Cache settings can be left as defaults
 
-3. **Set up Google Sheets API** (for Dan/Adam formats only):
+3. **Set up Google Sheets API** (for the Dan format only):
    - Create credentials at [Google Cloud Console](https://console.developers.google.com/)
    - Download `credentials.json` to the project directory
    - Run the authentication flow when first using Google Sheets features
@@ -95,7 +94,7 @@ pytest
 
 ## Available MCP Tools
 
-The server provides 5 data-retrieval tools. All analysis and recommendations are performed by the MCP client.
+The server provides 6 data-retrieval tools. All analysis and recommendations are performed by the MCP client.
 
 ### 1. `get_player_rankings`
 Retrieves player rankings from FantasySharks with caching.
@@ -115,8 +114,8 @@ Reads current draft state from configured data source with format-aware parsing.
 **Returns:** Draft state with picks made and team rosters
 
 **Note:** Data source is automatically determined from configuration based on the selected draft format:
-- **Dan/Adam formats**: Reads from Google Sheets with appropriate parser
 - **Tracker format**: Fetches from HTTP API endpoints (localhost:8175)
+- **Dan format**: Reads from Google Sheets with the Dan parser
 
 ### 3. `get_available_players`
 Lists top undrafted players at a specific position.
@@ -135,7 +134,7 @@ Gets all drafted players for a specific owner.
 **Parameters:**
 - `owner_name` (required): Name of the team owner as it appears in draft data
 
-**Returns:** List of Player objects for that owner's team
+**Returns:** That owner's roster. Each entry is the player's data plus the auction price paid (`null` for snake drafts).
 
 **Note:** This tool warms the draft state cache and should typically be called first for personalized recommendations.
 
@@ -149,6 +148,18 @@ Searches for specific players by name.
 - `position` (optional): Position filter
 
 **Returns:** Matching players with their information
+
+### 6. `get_auction_state`
+Gets the live auction state from the draft tracker.
+
+**Parameters:** None
+
+**Returns:** Each team's remaining budget and maximum bid, the currently nominated
+player with its high bid and bidder, and which owner nominates next. Owner IDs from
+the tracker are resolved to owner names.
+
+**Note:** Auction-only. Returns an `unsupported_format` error when the configured
+draft format is not `tracker`.
 
 ## Usage Examples
 
@@ -181,7 +192,7 @@ When used with an LLM-based MCP client configured with the example prompt, you c
 ## Performance Features
 
 - **In-memory caching** for player rankings (reduces web scraping)
-- **Draft state caching** with TTL (avoids redundant Google Sheets reads)  
+- **Draft state caching** with TTL (avoids redundant reads of the draft source)  
 - **Simplified data models** (minimal data transfer)
 - **Fast response times** (data-only, no complex analysis)
 
@@ -191,7 +202,7 @@ When used with an LLM-based MCP client configured with the example prompt, you c
 .
 ├── src/
 │   ├── config.py                    # Configuration settings
-│   ├── server.py                    # Main MCP server with 5 tools
+│   ├── server.py                    # Main MCP server with 6 tools
 │   ├── tools/
 │   │   ├── player_rankings.py       # Get player rankings tool
 │   │   ├── draft_progress.py        # Read draft progress tool
@@ -205,7 +216,6 @@ When used with an LLM-based MCP client configured with the example prompt, you c
 │   └── services/
 │       ├── sheet_parser.py          # Abstract parser interface
 │       ├── dan_draft_parser.py      # Dan format parser (snake draft)
-│       ├── adam_draft_parser.py     # Adam format parser (auction draft)
 │       ├── tracker_draft_parser.py  # Tracker format parser (API-based)
 │       ├── tracker_api_service.py   # HTTP client for tracker API
 │       ├── sheets_service.py        # Google Sheets integration & parser factory

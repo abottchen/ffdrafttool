@@ -63,7 +63,7 @@ async def get_cached_draft_state() -> Dict[str, Any]:
                 "source": "tracker_api",
             }
 
-    # Regular sheet-based formats (dan, adam)
+    # Regular sheet-based formats (dan)
     sheet_id = DEFAULT_SHEET_ID
 
     format_config = _config["draft"]["formats"].get(DRAFT_FORMAT)
