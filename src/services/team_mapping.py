@@ -43,6 +43,13 @@ RANKINGS_TO_SHEETS_MAPPING: Dict[str, str] = {
     "FA": None,  # Free Agent - not a real team (if it appears)
 }
 
+# Mapping from tracker API team abbreviations to the canonical (rankings) format.
+# The tracker uses ESPN-style abbreviations, which match the rankings format for
+# every team except Jacksonville.
+TRACKER_TO_CANONICAL_MAPPING: Dict[str, str] = {
+    "JAX": "JAC",  # Jacksonville Jaguars (tracker: JAX, rankings: JAC)
+}
+
 
 def normalize_team_abbreviation(team_abbrev: str, source: str = "rankings") -> str:
     """
@@ -50,7 +57,7 @@ def normalize_team_abbreviation(team_abbrev: str, source: str = "rankings") -> s
 
     Args:
         team_abbrev: The team abbreviation to normalize
-        source: The source of the abbreviation ("rankings" or "sheets")
+        source: The source of the abbreviation ("rankings", "tracker" or "sheets")
 
     Returns:
         Normalized team abbreviation in Google Sheets format, or "UNK" if cannot be mapped
@@ -59,6 +66,10 @@ def normalize_team_abbreviation(team_abbrev: str, source: str = "rankings") -> s
         return "UNK"
 
     team_upper = team_abbrev.upper().strip()
+
+    if source == "tracker":
+        # Map tracker (ESPN-style) abbreviations to the canonical format
+        return TRACKER_TO_CANONICAL_MAPPING.get(team_upper, team_upper)
 
     if source == "rankings":
         # Map from rankings format to sheets format

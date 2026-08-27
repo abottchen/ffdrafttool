@@ -77,3 +77,52 @@ class TestGetPlayerRankings:
 # Only testing the simplified player rankings tool.
 # The deprecated analyze_available_players and suggest_draft_pick tools
 # have been removed as part of the MCP server simplification.
+
+
+class TestServerToolRegistration:
+    """The MCP server must actually expose each tool to clients."""
+
+    @pytest.mark.asyncio
+    async def test_auction_state_tool_is_registered(self):
+        """get_auction_state is useless to the draft client unless it is registered."""
+        from src.server import mcp
+
+        tool_names = {tool.name for tool in await mcp.list_tools()}
+
+        assert "get_auction_state_tool" in tool_names
+
+
+class TestTeamRosterToolSerialization:
+    """The server wrapper must serialize roster entries that carry a price."""
+
+    @pytest.mark.asyncio
+    async def test_team_roster_tool_serializes_price(self):
+        """Roster entries are dicts now; the wrapper must not re-serialize them."""
+        import json
+
+        from src.server import get_team_roster_tool
+
+        roster = {
+            "success": True,
+            "owner_name": "Buffy",
+            "players": [
+                {
+                    "name": "Josh Allen",
+                    "team": "BUF",
+                    "position": "QB",
+                    "bye_week": 12,
+                    "ranking": 1,
+                    "projected_points": 99.0,
+                    "injury_status": "HEALTHY",
+                    "notes": "",
+                    "price": 34,
+                }
+            ],
+        }
+
+        with patch("src.server.get_team_roster", return_value=roster):
+            payload = json.loads(await get_team_roster_tool("Buffy"))
+
+        assert payload["success"] is True
+        assert payload["players"][0]["price"] == 34
+        assert payload["players"][0]["name"] == "Josh Allen"

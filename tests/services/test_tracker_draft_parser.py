@@ -108,9 +108,9 @@ async def test_tracker_parser_parse_draft_data(
                 # Check teams
                 assert len(result.teams) == 2
                 assert result.teams[0]["owner"] == "Buffy"
-                assert result.teams[0]["team"] == "Sunnydale Slayers"
+                assert result.teams[0]["team_name"] == "Sunnydale Slayers"
                 assert result.teams[1]["owner"] == "Willow"
-                assert result.teams[1]["team"] == "Dark Phoenix Rising"
+                assert result.teams[1]["team_name"] == "Dark Phoenix Rising"
 
                 # Check picks
                 assert len(result.picks) == 3
@@ -224,3 +224,115 @@ async def test_tracker_parser_with_custom_base_url():
     parser = TrackerDraftParser(base_url=custom_url)
 
     assert parser.api_service.base_url == custom_url
+
+
+@pytest.mark.asyncio
+async def test_tracker_parser_normalizes_jacksonville_abbreviation():
+    """Jaguars arrive from the tracker as JAX and must be stored as JAC.
+
+    Rankings use JAC, and get_team_roster matches on name AND team, so an
+    unnormalized JAX silently drops the player's bye week and projections.
+    """
+    parser = TrackerDraftParser()
+
+    draft_state = {
+        "teams": [
+            {
+                "owner_id": 1,
+                "picks": [
+                    {"pick_id": 1, "player_id": 4360438, "owner_id": 1, "price": 41}
+                ],
+            }
+        ]
+    }
+    players = [
+        {
+            "id": 4360438,
+            "first_name": "Brian",
+            "last_name": "Thomas Jr.",
+            "team": "JAX",
+            "position": "WR",
+        }
+    ]
+
+    with patch.object(
+        parser.api_service, "get_draft_state", new_callable=AsyncMock
+    ) as mock_get_draft:
+        with patch.object(
+            parser.api_service, "get_all_players", new_callable=AsyncMock
+        ) as mock_get_players:
+            with patch.object(
+                parser.api_service, "get_owner_info", new_callable=AsyncMock
+            ) as mock_get_owner:
+                mock_get_draft.return_value = draft_state
+                mock_get_players.return_value = players
+                mock_get_owner.return_value = {
+                    "id": 1,
+                    "owner_name": "Xander",
+                    "team_name": "Zeppo",
+                }
+
+                result = await parser.parse_draft_data([], None)
+
+                assert result.picks[0].player.team == "JAC"
+
+
+@pytest.mark.asyncio
+async def test_tracker_parser_records_auction_price(
+    mock_draft_state_response, mock_players_response, mock_owner_responses
+):
+    """Each pick keeps the auction price it went for."""
+    parser = TrackerDraftParser()
+
+    with patch.object(
+        parser.api_service, "get_draft_state", new_callable=AsyncMock
+    ) as mock_get_draft:
+        with patch.object(
+            parser.api_service, "get_all_players", new_callable=AsyncMock
+        ) as mock_get_players:
+            with patch.object(
+                parser.api_service, "get_owner_info", new_callable=AsyncMock
+            ) as mock_get_owner:
+                mock_get_draft.return_value = mock_draft_state_response
+                mock_get_players.return_value = mock_players_response
+
+                async def owner_side_effect(owner_id):
+                    return mock_owner_responses[owner_id]
+
+                mock_get_owner.side_effect = owner_side_effect
+
+                result = await parser.parse_draft_data([], None)
+
+                assert result.picks[0].price == 13
+                assert result.picks[1].price == 12
+                assert result.picks[2].price == 56
+
+
+@pytest.mark.asyncio
+async def test_tracker_parser_reports_team_budget(
+    mock_draft_state_response, mock_players_response, mock_owner_responses
+):
+    """Team entries carry the remaining auction budget from the tracker."""
+    parser = TrackerDraftParser()
+
+    with patch.object(
+        parser.api_service, "get_draft_state", new_callable=AsyncMock
+    ) as mock_get_draft:
+        with patch.object(
+            parser.api_service, "get_all_players", new_callable=AsyncMock
+        ) as mock_get_players:
+            with patch.object(
+                parser.api_service, "get_owner_info", new_callable=AsyncMock
+            ) as mock_get_owner:
+                mock_get_draft.return_value = mock_draft_state_response
+                mock_get_players.return_value = mock_players_response
+
+                async def owner_side_effect(owner_id):
+                    return mock_owner_responses[owner_id]
+
+                mock_get_owner.side_effect = owner_side_effect
+
+                result = await parser.parse_draft_data([], None)
+
+                assert result.teams[0]["budget_remaining"] == 168
+                assert result.teams[1]["budget_remaining"] == 111

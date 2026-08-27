@@ -8,10 +8,12 @@ logger = logging.getLogger(__name__)
 
 async def read_draft_progress(force_refresh: bool = False) -> Dict[str, Any]:
     """
-    Read draft progress from Google Sheets using cached data when available.
+    Read draft progress from the configured source, using cached data when available.
+
+    Reads the tracker API for the "tracker" format and Google Sheets for "dan".
 
     Args:
-        force_refresh: If True, ignore cache and fetch fresh data from Google Sheets
+        force_refresh: If True, ignore cache and fetch fresh data from the source
 
     Returns:
         DraftState object or error dict
@@ -34,7 +36,9 @@ async def read_draft_progress(force_refresh: bool = False) -> Dict[str, Any]:
             else:
                 sheet_range = "Draft!A1:V24"
 
-            provider = GoogleSheetsProvider()
+            # The tracker format reads from HTTP, not Sheets. Constructing a
+            # provider would demand the Google libraries it never uses.
+            provider = None if DRAFT_FORMAT == "tracker" else GoogleSheetsProvider()
             sheets_service = SheetsService(provider)
             result = await sheets_service.read_draft_data(
                 sheet_id, sheet_range, force_refresh=True

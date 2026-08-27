@@ -83,6 +83,7 @@ class TestDraftPick:
                 "projected_points": 325.5,
                 "notes": "Elite QB",
             },
+            "price": None,
         }
 
         assert pick.to_dict() == expected

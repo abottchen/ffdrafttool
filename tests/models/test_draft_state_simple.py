@@ -198,6 +198,7 @@ class TestDraftState:
                         "projected_points": 325.5,
                         "notes": "",
                     },
+                    "price": None,
                 }
             ],
         }

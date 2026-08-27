@@ -20,6 +20,7 @@ from pathlib import Path
 from mcp.server.fastmcp import FastMCP
 
 from src.config import DEFAULT_SHEET_ID, LOG_LEVEL
+from src.tools.auction_state import get_auction_state
 from src.tools.available_players import get_available_players
 from src.tools.draft_progress import read_draft_progress
 from src.tools.player_info import get_player_info
@@ -160,23 +161,39 @@ async def get_team_roster_tool(owner_name: str) -> str:
         owner_name: Name of the team owner to get roster for
 
     Returns:
-        JSON string with owner's name and list of Player objects
+        JSON string with the owner's name and their roster, where each entry is
+        the player's data plus the auction price paid (None for snake drafts)
     """
     logger.info(f"get_team_roster called with owner_name={owner_name}")
 
     try:
         result = await get_team_roster(owner_name)
 
-        # Convert Player objects to dicts using Pydantic serialization
-        if result.get("success") and "players" in result:
-            serialized_players = [
-                player.model_dump(mode="json") for player in result["players"]
-            ]
-            result["players"] = serialized_players
-
         return json.dumps(result, indent=2)
     except Exception as e:
         logger.error(f"Error in get_team_roster: {e}")
+        return json.dumps({"success": False, "error": str(e)}, indent=2)
+
+
+@mcp.tool()
+async def get_auction_state_tool() -> str:
+    """
+    Get live auction state: team budgets, max bids, and the current nomination.
+
+    Only available when the draft format is "tracker" (the auction draft).
+
+    Returns:
+        JSON string with each team's remaining budget and maximum bid, the
+        player currently nominated with its high bid and bidder, and who
+        nominates next.
+    """
+    logger.info("get_auction_state called")
+
+    try:
+        result = await get_auction_state()
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error in get_auction_state: {e}")
         return json.dumps({"success": False, "error": str(e)}, indent=2)
 
 

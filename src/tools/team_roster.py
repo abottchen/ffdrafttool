@@ -1,13 +1,23 @@
 """Team roster tool implementation."""
 
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Tuple
 
 from src.models.player_simple import Player
 from src.services.draft_state_cache import get_cached_draft_state
 from src.tools.player_rankings import get_player_rankings
 
 logger = logging.getLogger(__name__)
+
+
+def _roster_entry(player: Player, price: Optional[int]) -> Dict[str, Any]:
+    """Serialize a rostered player together with the auction price paid.
+
+    Price is None for non-auction formats (Dan's snake draft).
+    """
+    entry = player.model_dump(mode="json")
+    entry["price"] = price
+    return entry
 
 
 async def get_team_roster(owner_name: str) -> Dict[str, Any]:
@@ -18,7 +28,8 @@ async def get_team_roster(owner_name: str) -> Dict[str, Any]:
         owner_name: Name of the team owner to get roster for
 
     Returns:
-        Dict containing owner name and list of Player objects
+        Dict containing owner name and the owner's roster. Each roster entry is
+        the player's data plus the auction price paid (None for snake drafts).
     """
     import time
 
@@ -61,17 +72,17 @@ async def get_team_roster(owner_name: str) -> Dict[str, Any]:
                 "error_type": "invalid_draft_state",
             }
 
-        # Find picks by this owner
-        basic_picks: List[Player] = []
+        # Find picks by this owner, keeping the price paid alongside each player
+        basic_picks: List[Tuple[Player, Optional[int]]] = []
         for pick in draft_picks:
             if pick.owner.lower() == owner_name.lower():
-                basic_picks.append(pick.player)
+                basic_picks.append((pick.player, pick.price))
 
         # Enrich player data with rankings information (bye weeks, projections, etc.)
-        enriched_picks: List[Player] = []
+        enriched_picks: List[Dict[str, Any]] = []
         positions_fetched = set()  # Track which positions we've already fetched
 
-        for player in basic_picks:
+        for player, price in basic_picks:
             try:
                 # Check if we need to fetch rankings for this position
                 if player.position not in positions_fetched:
@@ -116,7 +127,7 @@ async def get_team_roster(owner_name: str) -> Dict[str, Any]:
                             break
 
                     if enriched_player:
-                        enriched_picks.append(enriched_player)
+                        enriched_picks.append(_roster_entry(enriched_player, price))
                     else:
                         # Player not found in rankings - this is concerning
                         logger.error(
@@ -125,19 +136,19 @@ async def get_team_roster(owner_name: str) -> Dict[str, Any]:
                             f"issue - either the player name/team doesn't match between draft sheet and rankings, "
                             f"or the rankings data is incomplete. Using basic draft sheet data as fallback."
                         )
-                        enriched_picks.append(player)
+                        enriched_picks.append(_roster_entry(player, price))
                 else:
                     # Rankings fetch failed, use basic data
                     logger.warning(
                         f"Could not fetch rankings for {player.position}, using basic data for {player.name}"
                     )
-                    enriched_picks.append(player)
+                    enriched_picks.append(_roster_entry(player, price))
 
             except Exception as e:
                 logger.error(
                     f"Error enriching data for {player.name}: {e}. Using basic data."
                 )
-                enriched_picks.append(player)
+                enriched_picks.append(_roster_entry(player, price))
 
         logger.info(
             f"get_team_roster completed in {time.time() - start_time:.2f} seconds. "
@@ -162,7 +173,7 @@ async def get_team_roster(owner_name: str) -> Dict[str, Any]:
                 "problem": f"An unexpected error occurred: {error_message}",
                 "solution": "Check logs for detailed error information",
                 "next_steps": [
-                    "1. Verify Google Sheets connection is working",
+                    "1. Verify the draft data source is reachable",
                     "2. Ensure owner name matches exactly with draft data",
                     "3. Check that draft data contains valid picks",
                 ],

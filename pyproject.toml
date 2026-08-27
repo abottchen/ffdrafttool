@@ -5,6 +5,9 @@ description = "Fantasy Football Draft Assistant MCP Server"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    # src/server.py uses the v1 API (mcp.server.fastmcp.FastMCP), which mcp 2.x
+    # removed in favour of mcp.server.mcpserver.MCPServer. Pin until migrated.
+    "mcp>=1.0,<2",
     "google-api-python-client",
     "google-auth-httplib2",
     "google-auth-oauthlib",

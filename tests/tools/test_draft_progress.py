@@ -118,9 +118,13 @@ class TestDraftProgress:
     @pytest.mark.asyncio
     async def test_read_draft_progress_missing_dependencies(self):
         """Test handling of missing Google Sheets dependencies with force refresh."""
-        with patch(
-            "src.tools.draft_progress.GoogleSheetsProvider"
-        ) as mock_provider_class:
+        # Pin the sheet-backed format so this never depends on local config.json
+        with (
+            patch("src.config.DRAFT_FORMAT", "dan"),
+            patch(
+                "src.tools.draft_progress.GoogleSheetsProvider"
+            ) as mock_provider_class,
+        ):
             mock_provider_class.side_effect = ImportError("Google API not available")
 
             result = await read_draft_progress(force_refresh=True)
@@ -241,3 +245,31 @@ class TestDraftProgress:
             assert isinstance(result, DraftState)
             assert len(result.picks) == 0
             assert len(result.teams) == 0
+
+
+class TestForceRefreshOnTrackerFormat:
+    """A forced refresh of the tracker draft must not touch Google Sheets."""
+
+    @pytest.mark.asyncio
+    async def test_force_refresh_does_not_require_google_dependencies(self):
+        """The tracker reads from HTTP; constructing a Sheets provider would
+        raise ImportError on a machine without the Google libraries installed."""
+        draft_state = DraftState(picks=[], teams=[{"owner": "Buffy"}])
+
+        def explode():
+            raise ImportError("Google API dependencies not available")
+
+        with (
+            patch("src.config.DRAFT_FORMAT", "tracker"),
+            patch("src.services.sheets_service.DRAFT_FORMAT", "tracker"),
+            patch("src.tools.draft_progress.GoogleSheetsProvider", side_effect=explode),
+            patch("src.services.sheets_service.get_parser") as mock_get_parser,
+        ):
+            parser = AsyncMock()
+            parser.parse_draft_data.return_value = draft_state
+            mock_get_parser.return_value = parser
+
+            result = await read_draft_progress(force_refresh=True)
+
+        assert result is draft_state
+        parser.parse_draft_data.assert_awaited_once()

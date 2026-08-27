@@ -9,8 +9,8 @@ from src.models.draft_state_simple import DraftState
 class SheetParser(ABC):
     """Abstract base class defining the interface for draft format parsers.
 
-    Each parser handles a specific Google Sheets format (Dan, Adam, etc.)
-    and converts the raw sheet data into a standardized DraftState object.
+    Each parser handles a specific draft data source (Dan's Google Sheet,
+    the tracker API) and converts it into a standardized DraftState object.
     """
 
     @abstractmethod
