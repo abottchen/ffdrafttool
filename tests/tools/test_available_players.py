@@ -8,7 +8,10 @@ from src.models.draft_pick import DraftPick
 from src.models.draft_state_simple import DraftState
 from src.models.injury_status import InjuryStatus
 from src.models.player_simple import Player
-from src.tools.available_players import _normalize_player_name, get_available_players
+from src.services.player_matching import (
+    normalize_player_name as _normalize_player_name,
+)
+from src.tools.available_players import get_available_players
 
 
 class TestAvailablePlayers:
@@ -487,3 +490,127 @@ class TestAvailablePlayers:
                 assert (
                     "Jayden Daniels" in available_names
                 ), "Jayden Daniels should be available"
+
+
+class TestDefenseMatching:
+    """Defenses are named differently in Dan's sheet than in the rankings.
+
+    The sheet records "Texans D/ST" (from its Data tab) while the rankings say
+    "Houston Texans", so name comparison alone leaves drafted defenses listed as
+    available all draft long.
+    """
+
+    @pytest.fixture
+    def drafted_texans_defense(self):
+        """Draft state where the Texans defense has been taken."""
+        return DraftState(
+            teams=[{"team_name": "Sunnydale Slayers", "owner": "Buffy"}],
+            picks=[
+                DraftPick(
+                    owner="Buffy",
+                    player=Player(
+                        name="Texans D/ST",
+                        team="HOU",
+                        position="DST",
+                        bye_week=0,
+                        ranking=0,
+                        projected_points=0.0,
+                        injury_status=InjuryStatus.HEALTHY,
+                    ),
+                )
+            ],
+        )
+
+    @pytest.fixture
+    def defense_rankings(self):
+        """Rankings that name defenses by full team name."""
+        return {
+            "success": True,
+            "players": [
+                {
+                    "name": "Houston Texans",
+                    "team": "HOU",
+                    "position": "DST",
+                    "bye_week": 7,
+                    "ranking": 2,
+                    "projected_points": 130.0,
+                    "injury_status": "HEALTHY",
+                    "notes": "",
+                },
+                {
+                    "name": "Denver Broncos",
+                    "team": "DEN",
+                    "position": "DST",
+                    "bye_week": 11,
+                    "ranking": 1,
+                    "projected_points": 140.0,
+                    "injury_status": "HEALTHY",
+                    "notes": "",
+                },
+            ],
+        }
+
+    @pytest.mark.asyncio
+    async def test_drafted_defense_excluded_from_available(
+        self, drafted_texans_defense, defense_rankings
+    ):
+        """A drafted defense is filtered out despite the naming difference."""
+        with patch("src.tools.available_players.get_player_rankings") as mock_rankings:
+            with patch(
+                "src.tools.available_players.get_cached_draft_state"
+            ) as mock_draft:
+                mock_rankings.return_value = defense_rankings
+                mock_draft.return_value = drafted_texans_defense
+
+                result = await get_available_players(position="DST", limit=10)
+
+                assert result["success"] is True
+                player_names = [p["name"] for p in result["players"]]
+                assert "Houston Texans" not in player_names
+                assert player_names == ["Denver Broncos"]
+                assert result["total_available"] == 1
+
+    @pytest.mark.asyncio
+    async def test_undrafted_defense_on_same_team_abbreviation_kept(
+        self, drafted_texans_defense, defense_rankings
+    ):
+        """Non-defense players are still matched by name, not by team."""
+        drafted_texans_defense.picks.append(
+            DraftPick(
+                owner="Buffy",
+                player=Player(
+                    name="C.J. Stroud",
+                    team="HOU",
+                    position="QB",
+                    bye_week=7,
+                    ranking=12,
+                    projected_points=300.0,
+                    injury_status=InjuryStatus.HEALTHY,
+                ),
+            )
+        )
+
+        with patch("src.tools.available_players.get_player_rankings") as mock_rankings:
+            with patch(
+                "src.tools.available_players.get_cached_draft_state"
+            ) as mock_draft:
+                mock_rankings.return_value = {
+                    "success": True,
+                    "players": [
+                        {
+                            "name": "Nico Collins",
+                            "team": "HOU",
+                            "position": "WR",
+                            "bye_week": 7,
+                            "ranking": 8,
+                            "projected_points": 240.0,
+                            "injury_status": "HEALTHY",
+                            "notes": "",
+                        }
+                    ],
+                }
+                mock_draft.return_value = drafted_texans_defense
+
+                result = await get_available_players(position="WR", limit=10)
+
+                assert [p["name"] for p in result["players"]] == ["Nico Collins"]

@@ -8,6 +8,7 @@ from src.models.draft_pick import DraftPick
 from src.models.draft_state_simple import DraftState
 from src.models.injury_status import InjuryStatus
 from src.models.player_simple import Player
+from src.services.player_matching import normalize_position
 from src.services.sheet_parser import ParseError, SheetParser
 
 logger = logging.getLogger(__name__)
@@ -336,7 +337,7 @@ class DanDraftParser(SheetParser):
         return Player(
             name=name,
             team=team,
-            position=position,
+            position=normalize_position(position),
             bye_week=0,  # Not available from sheet
             ranking=0,  # Not available from sheet
             projected_points=0.0,  # Not available from sheet

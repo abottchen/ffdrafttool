@@ -401,3 +401,69 @@ class TestTeamRosterAuctionPrices:
                 assert result["players"][0]["price"] == 34
                 assert result["players"][0]["name"] == "Josh Allen"
                 assert result["players"][0]["bye_week"] == 12
+
+
+class TestDefenseEnrichment:
+    """A rostered defense must be enriched despite the naming difference.
+
+    Dan's sheet records "Texans D/ST" (HOU) while the rankings say
+    "Houston Texans" (HOU), so a name comparison never matches and the defense
+    would keep the sheet's placeholder bye week and ranking.
+    """
+
+    @pytest.fixture
+    def draft_state_with_defense(self):
+        """Draft state where Buffy has drafted the Texans defense."""
+        return DraftState(
+            teams=[{"team_name": "Sunnydale Slayers", "owner": "Buffy"}],
+            picks=[
+                DraftPick(
+                    owner="Buffy",
+                    player=Player(
+                        name="Texans D/ST",
+                        team="HOU",
+                        position="DST",
+                        bye_week=0,
+                        ranking=0,
+                        projected_points=0.0,
+                        injury_status=InjuryStatus.HEALTHY,
+                    ),
+                )
+            ],
+        )
+
+    @pytest.mark.asyncio
+    async def test_rostered_defense_enriched_from_rankings(
+        self, draft_state_with_defense
+    ):
+        """The defense picks up the rankings' bye week, ranking and projection."""
+        with patch("src.tools.team_roster.get_cached_draft_state") as mock_draft:
+            with patch("src.tools.team_roster.get_player_rankings") as mock_rankings:
+                mock_draft.return_value = draft_state_with_defense
+                mock_rankings.return_value = {
+                    "success": True,
+                    "players": [
+                        {
+                            "name": "Houston Texans",
+                            "team": "HOU",
+                            "position": "DST",
+                            "bye_week": 7,
+                            "ranking": 2,
+                            "projected_points": 130.0,
+                            "injury_status": "HEALTHY",
+                            "notes": "Top unit",
+                        }
+                    ],
+                }
+
+                result = await get_team_roster("Buffy")
+
+                assert result["success"] is True
+                assert len(result["players"]) == 1
+                defense = result["players"][0]
+                assert defense["bye_week"] == 7
+                assert defense["ranking"] == 2
+                assert defense["projected_points"] == 130.0
+                assert defense["position"] == "DST"
+                # Rankings are queried with the position the scraper understands
+                mock_rankings.assert_called_with(position="DST")
