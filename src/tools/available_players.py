@@ -5,24 +5,10 @@ from typing import Any, Dict
 
 from src.models.draft_state_simple import DraftState
 from src.services.draft_state_cache import get_cached_draft_state
+from src.services.player_matching import player_match_key
 from src.tools.player_rankings import get_player_rankings
 
 logger = logging.getLogger(__name__)
-
-
-def _normalize_player_name(name: str) -> str:
-    """Normalize player name for comparison."""
-    normalized = name.lower()
-    # Remove common punctuation and suffixes
-    normalized = normalized.replace(".", "").replace("'", "").replace("-", "")
-    normalized = (
-        normalized.replace(" jr", "")
-        .replace(" sr", "")
-        .replace(" iii", "")
-        .replace(" ii", "")
-        .replace(" iv", "")
-    )
-    return " ".join(normalized.split()).strip()
 
 
 async def get_available_players(position: str, limit: int) -> Dict[str, Any]:
@@ -94,20 +80,25 @@ async def get_available_players(position: str, limit: int) -> Dict[str, Any]:
 
         all_position_players = rankings_result["players"]
 
-        # Create set of drafted player names for fast lookup
+        # Create set of drafted player keys for fast lookup
         drafted_players = set()
         for pick in draft_state.picks:
-            normalized_name = _normalize_player_name(pick.player.name)
-            drafted_players.add(normalized_name)
+            drafted_players.add(
+                player_match_key(
+                    pick.player.name, pick.player.team, pick.player.position
+                )
+            )
 
         logger.info(f"Found {len(drafted_players)} drafted players to filter out")
 
         # Filter out drafted players
         available_players = []
         for player_data in all_position_players:
-            normalized_ranking_name = _normalize_player_name(player_data["name"])
+            ranking_key = player_match_key(
+                player_data["name"], player_data["team"], player_data["position"]
+            )
 
-            if normalized_ranking_name not in drafted_players:
+            if ranking_key not in drafted_players:
                 available_players.append(player_data)
 
         # Sort by projected_points (descending - higher is better)

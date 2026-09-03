@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from src.models.player_simple import Player
 from src.services.draft_state_cache import get_cached_draft_state
+from src.services.player_matching import player_match_key
 from src.tools.player_rankings import get_player_rankings
 
 logger = logging.getLogger(__name__)
@@ -103,12 +104,18 @@ async def get_team_roster(owner_name: str) -> Dict[str, Any]:
                 if rankings_result.get("success"):
                     # Look for matching player in rankings
                     enriched_player = None
+                    pick_key = player_match_key(
+                        player.name, player.team, player.position
+                    )
                     for ranked_player_data in rankings_result["players"]:
-                        # Match by name and team
+                        # Match by name and team (defenses match by team alone)
                         if (
-                            ranked_player_data["name"].lower() == player.name.lower()
-                            and ranked_player_data["team"].upper()
-                            == player.team.upper()
+                            player_match_key(
+                                ranked_player_data["name"],
+                                ranked_player_data["team"],
+                                ranked_player_data["position"],
+                            )
+                            == pick_key
                         ):
                             # Create enriched Player object from rankings data
                             enriched_player = Player(

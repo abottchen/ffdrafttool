@@ -288,3 +288,60 @@ class TestDanDraftParser:
             result.picks[3].player.name == "Travis Kelce"
         )  # Willow, Pick 4 (from Willow's column, stays with Willow)
         assert result.picks[3].owner == "Willow"
+
+
+class TestDanDraftParserPositionNormalization:
+    """Position labels from Dan's sheet must match the rankings vocabulary.
+
+    The sheet's Pos column is a VLOOKUP against its Data tab, which labels
+    defenses "D/ST". The rankings (and every tool that queries them) use "DST".
+    """
+
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.parser = DanDraftParser()
+
+    @pytest.mark.asyncio
+    async def test_defense_position_label_normalized_to_dst(self):
+        """A "D/ST" pick is stored as position "DST"."""
+        sheet_data = [
+            ["2026 DAN League Draft"],
+            ["", "Buffy", "*", "Willow"],
+            ["", "Team 1", "", "Team 2"],
+            ["", "Player", "Pos", "Player", "Pos"],
+            ["1", "Texans D/ST HOU", "D/ST", "Josh Allen BUF", "QB"],
+        ]
+
+        result = await self.parser.parse_draft_data(sheet_data)
+
+        assert [pick.player.position for pick in result.picks] == ["DST", "QB"]
+
+    @pytest.mark.asyncio
+    async def test_lowercase_position_normalized_to_uppercase(self):
+        """A lowercase Pos entry is stored uppercased."""
+        sheet_data = [
+            ["2026 DAN League Draft"],
+            ["", "Buffy", "*", "Willow"],
+            ["", "Team 1", "", "Team 2"],
+            ["", "Player", "Pos", "Player", "Pos"],
+            ["1", "Bijan Robinson ATL", "rb", "Josh Allen BUF", "QB"],
+        ]
+
+        result = await self.parser.parse_draft_data(sheet_data)
+
+        assert result.picks[0].player.position == "RB"
+
+    @pytest.mark.asyncio
+    async def test_blank_position_stays_blank(self):
+        """An unmatched player (blank VLOOKUP result) keeps an empty position."""
+        sheet_data = [
+            ["2026 DAN League Draft"],
+            ["", "Buffy", "*", "Willow"],
+            ["", "Team 1", "", "Team 2"],
+            ["", "Player", "Pos", "Player", "Pos"],
+            ["1", "Some Guy WAS", "", "Josh Allen BUF", "QB"],
+        ]
+
+        result = await self.parser.parse_draft_data(sheet_data)
+
+        assert result.picks[0].player.position == ""
